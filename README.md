@@ -24,7 +24,99 @@ This file is the **onboarding guide** for setting up a frndOS development worksp
 
 If you're an LLM Agent helping set up a frndOS development workspace — welcome! You'll guide the user through workspace configuration, prerequisite checks, model verification, and service setup. Follow these steps in order.
 
-### Step 0: Ask user about their setup
+### Step 0: Verify GitHub access
+
+Before anything else, verify the user has access to GitHub and the frndOS repositories. This prevents failures later when cloning.
+
+#### Check gh CLI installation and authentication
+
+```bash
+# Check if gh CLI is installed
+if command -v gh &>/dev/null; then
+    echo "✓ GitHub CLI (gh) is installed: $(gh --version | head -1)"
+else
+    echo "✗ GitHub CLI (gh) is NOT installed — required"
+    echo "Install from: https://cli.github.com/"
+    exit 1
+fi
+
+# Check if user is authenticated
+ghecho "Checking GitHub authentication..."
+if gh auth status &>/dev/null; then
+    echo "✓ GitHub CLI is authenticated"
+    gh auth status 2>&1 | grep -E "(Logged in to|Token scopes)" || true
+else
+    echo "✗ GitHub CLI is NOT authenticated"
+    echo "Run: gh auth login"
+    exit 1
+fi
+```
+
+#### Verify repository access
+
+Check access to each repository. The user must have access to the `alva-intelligence` organization:
+
+```bash
+# Verify org access
+echo "Checking alva-intelligence organization access..."
+if gh api user/orgs --jq '.[].login' | grep -q "alva-intelligence"; then
+    echo "✓ User has access to alva-intelligence organization"
+else
+    echo "⚠ Warning: User may not have access to alva-intelligence organization"
+    echo "  Contact arhen to get invited to the organization"
+fi
+
+# Check specific repo access (these will fail with 404 if no access)
+echo ""
+echo "Checking repository access..."
+
+# API repo
+if gh repo view alva-intelligence/frnd-api-php &>/dev/null; then
+    echo "✓ frnd-api-php (API): Access confirmed"
+else
+    echo "✗ frnd-api-php (API): No access — contact arhen"
+fi
+
+# Web repo
+if gh repo view alva-intelligence/frnd-web &>/dev/null; then
+    echo "✓ frnd-web (Frontend): Access confirmed"
+else
+    echo "✗ frnd-web (Frontend): No access — contact fahrizky or daffa"
+fi
+
+# AI Service repo
+if gh repo view alva-intelligence/frnd-ai-services &>/dev/null; then
+    echo "✓ frnd-ai-services (AI): Access confirmed"
+else
+    echo "✗ frnd-ai-services (AI): No access — contact rifki"
+fi
+
+# Data Service repo
+if gh repo view alva-intelligence/frnd-clickhouse-api &>/dev/null; then
+    echo "✓ frnd-clickhouse-api (Data): Access confirmed"
+else
+    echo "✗ frnd-clickhouse-api (Data): No access — contact kemal or iru"
+fi
+```
+
+If any repository access is missing, **do not proceed** with cloning that service. The user must contact the owner to get access first.
+
+#### Check Git configuration
+
+```bash
+# Verify git is configured
+git config --global user.name || echo "⚠ Git user.name not set"
+git config --global user.email || echo "⚠ Git user.email not set"
+```
+
+If git user.name or user.email is not set, help the user configure it:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+```
+
+### Step 1: Ask user about their setup
 
 Ask the user these questions to determine what to configure:
 
@@ -66,7 +158,7 @@ This determines which symlinks, MCP configs, and skills to set up.
 
 #### 0.4 Which AI provider subscriptions do you have?
 
-Ask which providers the user has active subscriptions for. This determines model recommendations and what to verify in Step 3.
+Ask which providers the user has active subscriptions for. This determines model recommendations and what to verify in Step 3 (Verify model access).
 
 - **Anthropic** (Claude Pro/Max)
   - Do you have access to **Claude Opus 4.6**? (best for planning, architecture, code review)
@@ -74,8 +166,6 @@ Ask which providers the user has active subscriptions for. This determines model
 - **OpenAI** (ChatGPT Plus/Pro)
   - Do you have access to **GPT 5.3-codex**? (deep coding powerhouse)
   - Do you have access to **GPT 5.4**? (high intelligence, exploratory tasks)
-- **Google** (Gemini)
-  - Do you have access to Gemini models? (good for creative/exploratory work)
 
 **Preferred models for frndOS development:**
 
@@ -86,9 +176,11 @@ Ask which providers the user has active subscriptions for. This determines model
 | Code review | Claude Opus 4.6 | Claude Sonnet 4.6 |
 | Exploratory / creative | GPT 5.4 | Claude Sonnet 4.6 |
 
-### Step 1: Check system prerequisites
+### Step 2: Check system prerequisites
 
-Run these checks on the user's system. Only check tools relevant to the services the user selected:
+Run these checks on the user's system. Only check tools relevant to the services the user selected.
+
+> **These checks can be run in parallel using sub-agents.** Each tool category (runtimes, package managers, databases, dev tools, optional) can be checked independently and concurrently.
 
 ```bash
 echo "=== Required Runtimes ==="
@@ -141,11 +233,21 @@ for cmd in ngrok; do
         echo "○ $cmd: not found (optional — for sharing demos via PR)"
     fi
 done
+
+echo ""
+echo "=== Service-Specific Tools ==="
+# Mailhog for API email testing
+if command -v mailhog &>/dev/null || docker ps --format "table {{.Names}}" | grep -q "mailhog"; then
+    echo "✓ Mailhog: found (for API email testing)"
+else
+    echo "○ Mailhog: not found (optional — only needed for API email testing)"
+    echo "  Install: brew install mailhog  OR  docker run -d -p 1025:1025 -p 8025:8025 mailhog/mailhog"
+fi
 ```
 
 If any **required** tool is missing, help the user install it before continuing.
 
-### Step 2: Verify model access
+### Step 3: Verify model access
 
 Based on the user's CLI choice and AI subscriptions from Step 0, verify that the preferred models are actually accessible. This prevents surprises mid-session.
 
@@ -231,9 +333,11 @@ Codex uses OpenAI models natively. Verify the user's OpenAI API key is configure
 
 After testing, summarize which models are accessible and which failed. If the preferred models (Opus 4.6, Sonnet 4.6) are not available, recommend the best available alternative from the user's working models.
 
-### Step 3: Clone repositories
+### Step 4: Clone repositories
 
-Check which service directories exist. Clone only the services the user selected in Step 0:
+Check which service directories exist. Clone only the services the user selected in Step 0.
+
+> **Execute these clones in parallel using multiple agents** if your tool supports it. Each clone is independent and can run concurrently to speed up setup.
 
 ```bash
 # API
@@ -249,9 +353,11 @@ Check which service directories exist. Clone only the services the user selected
 [ -d "data-service" ] || (git clone git@github.com:alva-intelligence/frnd-clickhouse-api.git data-service && cd data-service && git checkout development && cd ..)
 ```
 
-### Step 4: Install service dependencies
+### Step 5: Install service dependencies
 
 For each service the user selected, install dependencies. **Skip any service where the user doesn't have the `.env` file.**
+
+> **Dependency installation can be done in parallel using sub-agents.** Each service's setup is independent and can run concurrently (especially since each service has its own virtual environment or node_modules).
 
 #### API (`api/`)
 
@@ -321,7 +427,7 @@ cd ..
 
 Then ask the user to replace `data-service/.env` with the real credentials from **kemal** or **iru**.
 
-### Step 5: Create `run-all.sh`
+### Step 6: Create `run-all.sh`
 
 If `run-all.sh` does not exist in the `frnd/` parent directory, create it with the following content and make it executable:
 
@@ -640,10 +746,10 @@ start_all() {
   if [[ -n "$api_pid" ]] && is_running "$api_pid"; then
     log_warn "API server already running (PID $api_pid)"
   else
-    (cd "$SCRIPT_DIR/api" && php artisan serve) \
+    (cd "$SCRIPT_DIR/api" && php artisan serve --port=9191) \
       > "$LOG_DIR/api-server.log" 2>&1 &
     save_pid "api-server" $!
-    log_ok "API server started (PID $!) → http://localhost:8000"
+    log_ok "API server started (PID $!) → http://localhost:9191"
   fi
 
   # ── 2. API Queue Worker ───────────────────────────────────────────────────
@@ -711,9 +817,9 @@ start_all() {
   log_ok "All services started."
   echo ""
   echo "  Endpoints:"
-  echo "    API Server    → http://localhost:8000"
+  echo "    API Server    → http://localhost:9191"
   echo "    Frontend      → http://localhost:3000"
-  echo "    AI Service    → http://localhost:8000  (shares port with API if both local)"
+  echo "    AI Service    → http://localhost:8000"
   echo "    Data Service  → http://localhost:9999"
   echo ""
   echo "  Logs:    tail -f $LOG_DIR/<service>.log"
@@ -784,21 +890,19 @@ Verify it works:
 ./run-all.sh --stop     # Stop all services
 ```
 
-#### What it starts
-
 | Process | Command | Port | Log |
 |---|---|---|---|
-| API Server | `php artisan serve` | 8000 | `.logs/api-server.log` |
+| API Server | `php artisan serve --port=9191` | 9191 | `.logs/api-server.log` |
 | API Queue | `php artisan queue:work database --timeout=3000 --tries=5 --queue=high,low,default,subscriptions` | — | `.logs/api-queue.log` |
 | Frontend | `bun dev` | 3000 | `.logs/web.log` |
 | AI Service | `source .venv/bin/activate && fastapi dev` | 8000 | `.logs/ai-service.log` |
 | Data Service | `source venv/bin/activate && uvicorn app.main:app --reload --port 9999` | 9999 | `.logs/data-service.log` |
 
-### Step 6: Set up service documentation
+### Step 7: Set up service documentation
 
 For each service the user selected, create the documentation folder structure and ensure the service's `AGENTS.md` includes documentation conventions.
 
-#### 6.1 Create docs folders
+#### 7.1 Create docs folders
 
 ```bash
 for dir in api web ai-service data-service; do
@@ -808,7 +912,7 @@ for dir in api web ai-service data-service; do
 done
 ```
 
-#### 6.2 Append documentation conventions to service AGENTS.md
+#### 7.2 Append documentation conventions to service AGENTS.md
 
 For each service that has an existing `AGENTS.md`, check if it already contains a documentation section. If not, append the full documentation conventions so every agent session in that service knows the rules.
 
@@ -886,13 +990,22 @@ Template sections: Status Summary (table), Milestones (with checklists), Decisio
 
 > **Important:** Only append if the service's `AGENTS.md` exists and doesn't already have this section. Do not create a new `AGENTS.md` for a service — that is the service owner's responsibility.
 
-### Step 7: Configure editor/agent tooling
+### Step 8: Configure editor/agent tooling
 
 Based on the user's editor/CLI from Step 0:
 
-#### 7.1 Agent instruction symlinks
+#### 8.1 Agent instruction symlinks
 
-Create symlinks so each tool finds the agent instructions file. Run for each service repo the user works on:
+Create symlinks **only for the tool(s) the user selected in Step 1**. Each tool reads a different filename:
+
+| Tool | Expected File | Symlink Command |
+|---|---|---|
+| **Claude Code** | `CLAUDE.md` | `ln -sf AGENTS.md CLAUDE.md` |
+| **Cursor** | `.cursorrules` | `ln -sf AGENTS.md .cursorrules` |
+| **GitHub Copilot** | `.github/copilot-instructions.md` | `mkdir -p .github && ln -sf ../AGENTS.md .github/copilot-instructions.md` |
+| **OpenCode** | `AGENTS.md` (native) | No symlink needed |
+
+Run only the relevant symlink commands for each service the user works on. For example, if the user chose **Claude Code**:
 
 ```bash
 for dir in api web ai-service data-service; do
@@ -902,20 +1015,42 @@ for dir in api web ai-service data-service; do
     # Claude Code reads CLAUDE.md
     [ -L CLAUDE.md ] || ln -sf AGENTS.md CLAUDE.md
 
+    cd ..
+done
+```
+
+If the user chose **Cursor**:
+
+```bash
+for dir in api web ai-service data-service; do
+    [ -d "$dir" ] || continue
+    cd "$dir"
+
     # Cursor reads .cursorrules
     [ -L .cursorrules ] || ln -sf AGENTS.md .cursorrules
-
-    # GitHub Copilot reads .github/copilot-instructions.md
-    mkdir -p .github
-    [ -L .github/copilot-instructions.md ] || ln -sf ../AGENTS.md .github/copilot-instructions.md
-
-    # OpenCode reads AGENTS.md natively — no symlink needed
 
     cd ..
 done
 ```
 
-#### 7.2 Install skills
+If the user chose **GitHub Copilot** (in VS Code or other editor):
+
+```bash
+for dir in api web ai-service data-service; do
+    [ -d "$dir" ] || continue
+    cd "$dir"
+
+    # GitHub Copilot reads .github/copilot-instructions.md
+    mkdir -p .github
+    [ -L .github/copilot-instructions.md ] || ln -sf ../AGENTS.md .github/copilot-instructions.md
+
+    cd ..
+done
+```
+
+> **Do NOT create all symlinks.** Only create the ones for the user's chosen tool(s). Extra symlinks clutter the repo and may confuse other tools.
+
+#### 8.2 Install skills
 
 Skills are installed via [skills.sh](https://skills.sh/). Install based on which services the user works on:
 
@@ -937,7 +1072,7 @@ npx skills add radix-ui/design-system                     # accessible component
 
 > Browse more skills at [skills.sh](https://skills.sh/) or use `npx skills add vercel-labs/skills/find-skills`.
 
-#### 7.3 MCP configuration
+#### 8.3 MCP configuration
 
 Each tool reads MCP config from a different path. Configure for the user's tool:
 
@@ -963,7 +1098,7 @@ Each tool reads MCP config from a different path. Configure for the user's tool:
 | **Sentry** | Error tracking and monitoring (production debugging) |
 | **Figma** | Design-to-code translation (frontend design implementation) |
 
-### Step 8: Generate `AGENTS.md`
+### Step 9: Generate `AGENTS.md`
 
 Onboarding is almost complete. Now generate the `AGENTS.md` file that subsequent agent sessions will read.
 
@@ -987,7 +1122,7 @@ Onboarding is almost complete. Now generate the `AGENTS.md` file that subsequent
 ---
 ```
 
-### Step 9: Verify and restart
+### Step 10: Verify and restart
 
 Tell the user:
 
@@ -1108,13 +1243,16 @@ Every agent session should perform these steps before writing any code:
 
    > Service-level `AGENTS.md` rules **override** this guide when there is a conflict.
 
-2. **Start services** — Run `./run-all.sh` from the `frnd/` parent directory. If the script doesn't exist, create it from the content in `README.md` Step 5. If the agent doesn't support background processes, instruct the user:
+2. **Start services** — Run `./run-all.sh` from the `frnd/` parent directory as a **background process within the agent session**. The services should run as long as the agent session is active and stop when the session ends.
 
+   ```bash
+   # Run as a foreground background process (tied to agent session lifetime)
+   ./run-all.sh &
    ```
-   Please run this in a separate terminal:
-     cd frnd && ./run-all.sh
-   Check status with: ./run-all.sh --status
-   ```
+
+   If `run-all.sh` doesn't exist, create it from the content in `README.md` Step 6.
+
+   > **Important:** Do NOT tell the user to run services in a separate terminal. The agent should start them directly. When the agent/CLI session exits, the processes terminate automatically.
 
 ## B.2 Working Directory Convention
 
@@ -1124,7 +1262,7 @@ When working on a single service, scope into that directory, but initial context
 
 ## B.3 Running All Services
 
-Use `./run-all.sh` to manage services. If the script doesn't exist, create it from `README.md` Step 5.
+Use `./run-all.sh` to manage services. If the script doesn't exist, create it from `README.md` Step 6.
 
 ```bash
 ./run-all.sh            # Start all (runs preflight first)
@@ -1135,7 +1273,7 @@ Use `./run-all.sh` to manage services. If the script doesn't exist, create it fr
 
 | Process | Command | Port | Log |
 |---|---|---|---|
-| API Server | `php artisan serve` | 8000 | `.logs/api-server.log` |
+| API Server | `php artisan serve --port=9191` | 9191 | `.logs/api-server.log` |
 | API Queue | `php artisan queue:work database --timeout=3000 --tries=5 --queue=high,low,default,subscriptions` | — | `.logs/api-queue.log` |
 | Frontend | `bun dev` | 3000 | `.logs/web.log` |
 | AI Service | `source .venv/bin/activate && fastapi dev` | 8000 | `.logs/ai-service.log` |
@@ -1170,7 +1308,7 @@ fix/<short-description>        ← bug fixes
    gh pr create --base develop --title "feat: add brand health endpoint"
 
 4. Demo via ngrok (for cross-team review)
-   API: ngrok http 8000 | Frontend: ngrok http 3000
+   API: ngrok http 9191 | Frontend: ngrok http 3000
 
 5. PR review by service owner(s)
 
@@ -1473,7 +1611,7 @@ updated_by: arhen
 
 | Service | Directory | Start Dev | Lint/Format | Test | Build |
 |---|---|---|---|---|---|
-| **API** | `api/` | `php artisan serve` | `vendor/bin/pint --dirty` | `php artisan test` | N/A |
+| **API** | `api/` | `php artisan serve --port=9191` | `vendor/bin/pint --dirty` | `php artisan test` | N/A |
 | **API Queue** | `api/` | `php artisan queue:work database --timeout=3000 --tries=5 --queue=high,low,default,subscriptions` | — | — | — |
 | **Frontend** | `web/` | `bun dev` | `bun lint && bun format` | `bun test` | `bun run build` |
 | **AI** | `ai-service/` | `source .venv/bin/activate && fastapi dev` | `ruff check .` | `pytest` | N/A |
