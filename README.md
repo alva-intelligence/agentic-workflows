@@ -28,10 +28,11 @@ If you're an LLM Agent helping set up a frndOS development workspace — welcome
 >
 > This onboarding is **interactive**. You MUST follow these rules:
 >
-> 1. **Execute steps in order** (Step 0 → Step 10). Do NOT skip ahead.
-> 2. **Steps marked with STOP** require user input. You MUST present the questions, then **stop and wait for the user's response** before continuing to the next step. Do NOT assume answers or proceed without them.
-> 3. **Only run setup for services/tools the user selected.** Do not set up everything by default.
-> 4. After each step completes, briefly summarize what was done before moving to the next step.
+> 1. **Switch to plan mode first.** Before executing anything, switch to your CLI/editor's planning or interactive mode (e.g., Claude Code: plan mode, Cursor: chat, OpenCode: plan). This ensures you present plans and questions to the user and wait for their approval before executing.
+> 2. **Execute steps in order** (Step 0 → Step 10). Do NOT skip ahead.
+> 3. **Steps marked with ⛔ STOP** require user input. You MUST present the questions, then **stop and wait for the user's response** before continuing to the next step. Do NOT assume answers or proceed without them.
+> 4. **Only run setup for services/tools the user selected.** Do not set up everything by default.
+> 5. After each step completes, briefly summarize what was done before moving to the next step.
 
 ### Step 0: Verify GitHub access
 
@@ -50,7 +51,7 @@ else
 fi
 
 # Check if user is authenticated
-ghecho "Checking GitHub authentication..."
+echo "Checking GitHub authentication..."
 if gh auth status &>/dev/null; then
     echo "✓ GitHub CLI is authenticated"
     gh auth status 2>&1 | grep -E "(Logged in to|Token scopes)" || true
@@ -191,6 +192,8 @@ Ask which providers the user has active subscriptions for. This determines model
 | Exploratory / creative | GPT 5.4 | Claude Sonnet 4.6 |
 
 ### Step 2: Check system prerequisites
+
+> **Switch to execution mode now.** The user has answered all questions. Exit plan mode and switch to your CLI/editor's execution or build mode (e.g., Claude Code: normal mode, Cursor: agent, OpenCode: build). All remaining steps (2–10) require executing commands.
 
 Run these checks on the user's system. Only check tools relevant to the services the user selected.
 
