@@ -195,6 +195,25 @@ Ask which providers the user has active subscriptions for. This determines model
 
 > **Switch to execution mode now.** The user has answered all questions. Exit plan mode and switch to your CLI/editor's execution or build mode (e.g., Claude Code: normal mode, Cursor: agent, OpenCode: build). All remaining steps (2–10) require executing commands.
 
+> **Create a todo checklist now.** Based on the user's answers from Step 1, create a todo list covering Steps 2–10. Only include items relevant to the services, tools, and providers the user selected. Example:
+>
+> ```
+> - [ ] Check system prerequisites (php, bun, python3, ...)
+> - [ ] Verify model access (Claude Opus 4.6, Sonnet 4.6, ...)
+> - [ ] Clone repositories (api, web, ...)
+> - [ ] Install dependencies — api (composer install, migrate)
+> - [ ] Install dependencies — web (bun install)
+> - [ ] Create run-all.sh
+> - [ ] Set up service documentation (docs/prd, docs/tracks)
+> - [ ] Configure editor tooling — symlinks (Claude Code → CLAUDE.md)
+> - [ ] Configure editor tooling — install skills
+> - [ ] Configure editor tooling — MCP servers
+> - [ ] Generate AGENTS.md
+> - [ ] Verify and restart
+> ```
+>
+> Adapt this list based on the user's selections. Skip items for services/tools the user didn't choose. Mark each item as you complete it.
+
 Run these checks on the user's system. Only check tools relevant to the services the user selected.
 
 > **These checks can be run in parallel using sub-agents.** Each tool category (runtimes, package managers, databases, dev tools, optional) can be checked independently and concurrently.
