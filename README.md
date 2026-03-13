@@ -22,7 +22,16 @@ This file is the **onboarding guide** for setting up a frndOS development worksp
 >
 > If `AGENTS.md` exists as a **standalone file** (not a symlink to `README.md`), onboarding is done. **Read `AGENTS.md` and skip this file entirely.**
 
-If you're an LLM Agent helping set up a frndOS development workspace — welcome! You'll guide the user through workspace configuration, prerequisite checks, model verification, and service setup. Follow these steps in order.
+If you're an LLM Agent helping set up a frndOS development workspace — welcome! You'll guide the user through workspace configuration, prerequisite checks, model verification, and service setup.
+
+> **INTERACTION MODEL — READ THIS FIRST:**
+>
+> This onboarding is **interactive**. You MUST follow these rules:
+>
+> 1. **Execute steps in order** (Step 0 → Step 10). Do NOT skip ahead.
+> 2. **Steps marked with STOP** require user input. You MUST present the questions, then **stop and wait for the user's response** before continuing to the next step. Do NOT assume answers or proceed without them.
+> 3. **Only run setup for services/tools the user selected.** Do not set up everything by default.
+> 4. After each step completes, briefly summarize what was done before moving to the next step.
 
 ### Step 0: Verify GitHub access
 
@@ -118,9 +127,14 @@ git config --global user.email "your.email@example.com"
 
 ### Step 1: Ask user about their setup
 
+> **⛔ STOP — This step requires user input.**
+> Present ALL four questions below to the user in a single message, then **stop and wait** for their answers.
+> Do NOT proceed to Step 2 until the user has responded.
+> Do NOT assume default answers or make choices on behalf of the user.
+
 Ask the user these questions to determine what to configure:
 
-#### 0.1 Which services will you work on?
+#### 1.1 Which services will you work on?
 
 | # | Service | Directory | Stack |
 |---|---|---|---|
@@ -129,7 +143,7 @@ Ask the user these questions to determine what to configure:
 | 3 | **AI Service** | `ai-service/` | FastAPI, Python, Agno framework, OpenAI/Anthropic/Google, pgvector, Redis |
 | 4 | **Data Service** | `data-service/` | FastAPI, Python, ClickHouse, pandas, Sentry |
 
-#### 0.2 Do you have `.env` files ready?
+#### 1.2 Do you have `.env` files ready?
 
 Each service requires a `.env` file with secrets (database credentials, API keys, etc.). These are **never committed to git**. If the user doesn't have them, they must contact the service owner:
 
@@ -142,7 +156,7 @@ Each service requires a `.env` file with secrets (database credentials, API keys
 
 > **Do not proceed with service setup** for any service where the user doesn't have the `.env` file. The service won't run without it.
 
-#### 0.3 Which editor/CLI do you use?
+#### 1.3 Which editor/CLI do you use?
 
 This determines which symlinks, MCP configs, and skills to set up.
 
@@ -156,7 +170,7 @@ This determines which symlinks, MCP configs, and skills to set up.
 - **OpenCode** — lightweight, fast, configurable
 - **Codex** — OpenAI-native code generation
 
-#### 0.4 Which AI provider subscriptions do you have?
+#### 1.4 Which AI provider subscriptions do you have?
 
 Ask which providers the user has active subscriptions for. This determines model recommendations and what to verify in Step 3 (Verify model access).
 
@@ -249,7 +263,7 @@ If any **required** tool is missing, help the user install it before continuing.
 
 ### Step 3: Verify model access
 
-Based on the user's CLI choice and AI subscriptions from Step 0, verify that the preferred models are actually accessible. This prevents surprises mid-session.
+Based on the user's CLI choice and AI subscriptions from Step 1, verify that the preferred models are actually accessible. This prevents surprises mid-session.
 
 #### If using Claude Code
 
@@ -992,7 +1006,7 @@ Template sections: Status Summary (table), Milestones (with checklists), Decisio
 
 ### Step 8: Configure editor/agent tooling
 
-Based on the user's editor/CLI from Step 0:
+Based on the user's editor/CLI from Step 1:
 
 #### 8.1 Agent instruction symlinks
 
