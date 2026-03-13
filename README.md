@@ -731,8 +731,8 @@ status_all() {
   echo "  ─────────────────────"
   echo ""
 
-  local services=("api-server" "api-queue" "web" "ai-service" "data-service")
-  local labels=("API Server" "API Queue Worker" "Frontend (web)" "AI Service" "Data Service")
+  local services=("mailhog" "api-server" "api-queue" "web" "ai-service" "data-service")
+  local labels=("Mailhog" "API Server" "API Queue Worker" "Frontend (web)" "AI Service" "Data Service")
   local any_running=false
 
   for i in "${!services[@]}"; do
@@ -773,6 +773,23 @@ start_all() {
   echo ""
 
   local failed=0
+
+  # ── 0. Mailhog (email testing) ────────────────────────────────────────────
+
+  if command -v mailhog &>/dev/null; then
+    log_info "Starting Mailhog..."
+    local mailhog_pid
+    mailhog_pid="$(read_pid "mailhog")"
+    if [[ -n "$mailhog_pid" ]] && is_running "$mailhog_pid"; then
+      log_warn "Mailhog already running (PID $mailhog_pid)"
+    else
+      mailhog > "$LOG_DIR/mailhog.log" 2>&1 &
+      save_pid "mailhog" $!
+      log_ok "Mailhog started (PID $!) → http://localhost:8025"
+    fi
+  else
+    log_warn "Mailhog not installed — skipping (API emails won't be captured)"
+  fi
 
   # ── 1. API Server (php artisan serve) ─────────────────────────────────────
 
