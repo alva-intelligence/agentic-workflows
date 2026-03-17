@@ -1,0 +1,118 @@
+{
+  "gates": {
+    "prd_creation_to_wireframe": {
+      "from": "prd_creation",
+      "to": "wireframe",
+      "conditions": [
+        {
+          "type": "file_exists",
+          "description": "PRD file must exist",
+          "check": "features[active_feature].prd_path exists as a file"
+        },
+        {
+          "type": "frontmatter_valid",
+          "description": "PRD must have required frontmatter fields",
+          "required_fields": ["title", "slug", "author", "created", "status", "services"]
+        },
+        {
+          "type": "sections_present",
+          "description": "PRD must have required sections",
+          "required_sections": ["Overview", "User Stories", "Requirements", "Service Breakdown", "Acceptance Criteria"]
+        }
+      ]
+    },
+    "wireframe_to_wireframe_review": {
+      "from": "wireframe",
+      "to": "wireframe_review",
+      "conditions": [
+        {
+          "type": "file_exists",
+          "description": "At least one wireframe directory must exist with a .tsx file",
+          "check": "Each wireframe in features[active_feature].wireframes has a directory with ≥1 .tsx file"
+        },
+        {
+          "type": "metadata_exists",
+          "description": "Each wireframe must have a metadata.json",
+          "check": "metadata.json exists in each wireframe directory"
+        }
+      ]
+    },
+    "wireframe_review_to_branch_creation": {
+      "from": "wireframe_review",
+      "to": "branch_creation",
+      "conditions": [
+        {
+          "type": "approval",
+          "description": "All wireframes must be approved by Jeff",
+          "check": "All wireframes in features[active_feature].wireframes have approval.status === 'approved'"
+        }
+      ]
+    },
+    "branch_creation_to_prd_splitting": {
+      "from": "branch_creation",
+      "to": "prd_splitting",
+      "conditions": [
+        {
+          "type": "git_branch",
+          "description": "Feature branch must exist from latest develop",
+          "check": "features[active_feature].branch exists and is checked out"
+        }
+      ]
+    },
+    "prd_splitting_to_implementation": {
+      "from": "prd_splitting",
+      "to": "implementation",
+      "conditions": [
+        {
+          "type": "file_exists",
+          "description": "Service PRDs must exist for each touched service",
+          "check": "features[active_feature].service_prds has entries for all services listed in main PRD frontmatter"
+        }
+      ]
+    },
+    "implementation_to_pr_submission": {
+      "from": "implementation",
+      "to": "pr_submission",
+      "conditions": [
+        {
+          "type": "track_progress",
+          "description": "Track file must show progress",
+          "check": "At least one task checked off in each service's track file"
+        }
+      ]
+    },
+    "pr_submission_to_pr_review": {
+      "from": "pr_submission",
+      "to": "pr_review",
+      "conditions": [
+        {
+          "type": "pr_exists",
+          "description": "PR URL must be recorded and exist on GitHub",
+          "check": "features[active_feature].pr_url is set and `gh pr view` succeeds"
+        }
+      ]
+    },
+    "pr_review_to_completion": {
+      "from": "pr_review",
+      "to": "completion",
+      "conditions": [
+        {
+          "type": "pr_merged",
+          "description": "PR must be merged",
+          "check": "`gh pr view --json state` returns 'MERGED'"
+        }
+      ]
+    },
+    "completion_to_idle": {
+      "from": "completion",
+      "to": "idle",
+      "conditions": [
+        {
+          "type": "track_complete",
+          "description": "Track file must be marked complete",
+          "check": "Track file frontmatter has status: completed"
+        }
+      ]
+    }
+  }
+}

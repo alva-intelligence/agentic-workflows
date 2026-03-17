@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/alva-intelligence/agentic-workflows/workflow/state-schema.json",
+  "title": "Workflow State",
+  "description": "Schema for .workflow-state.json — tracks the current state of the agentic-workflows engine across features and phases.",
+  "type": "object",
+  "required": ["active_feature", "worker", "features"],
+  "additionalProperties": false,
+  "properties": {
+    "active_feature": {
+      "description": "The slug of the currently active feature, or null if idle.",
+      "type": ["string", "null"]
+    },
+    "worker": {
+      "description": "Identifier of the worker (agent or user) currently operating.",
+      "type": "string",
+      "minLength": 1
+    },
+    "features": {
+      "description": "Map of feature slugs to their workflow state.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z0-9]+(-[a-z0-9]+)*$": {
+          "$ref": "#/definitions/feature"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "feature": {
+      "type": "object",
+      "description": "State for a single feature being tracked through the workflow.",
+      "required": ["phase", "phase_entered", "prd_path", "wireframes", "branch", "service_prds", "pr_url"],
+      "additionalProperties": false,
+      "properties": {
+        "phase": {
+          "description": "Current workflow phase for this feature.",
+          "type": "string",
+          "enum": [
+            "idle",
+            "prd_creation",
+            "wireframe",
+            "wireframe_review",
+            "branch_creation",
+            "prd_splitting",
+            "implementation",
+            "pr_submission",
+            "pr_review",
+            "completion"
+          ]
+        },
+        "phase_entered": {
+          "description": "ISO 8601 timestamp of when the current phase was entered.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "prd_path": {
+          "description": "Relative path to the main PRD file for this feature, or null if not yet created.",
+          "type": ["string", "null"]
+        },
+        "wireframes": {
+          "description": "Array of wireframe entries associated with this feature.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/wireframe"
+          }
+        },
+        "branch": {
+          "description": "Git branch name for this feature, or null if not yet created.",
+          "type": ["string", "null"]
+        },
+        "service_prds": {
+          "description": "Map of service names to their per-service PRD file paths.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "pr_url": {
+          "description": "GitHub pull request URL for this feature, or null if not yet submitted.",
+          "type": ["string", "null"],
+          "format": "uri"
+        }
+      }
+    },
+    "wireframe": {
+      "type": "object",
+      "description": "A single wireframe associated with a feature.",
+      "required": ["slug", "path", "owner", "approval"],
+      "additionalProperties": false,
+      "properties": {
+        "slug": {
+          "description": "URL-friendly identifier for this wireframe page.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "minLength": 1
+        },
+        "path": {
+          "description": "Relative path to the wireframe directory.",
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "description": "Agent or person responsible for this wireframe.",
+          "type": "string",
+          "minLength": 1
+        },
+        "approval": {
+          "description": "Approval status for this wireframe, or null if not yet reviewed.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/approval"
+            }
+          ]
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "description": "Approval record for a wireframe.",
+      "required": ["status", "by", "at"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "description": "Approval status.",
+          "type": "string",
+          "enum": ["pending", "approved", "changes_requested"]
+        },
+        "by": {
+          "description": "Name or identifier of the person who reviewed.",
+          "type": ["string", "null"]
+        },
+        "at": {
+          "description": "ISO 8601 timestamp of when the approval decision was made, or null if pending.",
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

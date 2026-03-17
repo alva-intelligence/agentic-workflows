@@ -1,0 +1,146 @@
+{
+  "version": "2.0.0",
+  "updated": "2026-03-18",
+  "files": {
+    "agents/fragments/session-protocol.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/fragments/session-protocol.md",
+      "type": "fragment"
+    },
+    "agents/fragments/workflow-rules.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/fragments/workflow-rules.md",
+      "type": "fragment"
+    },
+    "agents/fragments/prd-conventions.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/fragments/prd-conventions.md",
+      "type": "fragment"
+    },
+    "agents/fragments/track-conventions.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/fragments/track-conventions.md",
+      "type": "fragment"
+    },
+    "agents/fragments/wireframe-conventions.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/fragments/wireframe-conventions.md",
+      "type": "fragment"
+    },
+    "agents/fragments/git-conventions.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/fragments/git-conventions.md",
+      "type": "fragment"
+    },
+    "agents/fragments/service-registry.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/fragments/service-registry.md",
+      "type": "fragment"
+    },
+    "agents/AGENTS.md.template": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/AGENTS.md.template",
+      "type": "template"
+    },
+    "scripts/update-check.sh": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/scripts/update-check.sh",
+      "type": "script"
+    },
+    "scripts/generate-agents.sh": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/scripts/generate-agents.sh",
+      "type": "script"
+    },
+    "workflow/phases.json": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/workflow/phases.json",
+      "type": "workflow"
+    },
+    "workflow/gates.json": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/workflow/gates.json",
+      "type": "workflow"
+    },
+    "workflow/state-schema.json": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/workflow/state-schema.json",
+      "type": "workflow"
+    },
+    "templates/prd/main-prd.template.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/templates/prd/main-prd.template.md",
+      "type": "template"
+    },
+    "templates/prd/service-prd.template.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/templates/prd/service-prd.template.md",
+      "type": "template"
+    },
+    "templates/tracks/feature.track.template.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/templates/tracks/feature.track.template.md",
+      "type": "template"
+    },
+    "skills/workflow-manager/SKILL.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".claude/skills/workflow-manager/SKILL.md",
+      "type": "skill"
+    },
+    "skills/prd-creator/SKILL.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".claude/skills/prd-creator/SKILL.md",
+      "type": "skill"
+    },
+    "skills/prd-splitter/SKILL.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".claude/skills/prd-splitter/SKILL.md",
+      "type": "skill"
+    },
+    "skills/wireframe-builder/SKILL.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".claude/skills/wireframe-builder/SKILL.md",
+      "type": "skill"
+    },
+    "agents/tools/claude-code/frndos-orchestra.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".claude/agents/frndos-orchestra.md",
+      "type": "agent"
+    },
+    "agents/tools/claude-code/frndos-prd.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".claude/agents/frndos-prd.md",
+      "type": "agent"
+    },
+    "agents/tools/claude-code/frndos-wireframe.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".claude/agents/frndos-wireframe.md",
+      "type": "agent"
+    },
+    "agents/tools/claude-code/frndos-splitter.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".claude/agents/frndos-splitter.md",
+      "type": "agent"
+    },
+    "agents/tools/claude-code/frndos-implement.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".claude/agents/frndos-implement.md",
+      "type": "agent"
+    },
+    "agents/tools/claude-code/frndos-pr.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".claude/agents/frndos-pr.md",
+      "type": "agent"
+    },
+    "agents/tools/claude-code/frndos-track.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".claude/agents/frndos-track.md",
+      "type": "agent"
+    },
+    "flake.nix": {
+      "sha256": "PLACEHOLDER",
+      "install_to": "flake.nix",
+      "type": "config"
+    }
+  }
+}

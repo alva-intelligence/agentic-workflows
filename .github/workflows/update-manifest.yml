@@ -1,0 +1,91 @@
+name: Update Manifest
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[manifest]')"
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Compute hashes and update manifest
+        run: |
+          set -euo pipefail
+
+          MANIFEST="manifest.json"
+          VERSION_FILE="VERSION"
+
+          # ── 1. Read current version ──────────────────────────────────────
+          CURRENT_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+          echo "Current version: $CURRENT_VERSION"
+
+          # ── 2. Bump patch version ────────────────────────────────────────
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "$NEW_VERSION" > "$VERSION_FILE"
+
+          # ── 3. Compute SHA-256 for every file listed in manifest ─────────
+          # Extract file paths from manifest (keys under .files)
+          FILE_KEYS=$(jq -r '.files | keys[]' "$MANIFEST")
+
+          # Build a temporary JSON object with updated sha256 values
+          HASH_UPDATES="{}"
+          for filepath in $FILE_KEYS; do
+            if [ -f "$filepath" ]; then
+              HASH=$(sha256sum "$filepath" | awk '{print $1}')
+              HASH_UPDATES=$(echo "$HASH_UPDATES" | jq --arg path "$filepath" --arg hash "$HASH" \
+                '. + {($path): $hash}')
+              echo "  $filepath -> $HASH"
+            else
+              echo "  WARNING: $filepath not found, keeping existing hash"
+            fi
+          done
+
+          # ── 4. Update manifest.json ──────────────────────────────────────
+          TODAY=$(date -u +"%Y-%m-%d")
+
+          # Apply hash updates to each file entry, then update version/updated
+          UPDATED_MANIFEST=$(jq --arg version "$NEW_VERSION" --arg updated "$TODAY" \
+            --argjson hashes "$HASH_UPDATES" '
+            .version = $version |
+            .updated = $updated |
+            .files = (
+              .files | to_entries | map(
+                if $hashes[.key] then
+                  .value.sha256 = $hashes[.key]
+                else
+                  .
+                end
+              ) | from_entries
+            )
+          ' "$MANIFEST")
+
+          echo "$UPDATED_MANIFEST" | jq '.' > "$MANIFEST"
+
+          echo "Manifest updated to version $NEW_VERSION ($TODAY)"
+
+      - name: Commit updated manifest and version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add manifest.json VERSION
+
+          # Only commit if there are actual changes
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update manifest hashes [manifest]"
+            git push
+          fi

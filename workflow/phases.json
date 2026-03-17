@@ -1,0 +1,74 @@
+{
+  "phases": {
+    "idle": {
+      "name": "Idle",
+      "description": "No active work. Ready for a new feature.",
+      "agent": null,
+      "next": ["prd_creation"],
+      "allowed_actions": ["start_feature", "resume_feature"]
+    },
+    "prd_creation": {
+      "name": "PRD Creation",
+      "description": "Creating the main PRD from Lark notes or user input.",
+      "agent": "frndos-prd",
+      "next": ["wireframe"],
+      "allowed_actions": ["create_prd", "edit_prd"]
+    },
+    "wireframe": {
+      "name": "Wireframe",
+      "description": "Building wireframe pages for the feature.",
+      "agent": "frndos-wireframe",
+      "next": ["wireframe_review"],
+      "allowed_actions": ["create_wireframe", "edit_wireframe", "add_wireframe"]
+    },
+    "wireframe_review": {
+      "name": "Wireframe Review",
+      "description": "Waiting for wireframe approval from Jeff.",
+      "agent": "frndos-wireframe",
+      "next": ["branch_creation"],
+      "allowed_actions": ["record_approval", "request_changes"]
+    },
+    "branch_creation": {
+      "name": "Branch Creation",
+      "description": "Creating the feature branch from latest develop.",
+      "agent": "frndos-orchestra",
+      "next": ["prd_splitting"],
+      "allowed_actions": ["create_branch"]
+    },
+    "prd_splitting": {
+      "name": "PRD Splitting",
+      "description": "Splitting main PRD into per-service PRDs.",
+      "agent": "frndos-splitter",
+      "next": ["implementation"],
+      "allowed_actions": ["split_prd", "edit_service_prd"]
+    },
+    "implementation": {
+      "name": "Implementation",
+      "description": "Implementing the feature across services.",
+      "agent": "frndos-implement",
+      "next": ["pr_submission"],
+      "allowed_actions": ["implement", "update_track"]
+    },
+    "pr_submission": {
+      "name": "PR Submission",
+      "description": "Creating pull requests for the feature.",
+      "agent": "frndos-pr",
+      "next": ["pr_review"],
+      "allowed_actions": ["create_pr", "update_pr"]
+    },
+    "pr_review": {
+      "name": "PR Review",
+      "description": "PR is under review by the repo owner.",
+      "agent": "frndos-pr",
+      "next": ["completion"],
+      "allowed_actions": ["address_feedback", "update_pr"]
+    },
+    "completion": {
+      "name": "Completion",
+      "description": "Feature is merged. Cleaning up and marking complete.",
+      "agent": "frndos-track",
+      "next": ["idle"],
+      "allowed_actions": ["mark_complete"]
+    }
+  }
+}
