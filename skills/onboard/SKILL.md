@@ -7,6 +7,16 @@ description: Full frndOS workspace onboarding — GitHub access, service setup, 
 
 This skill guides you through setting up a complete frndOS development workspace. Execute steps in order. Steps marked **STOP** require user input — wait for answers before proceeding.
 
+## Asking the User (MANDATORY)
+
+When you need user input, you MUST use your tool's dedicated ask/question tool:
+
+- **Claude Code:** Use the `AskUserQuestion` tool with structured options
+- **Cursor:** Use the built-in ask question tool
+- **OpenCode:** Use the question tool with select/text modes
+
+**NEVER** just print a question as plain text and hope the user responds. **ALWAYS** use the ask tool so the user gets a proper interactive prompt with selectable options. This prevents the agent from continuing without an answer.
+
 ## Onboarding State
 
 Throughout onboarding, maintain a `.onboard-state.json` file at the workspace root. **Write/update this file after each step.**

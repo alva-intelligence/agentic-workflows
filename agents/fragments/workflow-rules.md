@@ -55,9 +55,16 @@ When picking up another person's feature:
 
 **MANDATORY for every agent:** Before performing ANY action:
 1. **Explain** what you plan to do and why
-2. **Ask questions** if anything is unclear
+2. **Ask questions** if anything is unclear — **use the ask tool** (see below)
 3. **Give suggestions** if there are multiple valid approaches
 4. **Wait for user confirmation** before executing
+
+**Use the ask tool for ALL user input.** Do NOT just print questions as plain text. Use your tool's dedicated ask mechanism:
+- **Claude Code:** `AskUserQuestion` tool with structured options
+- **Cursor:** Built-in ask question tool
+- **OpenCode:** Question tool with select/text modes
+
+This ensures the agent blocks until the user responds and prevents accidentally proceeding without input.
 
 NEVER execute code changes without explaining the plan first.
 NEVER make assumptions about requirements without asking.
