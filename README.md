@@ -74,6 +74,179 @@ User points agent at this repo
 
 This repo is the single source of truth for frndOS AI agent instructions. It is NOT cloned into workspaces — instead, individual files are downloaded and cached locally via the auto-update mechanism.
 
+### Workflow State Machine
+
+10 phases with gate enforcement — each phase has a dedicated agent and model assignment.
+
+[![Workflow State Machine](https://excalidraw.com/api/og?scene=59CtKI6JR7GEwpVorx-rb)](https://excalidraw.com/#json=59CtKI6JR7GEwpVorx-rb,Lz2F66p-HZuPHcuXwNYAGQ)
+
+### Agent Architecture
+
+Phase-scoped agents with auto-delegation — orchestra routes, sub-agents do the work.
+
+[![Agent Architecture](https://excalidraw.com/api/og?scene=xs01BKkEeR7Zh4SAZEEoV)](https://excalidraw.com/#json=xs01BKkEeR7Zh4SAZEEoV,7T34Kh2EZmoalN6yA2ZYbg)
+
+### Onboarding Flow
+
+```mermaid
+flowchart TD
+    A[User points agent at repo URL] --> B[Agent reads README.md]
+    B --> C[Shows welcome message]
+    C --> D{Ready to set up?}
+    D -- No --> E[Exit]
+    D -- Yes --> F[Run bootstrap script]
+    F --> G[Downloads 29 files to workspace]
+    G --> H[Generates AGENTS.md from fragments]
+    H --> I[Creates symlinks for Claude/Cursor/OpenCode]
+    I --> J{Start onboarding now?}
+    J -- No --> K[User runs /onboard later]
+    J -- Yes --> L[Read SKILL.md directly]
+
+    L --> M["Step 0: Verify GitHub Access"]
+    M --> N["Step 1: Questionnaire (PLAN MODE)
+    Services, tools, .env, MCPs"]
+    N --> O["Switch to EXECUTION MODE
+    Create todo checklist"]
+    O --> P["Step 2: Install Nix
+    (sudo — wait for user)"]
+    P --> Q["nix develop"]
+    Q --> R["Step 3: Verify Model Access"]
+    R --> S["Step 4: Clone Repos"]
+    S --> T["Step 5: Install Dependencies"]
+    T --> U["Step 6: .env Files
+    (ask per service)"]
+    U --> V["Step 7: Database Setup
+    (wait for dump file)"]
+    V --> W["Step 8–9: run-all.sh + docs + editor"]
+    W --> X["Step 10: Community Skills"]
+    X --> Y["Step 11: MCP Servers"]
+    Y --> Z["Step 12: Verify & Complete"]
+    Z --> AA{All critical steps done?}
+    AA -- Yes --> AB["status: completed
+    Ready for /workflow start"]
+    AA -- No --> AC["status: in_progress
+    List missing items
+    /workflow start will BLOCK"]
+```
+
+### Workflow State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle
+
+    idle --> prd_creation: /workflow start
+
+    prd_creation --> wireframe: PRD file exists\nwith required sections
+    note right of prd_creation: frndos-prd\n(Opus 4.6)
+
+    wireframe --> wireframe_review: Wireframe dir exists\nwith ≥1 .tsx file
+    note right of wireframe: frndos-wireframe\n(Opus 4.6)
+
+    wireframe_review --> branch_creation: All wireframes\napproved by Jeff
+    note right of wireframe_review: frndos-wireframe\n(Opus 4.6)
+
+    branch_creation --> prd_splitting: Feature branch exists\nfrom latest develop
+    note right of branch_creation: frndos-orchestra\n(Opus 4.5)
+
+    prd_splitting --> implementation: Service PRDs exist\nfor all touched services
+    note right of prd_splitting: frndos-splitter\n(Opus 4.6)
+
+    implementation --> pr_submission: Track file\nshows progress
+    note right of implementation: frndos-implement\n(Opus 4.6)
+
+    pr_submission --> pr_review: PR URL exists\non GitHub
+    note right of pr_submission: frndos-pr\n(Sonnet 4.6)
+
+    pr_review --> completion: PR merged
+    note right of pr_review: frndos-pr\n(Sonnet 4.6)
+
+    completion --> idle: Track file\nmarked complete
+    note right of completion: frndos-track\n(Sonnet 4.6)
+```
+
+### Agent Architecture
+
+```mermaid
+flowchart TB
+    User([User]) --> Orchestra
+
+    subgraph "frndos-orchestra (Opus 4.5)"
+        Orchestra[Router Agent]
+        Orchestra --> ReadState["Read .workflow-state.json"]
+        ReadState --> Route{Current Phase?}
+    end
+
+    Route -- prd_creation --> PRD["frndos-prd
+    (Opus 4.6)
+    Creates PRD from Lark notes"]
+
+    Route -- wireframe --> WF["frndos-wireframe
+    (Opus 4.6)
+    Builds wireframe pages"]
+
+    Route -- wireframe_review --> WF
+
+    Route -- prd_splitting --> Split["frndos-splitter
+    (Opus 4.6)
+    Splits PRD per service"]
+
+    Route -- implementation --> Impl["frndos-implement
+    (Opus 4.6)
+    Implements across services"]
+
+    Route -- pr_submission --> PR["frndos-pr
+    (Sonnet 4.6)
+    Creates & manages PRs"]
+
+    Route -- pr_review --> PR
+
+    Route -- completion --> Track["frndos-track
+    (Sonnet 4.6)
+    Updates tracking files"]
+
+    subgraph "Workspace Files"
+        WFS[".workflow-state.json"]
+        OBS[".onboard-state.json"]
+        AGENTS["AGENTS.md"]
+        PRDS["docs/prd/*.md"]
+        TRACKS["*/docs/tracks/*.track.md"]
+    end
+
+    PRD --> PRDS
+    Split --> PRDS
+    Impl --> TRACKS
+    Track --> TRACKS
+    Orchestra --> WFS
+```
+
+### Auto-Update Flow
+
+```mermaid
+sequenceDiagram
+    participant TL as Team Lead
+    participant GH as GitHub
+    participant CI as GitHub Action
+    participant WS as Workspace Agent
+
+    TL->>GH: Push changes to main
+    GH->>CI: Trigger update-manifest
+    CI->>CI: Compute SHA-256 hashes
+    CI->>CI: Bump VERSION patch
+    CI->>GH: Commit manifest.json + VERSION [manifest]
+
+    Note over WS: Next agent session starts
+    WS->>GH: Fetch manifest.json (raw.githubusercontent.com)
+    WS->>WS: Compare local vs remote hashes
+    alt Files changed
+        WS->>GH: Download only changed files
+        WS->>WS: Regenerate AGENTS.md if fragments changed
+        WS->>WS: Update local .version
+    else Up to date
+        WS->>WS: Skip (no downloads)
+    end
+```
+
 ### How auto-update works
 
 1. Edit files in this repo → push to `main`
