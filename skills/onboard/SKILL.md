@@ -417,22 +417,65 @@ See [references/mcp-configs.md](references/mcp-configs.md) for per-tool configur
 
 Configure MCPs in the correct file for the user's selected tool(s). For service-specific MCPs (Laravel Boost), configure inside the service directory, not the workspace root.
 
-## Step 12: Verify & Complete
+## Step 12: Verify & Complete — **STOP, ask user**
+
+Before finishing, the agent MUST verify that everything works by starting all services.
+
+Use the ask tool:
+
+> "Everything is set up. Would you like me to start all services now to verify everything works?"
+> - Yes, start all services
+> - No, I'll do it later
+
+### If user says Yes:
 
 1. Run preflight: `./run-all.sh --check`
-2. If all checks pass, try starting: `./run-all.sh`
-3. Run health checks for each selected service
-4. Update `.onboard-state.json`: set `steps.verify` to `"completed"`
+2. If preflight passes, start services: `./run-all.sh`
+3. Wait 10-15 seconds for services to boot
+4. Run health checks for EACH selected service:
+
+```bash
+# Check each service that was set up
+curl -sf http://localhost:9191/health && echo "✓ API" || echo "✗ API"
+curl -sf http://localhost:3000 && echo "✓ Frontend" || echo "✗ Frontend"
+curl -sf http://localhost:8000/health && echo "✓ AI Service" || echo "✗ AI Service"
+curl -sf http://localhost:9999/health && echo "✓ Data Service" || echo "✗ Data Service"
+pg_isready -h localhost -p 5432 && echo "✓ PostgreSQL" || echo "✗ PostgreSQL"
+redis-cli ping && echo "✓ Redis" || echo "✗ Redis"
+```
+
+5. **If ALL health checks pass:**
+   - Tell user: "All services are running and healthy!"
+   - Update `.onboard-state.json`: set `steps.verify` to `"completed"`
+
+6. **If ANY health check fails:**
+   - List which services failed and why (check logs: `tail .logs/<service>.log`)
+   - Help troubleshoot:
+     - Missing .env? → remind contact
+     - Port conflict? → check what's using the port
+     - DB not running? → start PostgreSQL
+     - Missing deps? → re-run install
+   - Use the ask tool: "Should I try to fix these issues?"
+   - Keep trying until all services pass OR user decides to skip
+
+7. **After verification, stop the services:**
+   ```bash
+   ./run-all.sh --stop
+   ```
+
+### Final summary
 
 **Check for incomplete items.** Read `.onboard-state.json` and report:
 
 If ALL critical steps are completed:
 ```
-Onboarding complete! Your workspace is fully set up.
+Onboarding complete! All services verified and working.
 
-Next step:
+You're ready to start building. In your next session:
   /workflow start <feature-slug>    — begin a new feature
   /workflow status                  — check current state
+
+Please restart your agent session now so all skills and agents are properly loaded.
 ```
 Set `status` to `"completed"`.
 
@@ -447,8 +490,11 @@ Onboarding mostly done, but some items need attention before you can start worki
   Database:
     - DB dump not restored — contact arhen for a sanitized dev dump
 
-You can complete these later. When ready, the agent will verify automatically.
-To re-check: /onboard verify
+  Failed health checks:
+    - API — not responding (likely needs .env)
+
+You can complete these later. When ready, run /onboard verify to re-check.
+The workflow will block until all critical items are resolved.
 ```
 Keep `status` as `"in_progress"`.
 
