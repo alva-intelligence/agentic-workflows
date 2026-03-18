@@ -158,11 +158,25 @@ Neither is required. Workflow works without them.
 
 **Nix is REQUIRED. Do NOT fall back to system-installed tools.** All dependencies (PHP, Bun, Node, Python, PostgreSQL, ClickHouse, Redis, etc.) are managed through the Nix flake to ensure reproducible builds across all team members.
 
-### 2.1 Check if Nix is installed
+### 2.1 Check if Nix is installed and flakes are enabled
 
 ```bash
 command -v nix &>/dev/null && echo "✓ Nix installed: $(nix --version)" || echo "✗ Nix not found"
 ```
+
+If Nix IS installed, ensure flakes are enabled (idempotent — safe to run multiple times):
+
+```bash
+mkdir -p ~/.config/nix
+grep -q 'experimental-features' ~/.config/nix/nix.conf 2>/dev/null || echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
+```
+
+Verify flakes work:
+```bash
+nix flake --help &>/dev/null && echo "✓ Flakes enabled" || echo "✗ Flakes not enabled — check ~/.config/nix/nix.conf"
+```
+
+If Nix is installed and flakes work, skip to Step 2.3.
 
 ### 2.2 If Nix is NOT installed — **STOP, wait for user**
 
@@ -179,30 +193,28 @@ Tell the user (use the ask tool):
 >
 > **Let me know when the installation finishes.**"
 
-After user confirms installation is done, **enable flakes and continue in the same session** using the full Nix path (no terminal restart needed):
-
-```bash
-# Enable flakes (no sudo needed)
-mkdir -p ~/.config/nix && echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
-
-# Use full path since shell PATH hasn't refreshed
-/nix/var/nix/profiles/default/bin/nix --version
-```
-
-From this point, always use `/nix/var/nix/profiles/default/bin/nix` as the command until the user starts a new session.
-
 **DO NOT proceed to the next step.** Wait for the user to confirm Nix is installed. Use the ask tool to ask:
 
-> "Have you installed Nix and restarted your terminal?"
-> - Yes, Nix is installed
+> "Have you installed Nix?"
+> - Yes, it's installed
 > - Not yet, I need more time
 > - I need help with the installation
 
 Only continue when user confirms "Yes". If "Not yet", wait. If "Need help", troubleshoot.
 
-After confirmation, verify:
+After confirmation, **enable flakes permanently** (no sudo needed, idempotent):
+
 ```bash
-command -v nix &>/dev/null && echo "✓ Nix installed: $(nix --version)" || echo "✗ Still not found"
+mkdir -p ~/.config/nix
+grep -q 'experimental-features' ~/.config/nix/nix.conf 2>/dev/null || echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
+```
+
+Then verify (use full path if PATH hasn't refreshed):
+
+```bash
+# Try PATH first, fall back to full path
+NIX_CMD=$(command -v nix 2>/dev/null || echo "/nix/var/nix/profiles/default/bin/nix")
+$NIX_CMD --version
 ```
 
 If still not found, do NOT continue. Ask the user to check their shell path.
@@ -212,11 +224,8 @@ If still not found, do NOT continue. Ask the user to check their shell path.
 The `flake.nix` at the workspace root provides all dependencies. Enter the shell:
 
 ```bash
-# If nix is in PATH:
-nix develop
-
-# If fresh install in same session (PATH not refreshed):
-/nix/var/nix/profiles/default/bin/nix develop
+NIX_CMD=$(command -v nix 2>/dev/null || echo "/nix/var/nix/profiles/default/bin/nix")
+$NIX_CMD develop
 ```
 
 This gives you: PHP 8.5, Composer, Bun, Node 22, Python 3.12, uv, PostgreSQL 18 (with pgvector), ClickHouse, Redis, gh, git, curl, jq.
