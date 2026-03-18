@@ -154,35 +154,50 @@ Neither is required. Workflow works without them.
 
 ---
 
-## Step 2: Check System Prerequisites
+## Step 2: Install Nix and Enter Dev Shell
 
-**Option A — Nix (recommended):**
+**Nix is REQUIRED. Do NOT fall back to system-installed tools.** All dependencies (PHP, Bun, Node, Python, PostgreSQL, ClickHouse, Redis, etc.) are managed through the Nix flake to ensure reproducible builds across all team members.
+
+### 2.1 Check if Nix is installed
+
 ```bash
-if command -v nix &>/dev/null; then
-  echo "✓ Nix installed"
-else
-  echo "Nix not found. Install with: curl -L https://nixos.org/nix/install | sh"
-fi
-```
-If Nix is available, `nix develop` in workspace root provides all dependencies.
-
-**Option B — Manual checks** (only for services user selected):
-```bash
-# Runtimes
-for cmd in php bun python3 node; do command -v "$cmd" &>/dev/null && echo "✓ $cmd" || echo "✗ $cmd missing"; done
-
-# Package managers
-for cmd in composer uv pip; do command -v "$cmd" &>/dev/null && echo "✓ $cmd" || echo "✗ $cmd missing"; done
-
-# Databases
-command -v psql &>/dev/null && echo "✓ PostgreSQL" || echo "✗ PostgreSQL missing"
-command -v redis-cli &>/dev/null && echo "✓ Redis" || echo "○ Redis (optional)"
-
-# Dev tools
-for cmd in git gh; do command -v "$cmd" &>/dev/null && echo "✓ $cmd" || echo "✗ $cmd missing"; done
+command -v nix &>/dev/null && echo "✓ Nix installed: $(nix --version)" || echo "✗ Nix not found"
 ```
 
-Help install any missing prerequisites before continuing.
+### 2.2 If Nix is NOT installed — install it
+
+```bash
+curl -L https://nixos.org/nix/install | sh
+```
+
+After installation, restart the terminal/shell and verify:
+```bash
+nix --version
+```
+
+### 2.3 Enter the Nix dev shell
+
+The `flake.nix` at the workspace root provides all dependencies. Enter the shell:
+
+```bash
+nix develop
+```
+
+This gives you: PHP 8.5, Composer, Bun, Node 22, Python 3.12, uv, PostgreSQL 18 (with pgvector), ClickHouse, Redis, gh, git, curl, jq.
+
+### 2.4 Verify tools are available inside the shell
+
+```bash
+php --version && composer --version && bun --version && node --version && python3 --version && uv --version && psql --version
+```
+
+**If any tool is missing, something is wrong with the flake — do NOT install tools manually.** Fix the `flake.nix` instead.
+
+### 2.5 IMPORTANT: All subsequent steps MUST run inside `nix develop`
+
+Every command from this point forward (deps install, migrations, run-all.sh, etc.) must be run inside the Nix shell. If the user opens a new terminal, they must run `nix develop` again.
+
+> **Do NOT use brew, apt, pip install --global, npm install -g, or any other system package manager.** Everything comes from Nix.
 
 ## Step 3: Verify Model Access
 
