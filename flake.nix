@@ -32,7 +32,7 @@
             uv
 
             # Databases
-            postgresql_16
+            (postgresql_18.withPackages (ps: [ ps.pgvector ]))
             clickhouse
             redis
 
