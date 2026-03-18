@@ -7,7 +7,10 @@
 Check the workspace to determine what's needed:
 
 1. **No service directories** (none of `api/`, `web/`, `ai-service/`, `data-service/` exist):
-   → Fresh workspace. Tell user: "This workspace hasn't been set up yet. Run `/onboard` to configure your development environment."
+   → Fresh workspace. Use your **ask tool** to ask the user:
+     "This workspace hasn't been set up yet. Would you like to start onboarding now?"
+   → If **yes**: Read `.agents/skills/onboard/SKILL.md` and execute the onboarding skill directly in this session.
+   → If **no**: Tell user they can run `/onboard` later (may need a session restart for the slash command to appear).
    → Do NOT proceed with workflow commands until onboarding is complete.
 
 2. **`.onboard-state.json` exists and `status` is `"in_progress"`**:

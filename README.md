@@ -48,12 +48,13 @@ curl -sL "https://raw.githubusercontent.com/alva-intelligence/agentic-workflows/
 
 This downloads all agents, skills, fragments, templates, and workflow configs into the workspace and generates `AGENTS.md`.
 
-### Step 4: After bootstrap — read AGENTS.md and follow the session protocol
+### Step 4: After bootstrap — start onboarding
 
 1. Read the generated `AGENTS.md` file in the workspace root
-2. Follow the **Session Start Protocol** inside it
-3. The protocol will detect that this is a fresh workspace and direct the user to run `/onboard`
-4. `/onboard` walks through the full workspace setup: GitHub access, service selection, cloning, dependencies, .env files, database, editor config, and MCP setup
+2. Follow the **Session Start Protocol** — it detects this is a fresh workspace
+3. Use your **ask tool** to ask: "Would you like to start onboarding now?"
+4. If yes: Read `.agents/skills/onboard/SKILL.md` and execute the onboarding directly in this session
+5. Onboarding walks through: GitHub access, service selection, cloning, dependencies, .env files, database, editor config, and MCP setup
 
 ### Flow summary
 
@@ -62,7 +63,8 @@ User points agent at this repo
   → Agent reads README.md (this file)
   → Agent shows welcome message
   → Agent asks: "Ready to set up?" (yes/no)
-  → If yes: bootstrap → AGENTS.md → session protocol → /onboard
+  → If yes: bootstrap → AGENTS.md → asks "Start onboarding now?"
+  → If yes: reads SKILL.md directly → runs onboarding in same session
   → After onboarding: /workflow start <feature-slug>
 ```
 

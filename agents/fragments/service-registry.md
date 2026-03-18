@@ -4,7 +4,7 @@
 
 | Service | Directory | Repository | Stack | Default Branch | Port |
 |---------|-----------|-----------|-------|---------------|------|
-| API | `api/` | alva-intelligence/frnd-api-php | Laravel 12, PHP 8.2+, PostgreSQL, Sanctum + JWT | `develop` | 9191 |
+| API | `api/` | alva-intelligence/frnd-api-php | Laravel 12, PHP 8.5, PostgreSQL, Sanctum + JWT | `develop` | 9191 |
 | Frontend | `web/` | alva-intelligence/frnd-web | Next.js 16, React 19, TypeScript, Tailwind CSS, Zustand, TanStack Query v5, Bun | `develop` | 3000 |
 | AI Service | `ai-service/` | alva-intelligence/frnd-ai-services | FastAPI, Python, Agno, OpenAI/Anthropic/Google, pgvector, Redis | `development` | 8000 |
 | Data Service | `data-service/` | alva-intelligence/frnd-clickhouse-api | FastAPI, Python, ClickHouse, pandas, Sentry | `development` | 9999 |

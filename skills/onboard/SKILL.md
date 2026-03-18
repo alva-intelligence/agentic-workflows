@@ -111,7 +111,7 @@ Present ALL questions in a single message:
 
 | # | Service | Directory | Stack |
 |---|---------|-----------|-------|
-| 1 | API | `api/` | Laravel 12, PHP 8.2+, PostgreSQL, Sanctum + JWT |
+| 1 | API | `api/` | Laravel 12, PHP 8.5, PostgreSQL, Sanctum + JWT |
 | 2 | Frontend | `web/` | Next.js 16, React 19, TypeScript, Tailwind, Bun |
 | 3 | AI Service | `ai-service/` | FastAPI, Python, Agno, OpenAI/Anthropic/Google |
 | 4 | Data Service | `data-service/` | FastAPI, Python, ClickHouse, pandas |
