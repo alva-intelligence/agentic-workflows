@@ -152,6 +152,86 @@
       "install_to": ".agents/agents/frndos-track.md",
       "type": "agent"
     },
+    "agents/tools/cursor/frndos-orchestra.mdc": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/cursor/frndos-orchestra.mdc",
+      "type": "agent"
+    },
+    "agents/tools/cursor/frndos-prd.mdc": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/cursor/frndos-prd.mdc",
+      "type": "agent"
+    },
+    "agents/tools/cursor/frndos-wireframe.mdc": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/cursor/frndos-wireframe.mdc",
+      "type": "agent"
+    },
+    "agents/tools/cursor/frndos-splitter.mdc": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/cursor/frndos-splitter.mdc",
+      "type": "agent"
+    },
+    "agents/tools/cursor/frndos-implement.mdc": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/cursor/frndos-implement.mdc",
+      "type": "agent"
+    },
+    "agents/tools/cursor/frndos-pr.mdc": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/cursor/frndos-pr.mdc",
+      "type": "agent"
+    },
+    "agents/tools/cursor/frndos-track.mdc": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/cursor/frndos-track.mdc",
+      "type": "agent"
+    },
+    "agents/tools/opencode/frndos-orchestra.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/opencode/frndos-orchestra.md",
+      "type": "agent"
+    },
+    "agents/tools/opencode/frndos-prd.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/opencode/frndos-prd.md",
+      "type": "agent"
+    },
+    "agents/tools/opencode/frndos-wireframe.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/opencode/frndos-wireframe.md",
+      "type": "agent"
+    },
+    "agents/tools/opencode/frndos-splitter.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/opencode/frndos-splitter.md",
+      "type": "agent"
+    },
+    "agents/tools/opencode/frndos-implement.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/opencode/frndos-implement.md",
+      "type": "agent"
+    },
+    "agents/tools/opencode/frndos-pr.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/opencode/frndos-pr.md",
+      "type": "agent"
+    },
+    "agents/tools/opencode/frndos-track.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/agents/opencode/frndos-track.md",
+      "type": "agent"
+    },
+    "wireframe-scaffold/layout.tsx": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/wireframe-scaffold/layout.tsx",
+      "type": "scaffold"
+    },
+    "wireframe-scaffold/page.tsx": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/wireframe-scaffold/page.tsx",
+      "type": "scaffold"
+    },
     "flake.nix": {
       "sha256": "PLACEHOLDER",
       "install_to": "flake.nix",
