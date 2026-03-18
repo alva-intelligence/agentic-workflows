@@ -25,7 +25,11 @@ You receive from frndos-orchestra:
 
 1. **Gather input:**
    - Ask user for their feature description, Lark notes, or Lark URL
-   - If Lark MCP is available and URL provided, fetch content via MCP
+   - **If user provides a Lark URL:**
+     1. Check if Lark MCP is available (look for Lark tools in your MCP server list)
+     2. **If Lark MCP IS available:** Use the Lark MCP tool to fetch the document content directly
+     3. **If Lark MCP is NOT available:** Do NOT try to fetch via HTTP/web (it requires auth and will fail). Tell the user: "Lark MCP is not configured. Please paste the document content here, or run `/onboard` to set up Lark MCP integration."
+   - If user pastes text directly, use that as-is
 
 2. **Ask clarifying questions** (MANDATORY — do NOT skip):
    - Which services does this feature touch? (api, web, ai-service, data-service)

@@ -258,6 +258,64 @@ if [[ "$FRAGMENTS_CHANGED" == true ]]; then
   fi
 fi
 
+# ── Create symlinks for tool compatibility ───────────────────────────────────
+# .agents/ is the universal path. Symlink tool-specific dirs to it.
+header "Setting up tool compatibility symlinks"
+
+# Claude Code: .claude/agents/ → .agents/agents/, .claude/skills/ → .agents/skills/
+if [[ -d "$WORKSPACE_ROOT/.agents/agents" ]]; then
+  mkdir -p "$WORKSPACE_ROOT/.claude"
+  if [[ ! -e "$WORKSPACE_ROOT/.claude/agents" ]]; then
+    ln -s "../.agents/agents" "$WORKSPACE_ROOT/.claude/agents"
+    ok "Symlinked .claude/agents/ → .agents/agents/"
+  fi
+fi
+if [[ -d "$WORKSPACE_ROOT/.agents/skills" ]]; then
+  mkdir -p "$WORKSPACE_ROOT/.claude"
+  if [[ ! -e "$WORKSPACE_ROOT/.claude/skills" ]]; then
+    ln -s "../.agents/skills" "$WORKSPACE_ROOT/.claude/skills"
+    ok "Symlinked .claude/skills/ → .agents/skills/"
+  fi
+fi
+
+# Cursor: .cursor/agents/ → .agents/agents/, .cursor/skills/ → .agents/skills/
+if [[ -d "$WORKSPACE_ROOT/.agents/agents" ]]; then
+  mkdir -p "$WORKSPACE_ROOT/.cursor"
+  if [[ ! -e "$WORKSPACE_ROOT/.cursor/agents" ]]; then
+    ln -s "../.agents/agents" "$WORKSPACE_ROOT/.cursor/agents"
+    ok "Symlinked .cursor/agents/ → .agents/agents/"
+  fi
+fi
+if [[ -d "$WORKSPACE_ROOT/.agents/skills" ]]; then
+  mkdir -p "$WORKSPACE_ROOT/.cursor"
+  if [[ ! -e "$WORKSPACE_ROOT/.cursor/skills" ]]; then
+    ln -s "../.agents/skills" "$WORKSPACE_ROOT/.cursor/skills"
+    ok "Symlinked .cursor/skills/ → .agents/skills/"
+  fi
+fi
+
+# OpenCode: .opencode/agents/ → .agents/agents/, .opencode/skills/ → .agents/skills/
+if [[ -d "$WORKSPACE_ROOT/.agents/agents" ]]; then
+  mkdir -p "$WORKSPACE_ROOT/.opencode"
+  if [[ ! -e "$WORKSPACE_ROOT/.opencode/agents" ]]; then
+    ln -s "../.agents/agents" "$WORKSPACE_ROOT/.opencode/agents"
+    ok "Symlinked .opencode/agents/ → .agents/agents/"
+  fi
+fi
+if [[ -d "$WORKSPACE_ROOT/.agents/skills" ]]; then
+  mkdir -p "$WORKSPACE_ROOT/.opencode"
+  if [[ ! -e "$WORKSPACE_ROOT/.opencode/skills" ]]; then
+    ln -s "../.agents/skills" "$WORKSPACE_ROOT/.opencode/skills"
+    ok "Symlinked .opencode/skills/ → .agents/skills/"
+  fi
+fi
+
+# CLAUDE.md symlink to AGENTS.md (Claude Code reads CLAUDE.md)
+if [[ -f "$WORKSPACE_ROOT/AGENTS.md" ]] && [[ ! -e "$WORKSPACE_ROOT/CLAUDE.md" ]]; then
+  ln -s "AGENTS.md" "$WORKSPACE_ROOT/CLAUDE.md"
+  ok "Symlinked CLAUDE.md → AGENTS.md"
+fi
+
 # ── Update local version ────────────────────────────────────────────────────
 echo "$REMOTE_VERSION" > "$VERSION_FILE"
 
@@ -281,19 +339,43 @@ ok "Done."
 
 # ── Next steps (shown after bootstrap or first run) ─────────────────────────
 if [[ "$BOOTSTRAP" == true ]] || [[ -z "$LOCAL_VERSION" ]]; then
-  header "What's next"
-  echo ""
-  echo "  1. Read AGENTS.md — it contains all workflow instructions"
-  echo "  2. Start a feature workflow:"
-  echo ""
-  echo "     /workflow start <feature-slug>"
-  echo ""
-  echo "  3. Or check available commands:"
-  echo ""
-  echo "     /workflow status    — show current state"
-  echo "     /workflow list      — list all features"
-  echo "     /workflow resume    — pick up someone else's feature"
-  echo ""
+  # Check if this is a fresh workspace (no service dirs)
+  has_services=false
+  for dir in api web ai-service data-service; do
+    if [[ -d "$WORKSPACE_ROOT/$dir" ]]; then
+      has_services=true
+      break
+    fi
+  done
+
+  if [[ "$has_services" == false ]]; then
+    header "What's next"
+    echo ""
+    echo "  This is a fresh workspace. Run the onboarding skill to set up"
+    echo "  your development environment:"
+    echo ""
+    echo "     /onboard"
+    echo ""
+    echo "  This will guide you through:"
+    echo "    - Cloning service repositories"
+    echo "    - Installing dependencies"
+    echo "    - Setting up .env files and database"
+    echo "    - Configuring your editor and MCPs"
+    echo ""
+  else
+    header "What's next"
+    echo ""
+    echo "  1. Start a feature workflow:"
+    echo ""
+    echo "     /workflow start <feature-slug>"
+    echo ""
+    echo "  2. Or check available commands:"
+    echo ""
+    echo "     /workflow status    — show current state"
+    echo "     /workflow list      — list all features"
+    echo "     /workflow resume    — pick up someone else's feature"
+    echo ""
+  fi
   printf "  ${BOLD}IMPORTANT:${RESET} Read AGENTS.md now to load the full session protocol.\n"
   echo ""
 fi

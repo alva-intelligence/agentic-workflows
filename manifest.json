@@ -82,59 +82,64 @@
       "install_to": ".agentic-workflows/templates/tracks/feature.track.template.md",
       "type": "template"
     },
-    "skills/workflow-manager/SKILL.md": {
+    "skills/onboard/SKILL.md": {
       "sha256": "PLACEHOLDER",
-      "install_to": ".claude/skills/workflow-manager/SKILL.md",
+      "install_to": ".agents/skills/onboard/SKILL.md",
       "type": "skill"
     },
-    "skills/prd-creator/SKILL.md": {
+    "skills/workflow/SKILL.md": {
       "sha256": "PLACEHOLDER",
-      "install_to": ".claude/skills/prd-creator/SKILL.md",
+      "install_to": ".agents/skills/workflow/SKILL.md",
       "type": "skill"
     },
-    "skills/prd-splitter/SKILL.md": {
+    "skills/prd/SKILL.md": {
       "sha256": "PLACEHOLDER",
-      "install_to": ".claude/skills/prd-splitter/SKILL.md",
+      "install_to": ".agents/skills/prd/SKILL.md",
       "type": "skill"
     },
-    "skills/wireframe-builder/SKILL.md": {
+    "skills/prd-split/SKILL.md": {
       "sha256": "PLACEHOLDER",
-      "install_to": ".claude/skills/wireframe-builder/SKILL.md",
+      "install_to": ".agents/skills/prd-split/SKILL.md",
+      "type": "skill"
+    },
+    "skills/wireframe/SKILL.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agents/skills/wireframe/SKILL.md",
       "type": "skill"
     },
     "agents/tools/claude-code/frndos-orchestra.md": {
       "sha256": "PLACEHOLDER",
-      "install_to": ".claude/agents/frndos-orchestra.md",
+      "install_to": ".agents/agents/frndos-orchestra.md",
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-prd.md": {
       "sha256": "PLACEHOLDER",
-      "install_to": ".claude/agents/frndos-prd.md",
+      "install_to": ".agents/agents/frndos-prd.md",
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-wireframe.md": {
       "sha256": "PLACEHOLDER",
-      "install_to": ".claude/agents/frndos-wireframe.md",
+      "install_to": ".agents/agents/frndos-wireframe.md",
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-splitter.md": {
       "sha256": "PLACEHOLDER",
-      "install_to": ".claude/agents/frndos-splitter.md",
+      "install_to": ".agents/agents/frndos-splitter.md",
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-implement.md": {
       "sha256": "PLACEHOLDER",
-      "install_to": ".claude/agents/frndos-implement.md",
+      "install_to": ".agents/agents/frndos-implement.md",
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-pr.md": {
       "sha256": "PLACEHOLDER",
-      "install_to": ".claude/agents/frndos-pr.md",
+      "install_to": ".agents/agents/frndos-pr.md",
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-track.md": {
       "sha256": "PLACEHOLDER",
-      "install_to": ".claude/agents/frndos-track.md",
+      "install_to": ".agents/agents/frndos-track.md",
       "type": "agent"
     },
     "flake.nix": {
