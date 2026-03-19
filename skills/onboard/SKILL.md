@@ -302,33 +302,39 @@ Only clone services the user selected. Skip if directory already exists.
 
 ## Step 5: Install Dependencies
 
-**CRITICAL: Nix shell rules for dependency installation:**
+**The agent MUST run these commands directly — do NOT ask the user to run them manually.**
 
-1. **All commands MUST run inside `nix develop`.** If you're in a Claude Code/agent session where `nix develop` wraps your shell, all tools (php, bun, python3, composer, uv) are already available.
-2. **NEVER run multiple `nix develop` sessions in parallel.** Nix uses an eval lock — concurrent sessions will deadlock and timeout. Run ONE session, install deps SEQUENTIALLY.
-3. **The first `nix develop` may take 5-15 minutes** as Nix downloads all packages. This is normal. Use a long timeout (600s) and DO NOT panic or retry.
-4. **If `nix develop` times out**, check if it's still building: `ps aux | grep nix`. If yes, wait. If no, retry once.
+**Nix shell rules:**
+1. **NEVER run multiple `nix develop` sessions in parallel.** Nix uses an eval lock — concurrent sessions will deadlock.
+2. **The first `nix develop` may take 5-15 minutes** downloading packages. Use a long timeout (600s). This is normal — DO NOT panic or retry.
+3. **Run deps SEQUENTIALLY**, one service at a time.
 
-Install deps **sequentially in a single shell**, one service at a time:
+**How to run commands inside nix shell:**
+
+Use `nix develop --command bash -c "..."` to execute inside the nix environment. Run each service separately and sequentially:
 
 ```bash
-# API (inside nix develop)
-cd api && composer install --no-interaction && cp -n .env.example .env && php artisan key:generate --no-interaction 2>/dev/null; cd ..
+NIX_CMD=$(command -v nix 2>/dev/null || echo "/nix/var/nix/profiles/default/bin/nix")
+
+# API
+$NIX_CMD develop --command bash -c "cd api && composer install --no-interaction && cp -n .env.example .env && php artisan key:generate --no-interaction 2>/dev/null && echo '✓ API deps installed'"
 
 # Frontend
-cd web && bun install && cp -n .env.example .env.local; cd ..
+$NIX_CMD develop --command bash -c "cd web && bun install && cp -n .env.example .env.local && echo '✓ Frontend deps installed'"
 
 # AI Service
-cd ai-service && uv venv && uv pip install -r requirements.txt && cp -n .env.example .env; cd ..
+$NIX_CMD develop --command bash -c "cd ai-service && uv venv && uv pip install -r requirements.txt && cp -n .env.example .env && echo '✓ AI Service deps installed'"
 
 # Data Service
-cd data-service && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && cp -n .env.example .env; cd ..
+$NIX_CMD develop --command bash -c "cd data-service && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && cp -n .env.example .env && echo '✓ Data Service deps installed'"
 ```
 
-**Notes:**
-- `cp -n` = don't overwrite if .env already exists (user may have placed real creds)
-- `--no-interaction` prevents artisan from prompting
-- Run each service one at a time, wait for completion before starting the next
+**IMPORTANT:**
+- The agent runs these commands itself. Do NOT show commands and ask user to run them.
+- After the first `nix develop` call, the nix store is cached — subsequent calls are fast.
+- `cp -n` = don't overwrite if .env already exists (user may have placed real creds).
+- Run each service one at a time. Wait for completion before starting the next.
+- If a command fails, show the error and ask user if they want to retry or skip.
 
 Update `.onboard-state.json`: set `steps.install_deps` to `"completed"`.
 
