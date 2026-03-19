@@ -1,5 +1,5 @@
 {
-  "version": "2.0.13",
+  "version": "2.0.14",
   "updated": "2026-03-19",
   "files": {
     "agents/fragments/session-protocol.md": {
@@ -93,7 +93,7 @@
       "type": "reference"
     },
     "skills/onboard/references/mcp-configs.md": {
-      "sha256": "13f9dcf3bff834b2ebd94a1749d92b12dc869b0e067c9ecbe4c3e3eca057ea7e",
+      "sha256": "e822a84d3a1be14451097f6455407a0d5de2c63dfc34890c89d7e6c2def72525",
       "install_to": ".agents/skills/onboard/references/mcp-configs.md",
       "type": "reference"
     },
