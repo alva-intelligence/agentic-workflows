@@ -368,19 +368,39 @@ After checking all services:
 
 ## Step 7: Database Setup — **STOP, ask user**
 
-Ask: "Do you have a PostgreSQL database dump (.dump file) for local development?"
+Use the ask tool:
 
-- **"Yes, I have the dump file":**
-  1. Ask for the file path (e.g., `~/Downloads/frnd-dev.dump`)
-  2. Create the database: `createdb frnd` (or whatever DB name is in `api/.env`)
-  3. Restore: `pg_restore -d frnd path/to/dump.dump` or `psql frnd < path/to/dump.dump`
-  4. Run migrations: `cd api && php artisan migrate`
-  5. Mark `steps.db_setup` as `"completed"`
+> "Do you have a PostgreSQL database dump (.dump file) for local development?"
+> - Yes, I have the dump file ready
+> - No, but I can get it now from arhen
+> - No, I'll get it later
 
-- **"No, I don't have it":**
-  1. Tell user: "Contact **arhen** for a sanitized dev database dump. The API needs it to function."
-  2. Mark `steps.db_setup` as `"skipped"` with reason
-  3. **Continue onboarding** — don't block here
+**If "Yes, I have the dump file":**
+
+1. Ask user: "Please provide the file path to the dump (e.g., `~/Downloads/frnd-dev.dump`)"
+2. **STOP AND WAIT** for user to provide the path
+3. Use the ask tool: "Is the dump file ready at the path you provided?"
+4. Only after confirmation, proceed with restore:
+   ```bash
+   createdb frnd 2>/dev/null || true
+   pg_restore -d frnd <path> || psql frnd < <path>
+   cd api && php artisan migrate --no-interaction; cd ..
+   ```
+5. Verify: `psql -h localhost -p 5432 -d frnd -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'"` — should return > 0
+6. Mark `steps.db_setup` as `"completed"`
+
+**If "No, but I can get it now":**
+
+1. Tell user: "Contact **arhen** for the sanitized dev dump. I'll wait."
+2. **STOP AND WAIT** for user to come back with the file
+3. Use the ask tool periodically: "Do you have the dump file now?"
+4. Once provided, proceed with restore as above
+
+**If "No, I'll get it later":**
+
+1. Mark `steps.db_setup` as `"skipped"` with reason
+2. Tell user: "The API won't function without the database. `/workflow start` will block until this is done."
+3. Continue onboarding with remaining steps
 
 **The DB dump is REQUIRED for API.** `/workflow start` will block if `db_setup` is not `"completed"` and the user selected the API service.
 
@@ -449,25 +469,77 @@ Each tool reads MCP config from a different path:
 | OpenCode | `opencode.json` (repo root) |
 | Cursor | `.cursor/mcp.json` |
 
-### Required MCPs (always configure)
+### Required MCPs — configure ONE AT A TIME
 
-| MCP Server | Purpose | For Service |
-|-----------|---------|-------------|
-| **Context7** | Up-to-date library/framework documentation lookup | All |
-| **GitHub** | PR management, issue tracking, repository operations | All |
-| **Laravel Boost** | Laravel docs, tinker, artisan, DB queries | API only |
+See [references/mcp-configs.md](references/mcp-configs.md) for per-tool config templates.
 
-### Optional MCPs (based on Step 1 answers)
+**1. Context7** (no credentials needed — just configure and move on)
+- Add to MCP config for the user's tool(s)
 
-| MCP Server | Purpose |
-|-----------|---------|
-| **Lark** | Read PRDs directly from Lark doc URLs |
-| **Figma** | Design-to-code translation |
-| **Sentry** | Error tracking and monitoring |
+**2. GitHub MCP** — requires a Personal Access Token. Use the ask tool:
 
-See [references/mcp-configs.md](references/mcp-configs.md) for per-tool configuration templates.
+> "GitHub MCP needs a Personal Access Token. Do you have one?"
+> - Yes, I have a PAT ready
+> - No, I need to create one
 
-Configure MCPs in the correct file for the user's selected tool(s). For service-specific MCPs (Laravel Boost), configure inside the service directory, not the workspace root.
+If **"Yes"**:
+1. Tell user: "Please provide your GitHub PAT (paste it or tell me when you've added it to the config)"
+2. **STOP AND WAIT** for user to provide the token
+3. Use the ask tool: "Have you provided the GitHub PAT?"
+4. Only after confirmation, write the MCP config with the token
+5. Verify: `gh auth status` should show authenticated
+
+If **"No"**:
+1. Tell user: "Generate one at https://github.com/settings/tokens — select 'repo' scope"
+2. **STOP AND WAIT** for user to create and provide the token
+3. Continue as above once provided
+
+**3. Laravel Boost** (API only, no credentials needed — just configure)
+- Only configure if user selected API service
+
+### Optional MCPs — ask ONE AT A TIME (based on Step 1 answers)
+
+Only configure MCPs the user selected in Step 1.5. For each one that needs credentials, **STOP and WAIT** for the token.
+
+**Lark MCP** (if selected):
+
+Use the ask tool:
+> "Lark MCP needs App ID and App Secret. Do you have them?"
+> - Yes, I have them ready
+> - No, I need to get them from arhen
+
+If **"Yes"**:
+1. Ask user: "Please provide the Lark App ID and App Secret"
+2. **STOP AND WAIT** for user to provide both values
+3. Use the ask tool: "Have you provided the Lark credentials?"
+4. Only after confirmation, write the MCP config
+
+If **"No"**:
+1. Tell user: "Contact **arhen** for the Lark App ID and Secret"
+2. Mark as pending — skip for now, can configure later
+
+**Figma MCP** (if selected):
+
+Use the ask tool:
+> "Figma MCP needs a Personal Access Token. Do you have one?"
+> - Yes, I have a token
+> - No, I need to create one
+
+If **"Yes"**:
+1. Ask user: "Please provide your Figma access token"
+2. **STOP AND WAIT** for user to provide the token
+3. Use the ask tool: "Have you provided the Figma token?"
+4. Only after confirmation, write the MCP config
+
+If **"No"**:
+1. Tell user: "Generate one at https://www.figma.com/developers/api#access-tokens"
+2. **STOP AND WAIT** for user to create and provide the token
+3. Continue as above once provided
+
+**Sentry MCP** (if selected):
+- Same pattern: ask for token → wait → configure
+
+**IMPORTANT: Never write placeholder tokens like `<your-token>` into config files.** Either write the real token the user provided, or skip the MCP entirely. Placeholder tokens cause startup errors.
 
 ## Step 12: Verify & Complete — **STOP, ask user**
 
