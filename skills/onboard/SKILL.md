@@ -667,11 +667,21 @@ If ALL critical steps are completed:
 ```
 Onboarding complete! All services verified and working.
 
-You're ready to start building. In your next session:
+⚠ RESTART YOUR AGENT SESSION NOW
+
+MCPs (Lark, Figma, GitHub, Context7) and skills (/workflow, /prd, etc.)
+are loaded at session start. Since they were configured during this session,
+you MUST restart for them to become active.
+
+After restarting:
   /workflow start <feature-slug>    — begin a new feature
   /workflow status                  — check current state
 
-Please restart your agent session now so all skills and agents are properly loaded.
+Configured MCPs (available after restart):
+  - Context7 — library documentation
+  - GitHub — PR/issue management
+  - Lark — PRD from Lark docs (if configured)
+  - Figma — design specs (if configured)
 ```
 Set `status` to `"completed"`.
 
