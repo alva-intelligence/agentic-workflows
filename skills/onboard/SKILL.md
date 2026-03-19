@@ -232,18 +232,23 @@ $NIX_CMD --version
 
 If still not found, do NOT continue. Ask the user to check their shell path.
 
-### 2.3 Enter the Nix dev shell
+### 2.3 Enter the Nix dev shell — agent does this directly
 
-The `flake.nix` at the workspace root provides all dependencies. Enter the shell:
+The agent MUST enter `nix develop` as its active shell. This is NOT optional and NOT deferred to the user.
 
+**Run this command directly:**
 ```bash
 NIX_CMD=$(command -v nix 2>/dev/null || echo "/nix/var/nix/profiles/default/bin/nix")
 $NIX_CMD develop
 ```
 
-This gives you: PHP 8.5, Composer, Bun, Node 22, Python 3.12, uv, PostgreSQL 18 (with pgvector), Redis, gh, git, curl, jq.
+**The first time may take 5-15 minutes** as Nix downloads all packages. This is normal. Use a long timeout (600s). DO NOT panic, cancel, or retry while it's building.
 
-### 2.4 Verify tools are available inside the shell
+After `nix develop` completes, the agent's shell now has all tools available. **All subsequent commands run directly — no more `nix develop --command` wrappers needed.**
+
+### 2.4 Verify tools are available
+
+Run this directly in the shell (should work now that you're inside nix develop):
 
 ```bash
 php --version && composer --version && bun --version && node --version && python3 --version && uv --version && psql --version
@@ -251,19 +256,13 @@ php --version && composer --version && bun --version && node --version && python
 
 **If any tool is missing, something is wrong with the flake — do NOT install tools manually.** Fix the `flake.nix` instead.
 
-### 2.5 IMPORTANT: All subsequent steps MUST run inside `nix develop`
+### 2.5 All subsequent commands run in this shell
 
-Every command from this point forward (deps install, migrations, run-all.sh, etc.) must be run inside the Nix shell. If the user opens a new terminal, they must run `nix develop` again.
+The agent is now inside `nix develop`. All commands from this point (deps, migrations, run-all.sh, etc.) run directly — no wrappers, no `nix develop --command`.
 
 > **Do NOT use brew, apt, pip install --global, npm install -g, or any other system package manager.** Everything comes from Nix.
 
-### 2.6 Remind user to restart later
-
-If Nix was freshly installed in this session (using full path), tell the user:
-
-> "Nix is working via the full path for now. **After onboarding is complete, please restart all terminals and start a new agent session** so that `nix` is properly in your PATH for future sessions."
-
-This does NOT block onboarding — continue with the remaining steps. Just remind them at the end.
+If Nix was freshly installed this session, remind user at the end: "After onboarding, restart your terminal so `nix` is in your PATH for future sessions."
 
 ## Step 3: Verify Model Access
 
@@ -302,39 +301,43 @@ Only clone services the user selected. Skip if directory already exists.
 
 ## Step 5: Install Dependencies
 
-**The agent MUST run these commands directly — do NOT ask the user to run them manually.**
+**The agent MUST run these commands directly** — you are already inside `nix develop` from Step 2.3, so all tools (php, composer, bun, python3, uv) are available. No `nix develop --command` wrappers needed.
 
-**Nix shell rules:**
-1. **NEVER run multiple `nix develop` sessions in parallel.** Nix uses an eval lock — concurrent sessions will deadlock.
-2. **The first `nix develop` may take 5-15 minutes** downloading packages. Use a long timeout (600s). This is normal — DO NOT panic or retry.
-3. **Run deps SEQUENTIALLY**, one service at a time.
+**Run sequentially, one service at a time. Do NOT ask user to run these manually.**
 
-**How to run commands inside nix shell:**
+### 5.1 Set up Python virtual environments FIRST (AI Service + Data Service)
 
-Use `nix develop --command bash -c "..."` to execute inside the nix environment. Run each service separately and sequentially:
+These must exist before installing Python deps:
 
 ```bash
-NIX_CMD=$(command -v nix 2>/dev/null || echo "/nix/var/nix/profiles/default/bin/nix")
+# AI Service — uses uv for venv
+cd ai-service && uv venv && cd ..
 
+# Data Service — uses standard venv
+cd data-service && python3 -m venv venv && cd ..
+```
+
+### 5.2 Install deps per service
+
+```bash
 # API
-$NIX_CMD develop --command bash -c "cd api && composer install --no-interaction && cp -n .env.example .env && php artisan key:generate --no-interaction 2>/dev/null && echo '✓ API deps installed'"
+cd api && composer install --no-interaction && cp -n .env.example .env && php artisan key:generate --no-interaction 2>/dev/null; cd ..
 
 # Frontend
-$NIX_CMD develop --command bash -c "cd web && bun install && cp -n .env.example .env.local && echo '✓ Frontend deps installed'"
+cd web && bun install && cp -n .env.example .env.local; cd ..
 
-# AI Service
-$NIX_CMD develop --command bash -c "cd ai-service && uv venv && uv pip install -r requirements.txt && cp -n .env.example .env && echo '✓ AI Service deps installed'"
+# AI Service (venv already created in 5.1)
+cd ai-service && source .venv/bin/activate && uv pip install -r requirements.txt && cp -n .env.example .env && deactivate; cd ..
 
-# Data Service
-$NIX_CMD develop --command bash -c "cd data-service && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && cp -n .env.example .env && echo '✓ Data Service deps installed'"
+# Data Service (venv already created in 5.1)
+cd data-service && source venv/bin/activate && pip install -r requirements.txt && cp -n .env.example .env && deactivate; cd ..
 ```
 
 **IMPORTANT:**
-- The agent runs these commands itself. Do NOT show commands and ask user to run them.
-- After the first `nix develop` call, the nix store is cached — subsequent calls are fast.
-- `cp -n` = don't overwrite if .env already exists (user may have placed real creds).
 - Run each service one at a time. Wait for completion before starting the next.
+- `cp -n` = don't overwrite if .env already exists (user may have placed real creds).
 - If a command fails, show the error and ask user if they want to retry or skip.
+- The agent runs these directly. Never show commands and ask user to run them.
 
 Update `.onboard-state.json`: set `steps.install_deps` to `"completed"`.
 
