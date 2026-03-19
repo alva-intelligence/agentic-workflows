@@ -313,8 +313,8 @@ These must exist before installing Python deps:
 # AI Service — uses uv for venv
 cd ai-service && uv venv && cd ..
 
-# Data Service — uses standard venv
-cd data-service && python3 -m venv venv && cd ..
+# Data Service — uses standard venv as .venv
+cd data-service && python3 -m venv .venv && cd ..
 ```
 
 ### 5.2 Install deps per service
@@ -330,7 +330,7 @@ cd web && bun install && cp -n .env.example .env.local; cd ..
 cd ai-service && source .venv/bin/activate && uv pip install -r requirements.txt && cp -n .env.example .env && deactivate; cd ..
 
 # Data Service (venv already created in 5.1)
-cd data-service && source venv/bin/activate && pip install -r requirements.txt && cp -n .env.example .env && deactivate; cd ..
+cd data-service && source .venv/bin/activate && pip install -r requirements.txt && cp -n .env.example .env && deactivate; cd ..
 ```
 
 **IMPORTANT:**

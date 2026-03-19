@@ -208,7 +208,7 @@ start_all() {
 
   # Data Service (entry point is app.main:app, NOT main:app)
   if [[ -d "$SCRIPT_DIR/data-service" ]] && [[ -f "$SCRIPT_DIR/data-service/.env" ]]; then
-    (cd "$SCRIPT_DIR/data-service" && source venv/bin/activate 2>/dev/null; \
+    (cd "$SCRIPT_DIR/data-service" && source .venv/bin/activate 2>/dev/null; \
       uvicorn app.main:app --reload --port 9999 > "$LOG_DIR/data-service.log" 2>&1) &
     save_pid "data-service" $!
     log_ok "Data Service started on :9999"
