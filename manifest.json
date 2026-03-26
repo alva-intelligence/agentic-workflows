@@ -1,5 +1,5 @@
 {
-  "version": "2.0.35",
+  "version": "2.0.36",
   "updated": "2026-03-26",
   "files": {
     "agents/fragments/session-protocol.md": {
@@ -8,7 +8,7 @@
       "type": "fragment"
     },
     "agents/fragments/workflow-rules.md": {
-      "sha256": "fc34459507dd82da6337a739dd7f17fc0b4bcdf3cdecb20823a8f2beea5a9b90",
+      "sha256": "069c936d014deb14a29dc40087f24af9621eeb07f2474002f26efdf5bcf356eb",
       "install_to": ".agentic-workflows/fragments/workflow-rules.md",
       "type": "fragment"
     },
@@ -18,7 +18,7 @@
       "type": "fragment"
     },
     "agents/fragments/track-conventions.md": {
-      "sha256": "5d628c08682948f653b40c131a858dbcdeff2b8b160255cfc6074b43459b2150",
+      "sha256": "3489bf5b91a427039c9d3c878f06e5a758ebdaf9b821672c80cc54dbc828960f",
       "install_to": ".agentic-workflows/fragments/track-conventions.md",
       "type": "fragment"
     },
@@ -28,7 +28,7 @@
       "type": "fragment"
     },
     "agents/fragments/git-conventions.md": {
-      "sha256": "b2cdd047d9f135daaeccd78e0e8c39d2437492f4c14bfe1ab7ac6eea46e7a115",
+      "sha256": "ed3ebb2bcbd86dd6b90b709972325d2d5c4b21671c87f0ad148bf6a34de6f90e",
       "install_to": ".agentic-workflows/fragments/git-conventions.md",
       "type": "fragment"
     },
@@ -53,17 +53,17 @@
       "type": "script"
     },
     "workflow/phases.json": {
-      "sha256": "7b16f783f913bbf45aeb092e6e8d83139fed6135166687672719155b768f05e0",
+      "sha256": "b0a2795e1bf9f4f9336c790b4f4d08a798fc4dee93581f4cffb3ade55c9e17d9",
       "install_to": ".agentic-workflows/workflow/phases.json",
       "type": "workflow"
     },
     "workflow/gates.json": {
-      "sha256": "0d567a7fc3b84bc8d530c6f2066ff0b2b3fe10dc768e1571ed82b3c064f3a87f",
+      "sha256": "d053cc2ea6d99fc716541060e654802d230a7999e4b23889c78aca692e3e7042",
       "install_to": ".agentic-workflows/workflow/gates.json",
       "type": "workflow"
     },
     "workflow/state-schema.json": {
-      "sha256": "7baddfcd409540c7c7aaebd4db0c9ba2a2d0b129e48d7a6cd06b4f4e759cfd0d",
+      "sha256": "8f00d3004a557a46c8f2f836cbb4b44375bacf79798504a772d7138ab21ca9b6",
       "install_to": ".agentic-workflows/workflow/state-schema.json",
       "type": "workflow"
     },
@@ -78,7 +78,7 @@
       "type": "template"
     },
     "templates/tracks/feature.track.template.md": {
-      "sha256": "08c2e4594425b5ebc6534acc361edad9b01719bb61c546da156515b1f6940bda",
+      "sha256": "5faa5f3224d4de5d5d73b1455b918bd64993541a96d0cb8674b270559d34394d",
       "install_to": ".agentic-workflows/templates/tracks/feature.track.template.md",
       "type": "template"
     },
@@ -118,7 +118,7 @@
       "type": "reference"
     },
     "skills/workflow/SKILL.md": {
-      "sha256": "08c4d4a9978490c93ce3620f26a22fb23bcd9374b90a5b7034e1db93830db684",
+      "sha256": "dce4b07f87632469b8d61ad931bb4bc3efc14a91736e4c80b9d28298e58d3c66",
       "install_to": ".agents/skills/workflow/SKILL.md",
       "type": "skill"
     },
@@ -138,7 +138,7 @@
       "type": "skill"
     },
     "agents/tools/claude-code/frndos-orchestra.md": {
-      "sha256": "cd21646812916af913b135ea6da23e2a64e75dd3151a301a8436917df583d6bb",
+      "sha256": "0f19628f787b2877398835e625fe46f3c963734fd29df3803ed8783a3e34fc5b",
       "install_to": ".agents/agents/frndos-orchestra.md",
       "type": "agent"
     },
@@ -163,7 +163,7 @@
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-pr.md": {
-      "sha256": "35679e2552dce4c53a9c4043128daad7fb8ce16598b571b5bf58d59047b570e4",
+      "sha256": "36d8e258378b7a4b2aa17f9c3f488f63314c01d298222129ac2b6e924b83f96a",
       "install_to": ".agents/agents/frndos-pr.md",
       "type": "agent"
     },
@@ -173,7 +173,7 @@
       "type": "agent"
     },
     "agents/tools/cursor/frndos-orchestra.mdc": {
-      "sha256": "7ca6f49d9516c42a82dba9ea11106e0d8b7f091e3264ada94ab2aa7be9396b62",
+      "sha256": "70589a97a821d4a66bcef1e809be1e49ef58ffa7236e1de08a9cf148e3fcae32",
       "install_to": ".agentic-workflows/agents/cursor/frndos-orchestra.mdc",
       "type": "agent"
     },
@@ -188,12 +188,12 @@
       "type": "agent"
     },
     "agents/tools/cursor/frndos-splitter.mdc": {
-      "sha256": "e6676ced53574db4076e0358014a4d501ec81c32d20ca93f8152eeda7c5d5c2b",
+      "sha256": "df6f7557c468482a9990307c3ceba1afa9ba23c9536894dae3b0229ec6548a14",
       "install_to": ".agentic-workflows/agents/cursor/frndos-splitter.mdc",
       "type": "agent"
     },
     "agents/tools/cursor/frndos-implement.mdc": {
-      "sha256": "cd733146280dfba3477683a50f265540bfa1841144b05a9ba35ed2f5e7ad1ad2",
+      "sha256": "66e235a057319a98e2d53110f9960d3af2084a5c45d270ca2e9c85c3aee6861d",
       "install_to": ".agentic-workflows/agents/cursor/frndos-implement.mdc",
       "type": "agent"
     },
@@ -203,12 +203,12 @@
       "type": "agent"
     },
     "agents/tools/cursor/frndos-track.mdc": {
-      "sha256": "5528fe6c3dddc2664864d9a1ec26cde4624dc8da53f3f782e0241949f202de85",
+      "sha256": "728f1fc1c940b9ae38745fb4b3b988a8c330a82cd51a35dc3790fe4f83b65771",
       "install_to": ".agentic-workflows/agents/cursor/frndos-track.mdc",
       "type": "agent"
     },
     "agents/tools/opencode/frndos-orchestra.md": {
-      "sha256": "c7d6f2d72fb4f73120a73410e8880db789908425da6630730ab7421966602318",
+      "sha256": "5b04c5efe245b617f5c66f4fce6ef0ab0044ea72d890af5884c335b34be03366",
       "install_to": ".agentic-workflows/agents/opencode/frndos-orchestra.md",
       "type": "agent"
     },
@@ -223,22 +223,22 @@
       "type": "agent"
     },
     "agents/tools/opencode/frndos-splitter.md": {
-      "sha256": "a6c284039d5c9e49cbd2435e769fc19c821ce4ea63c8df96e13a4cdba0e3c6dd",
+      "sha256": "c99fd7e207a2f3ec1efc7585cd50828c3d0484e7d5d6886edc7f8f3971cfc42a",
       "install_to": ".agentic-workflows/agents/opencode/frndos-splitter.md",
       "type": "agent"
     },
     "agents/tools/opencode/frndos-implement.md": {
-      "sha256": "b280a04af7fc16f8eb2d06c2c88f83d96b7b72320d0e118ca0d0656d10cf89a5",
+      "sha256": "d28a0eac9de59c4b4e6d88d9e8eb3623fc6e96799466c00438c1b62ff721114c",
       "install_to": ".agentic-workflows/agents/opencode/frndos-implement.md",
       "type": "agent"
     },
     "agents/tools/opencode/frndos-pr.md": {
-      "sha256": "d49a270c3518ba32687090c23d88d8062f23129c23ab5a487ebe0813e0a0b393",
+      "sha256": "17f18043fa6e44352b1fbd152a23299fdba74a117ec3c572420a2190ec1d1316",
       "install_to": ".agentic-workflows/agents/opencode/frndos-pr.md",
       "type": "agent"
     },
     "agents/tools/opencode/frndos-track.md": {
-      "sha256": "f3ed6bcdf0d1fa6def6a69d0f22f046b730b0fe2ebdfc05a34d4e3ed716e6aa6",
+      "sha256": "52390aaa0796b30115d40ddc9dd372205368e858a2ffd9c0ea77cb9f97c8d1de",
       "install_to": ".agentic-workflows/agents/opencode/frndos-track.md",
       "type": "agent"
     },
