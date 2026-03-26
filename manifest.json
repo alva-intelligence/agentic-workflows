@@ -1,5 +1,5 @@
 {
-  "version": "2.0.32",
+  "version": "2.0.33",
   "updated": "2026-03-26",
   "files": {
     "agents/fragments/session-protocol.md": {
@@ -23,7 +23,7 @@
       "type": "fragment"
     },
     "agents/fragments/wireframe-conventions.md": {
-      "sha256": "93efd5a22dc2c576bd5392cb69e14afb5a5394b28532947b6e8539c4afd371ec",
+      "sha256": "2c357c330d0408ce83ea0ecd23f131e627d88a1bf433c1325827d15cc945614f",
       "install_to": ".agentic-workflows/fragments/wireframe-conventions.md",
       "type": "fragment"
     },
@@ -58,7 +58,7 @@
       "type": "workflow"
     },
     "workflow/gates.json": {
-      "sha256": "8999532e923e03ae8fa0b806c85f57683112f3ccd3d56d5f9beb296b259e7f14",
+      "sha256": "0d567a7fc3b84bc8d530c6f2066ff0b2b3fe10dc768e1571ed82b3c064f3a87f",
       "install_to": ".agentic-workflows/workflow/gates.json",
       "type": "workflow"
     },
@@ -83,12 +83,12 @@
       "type": "template"
     },
     "templates/pr/wireframe-pr.template.md": {
-      "sha256": "e33cd0d57f2d21d239cafd2e74c515f01a269e493d804a056b857a2648ee9eba",
+      "sha256": "c5019c70062bf3256281d0d220bc32e66514bb3e6e380fb5bea7e6cea0624f19",
       "install_to": ".agentic-workflows/templates/pr/wireframe-pr.template.md",
       "type": "template"
     },
     "templates/pr/feature-pr.template.md": {
-      "sha256": "161b668d7c6cc60febd155929e7b03aa46994e6f67d9941ceba08775e4584338",
+      "sha256": "591e3e652f354c60d7f252d42d7132f795f4e0fb15c8f0b18dd4588ee4a36a75",
       "install_to": ".agentic-workflows/templates/pr/feature-pr.template.md",
       "type": "template"
     },
@@ -118,7 +118,7 @@
       "type": "reference"
     },
     "skills/workflow/SKILL.md": {
-      "sha256": "0040f2204a1ca87ea68b90d5947f06dcf8b38ccf070b694a03878b25b47666aa",
+      "sha256": "08c4d4a9978490c93ce3620f26a22fb23bcd9374b90a5b7034e1db93830db684",
       "install_to": ".agents/skills/workflow/SKILL.md",
       "type": "skill"
     },
@@ -133,12 +133,12 @@
       "type": "skill"
     },
     "skills/wireframe/SKILL.md": {
-      "sha256": "df2ed6736020b1b84a26c063a8d892b27341e0dadb9bc0a27bf867c0fc89bd0d",
+      "sha256": "37f2d97f5f1e99c7500ca1d1c93615461ec0b087b1cb41b9b78fe12d39ee5d99",
       "install_to": ".agents/skills/wireframe/SKILL.md",
       "type": "skill"
     },
     "agents/tools/claude-code/frndos-orchestra.md": {
-      "sha256": "546b1ff4adc7fa609ac0854e5d6e18de360fc6c6aa91dba165b967f11042995a",
+      "sha256": "cd21646812916af913b135ea6da23e2a64e75dd3151a301a8436917df583d6bb",
       "install_to": ".agents/agents/frndos-orchestra.md",
       "type": "agent"
     },
@@ -148,7 +148,7 @@
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-wireframe.md": {
-      "sha256": "60f67b17a854ca5b0e4939eec67380e966df8a3b8d0ff10b7919042b3f45d1f5",
+      "sha256": "fa052cdeb63d2f67904bba019f0f66c8f5356f4610d7fa1de2681f32e37fe048",
       "install_to": ".agents/agents/frndos-wireframe.md",
       "type": "agent"
     },
@@ -163,7 +163,7 @@
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-pr.md": {
-      "sha256": "5369e282806ac6508887a638ddc43ac0f92b8ef384a37fd616f43ae0927b488d",
+      "sha256": "737c90d529e925b5218f79fde3daf5a67c35a253476bbb6789bf62ee0b26b6e2",
       "install_to": ".agents/agents/frndos-pr.md",
       "type": "agent"
     },
@@ -183,7 +183,7 @@
       "type": "agent"
     },
     "agents/tools/cursor/frndos-wireframe.mdc": {
-      "sha256": "367404122a95849b8fbb6436c90b285800251c69fe1557377bb953b5a8c276db",
+      "sha256": "f3e623ce699ca78bdf1bb0800101d7304351ac39585cb91fcddcf2909dfdc339",
       "install_to": ".agentic-workflows/agents/cursor/frndos-wireframe.mdc",
       "type": "agent"
     },
@@ -218,7 +218,7 @@
       "type": "agent"
     },
     "agents/tools/opencode/frndos-wireframe.md": {
-      "sha256": "6fd8639b7e165620ba493178104772564da0885b37d4239e02ede08827065779",
+      "sha256": "706374fc51a7953d2ed0617b3ab37587032b549e8f9d82e2759daf28b80e5538",
       "install_to": ".agentic-workflows/agents/opencode/frndos-wireframe.md",
       "type": "agent"
     },
