@@ -33,11 +33,13 @@ Supported tools: Claude Code, Cursor, OpenCode (and any tool supporting SKILL.md
 
 ### Step 2: Ask for confirmation
 
-Ask the user:
+Use your **ask tool** (Claude Code: `AskUserQuestion`, Cursor: ask tool, OpenCode: question tool):
 
-> **Would you like to set up frndOS and start the agentic workflow?** (yes/no)
+> "Would you like to set up frndOS and start the agentic workflow?"
+> - Yes, set it up
+> - No, not now
 
-**Wait for the user's response.** Do NOT proceed without explicit confirmation.
+**Do NOT proceed without explicit confirmation.** The ask tool blocks until the user responds.
 
 ### Step 3: If yes — run the bootstrap (DO NOT CLONE)
 
