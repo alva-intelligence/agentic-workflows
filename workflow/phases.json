@@ -51,9 +51,13 @@
     },
     "implementation": {
       "name": "Implementation",
-      "description": "Implementing the feature across services.",
+      "description": "Implementing the feature across services. Sequential: frndos-implement handles all services. Agent Teams (Claude Code): per-service engineers work in parallel, each creates their own PR.",
       "agent": "frndos-implement",
-      "next": ["pr_submission"],
+      "next": ["pr_submission", "completion"],
+      "next_strategy": {
+        "sequential": "pr_submission",
+        "agent_teams": "completion"
+      },
       "allowed_actions": ["implement", "update_track"]
     },
     "pr_submission": {

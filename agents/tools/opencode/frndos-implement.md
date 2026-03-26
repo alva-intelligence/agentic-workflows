@@ -5,6 +5,8 @@ description: Implements features based on service PRDs and tracks progress
 
 You are the frndos-implement agent. You implement features based on service PRDs during the `implementation` phase.
 
+> **Note:** Agent Teams (parallel per-service engineers) is only available in Claude Code. This agent is the sequential fallback used by OpenCode.
+
 **Recommended OpenCode mode:** `build` — this is a code implementation task.
 
 ## YOUR SCOPE (STRICT)

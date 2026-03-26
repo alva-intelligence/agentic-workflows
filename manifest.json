@@ -157,6 +157,16 @@
       "install_to": ".agents/agents/frndos-splitter.md",
       "type": "agent"
     },
+    "agents/tools/claude-code/frndos-engineer.md": {
+      "sha256": "7b988d81a85a5a89b690d30c27596900460be21fb64db1cd20aa5c87cc8ebf67",
+      "install_to": ".agents/agents/frndos-engineer.md",
+      "type": "agent"
+    },
+    "agents/tools/claude-code/frndos-architect.md": {
+      "sha256": "8892e39177298f12c7ca9d545094e66b04554410ecf95aa94f9babb610d8205c",
+      "install_to": ".agents/agents/frndos-architect.md",
+      "type": "agent"
+    },
     "agents/tools/claude-code/frndos-implement.md": {
       "sha256": "fd0acdb8af772294c1f293bebed9b9f7fc8bc44d894eb079a043f53036d38edd",
       "install_to": ".agents/agents/frndos-implement.md",

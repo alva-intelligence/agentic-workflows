@@ -26,6 +26,20 @@ Check what exists in the workspace:
 
 Run update check, load state, sync code, health checks, then route.
 
+## TOOL DETECTION
+
+Before entering the `implementation` phase, detect whether Agent Teams is available:
+
+**Claude Code (Agent Teams available):**
+- You have the `Agent` tool and can spawn teammates
+- Set `agent_teams.strategy = "agent_teams"` in workflow state
+- Use the Agent Teams flow (parallel engineers + architect)
+
+**Cursor / OpenCode (Agent Teams NOT available):**
+- You do NOT have the `Agent` tool
+- Set `agent_teams.strategy = "sequential"` (or leave `agent_teams` null)
+- Use the sequential flow (frndos-implement → frndos-pr)
+
 ## ROUTING TABLE
 
 | Phase | Agent | Expected Branch | Description |
@@ -37,9 +51,9 @@ Run update check, load state, sync code, health checks, then route.
 | wireframe_review | frndos-pr | `wireframe/<worker>/vc-<slug>` | Waiting for FE owners to merge + Jeff approval |
 | branch_creation | (self) | `develop` → `feature/<worker>/vc-<slug>` | Checkout develop, verify wireframe, create feature branch |
 | prd_splitting | frndos-splitter | `feature/<worker>/vc-<slug>` | Split main PRD into service PRDs |
-| implementation | frndos-implement | `feature/<worker>/vc-<slug>` | Implement the feature |
-| pr_submission | frndos-pr | `feature/<worker>/vc-<slug>` | Create pull request |
-| pr_review | frndos-pr | `feature/<worker>/vc-<slug>` | Handle PR feedback |
+| implementation | (see below) | `feature/<worker>/vc-<slug>` | Agent Teams: spawn engineers. Sequential: frndos-implement |
+| pr_submission | frndos-pr | `feature/<worker>/vc-<slug>` | Sequential only — create pull request |
+| pr_review | frndos-pr | `feature/<worker>/vc-<slug>` | Sequential only — handle PR feedback |
 | completion | frndos-track | `feature/<worker>/vc-<slug>` | Mark feature complete |
 
 **CRITICAL: Before delegating to any agent, verify the current git branch matches the expected branch for that phase.** If it doesn't, switch to the correct branch first.
@@ -76,10 +90,101 @@ Use `@frndos-prd` to delegate, or spawn via the Task tool for background work.
 | wireframe_pr | Spawn `frndos-pr` with: feature slug, wireframe branch, target=develop, type=wireframe |
 | wireframe_review | Spawn `frndos-pr` with: feature slug, wireframe PR URL, check merge status |
 | prd_splitting | Spawn `frndos-splitter` with: feature slug, PRD path |
-| implementation | Spawn `frndos-implement` with: feature slug, service PRDs, track files |
-| pr_submission | Spawn `frndos-pr` with: feature slug, feature branch, target=develop |
-| pr_review | Spawn `frndos-pr` with: feature slug, PR URL |
+| implementation (sequential) | Spawn `frndos-implement` with: feature slug, service PRDs, track files |
+| implementation (agent_teams) | Use Agent Teams flow below |
+| pr_submission | Spawn `frndos-pr` with: feature slug, feature branch, target=develop (sequential only) |
+| pr_review | Spawn `frndos-pr` with: feature slug, PR URLs (sequential only) |
 | completion | Spawn `frndos-track` with: feature slug, completion request |
+
+## AGENT TEAMS (Claude Code — Parallel Implementation)
+
+When entering `implementation` phase with Agent Teams available, follow this flow:
+
+### Step 1: Initialize state
+
+Determine services from `service_prds` in workflow state. Initialize `agent_teams` in `.workflow-state.json`:
+
+```json
+{
+  "agent_teams": {
+    "strategy": "agent_teams",
+    "engineers": {
+      "api": { "status": "pending", "pr_url": null, "tasks_completed": 0 },
+      "web": { "status": "pending", "pr_url": null, "tasks_completed": 0 }
+    }
+  },
+  "pr_urls": {}
+}
+```
+
+Only create engineer entries for services that have service PRDs.
+
+### Step 2: Spawn architect
+
+Spawn ONE architect teammate (cross-service reviewer):
+
+```
+Agent({
+  prompt: "You are frndos-architect. Read your agent definition at .agents/agents/frndos-architect.md and follow it completely. Feature: <slug>. Services being implemented: <list>. Branch: <branch>. You will be assigned reviews as engineers finish.",
+  description: "frndos-architect: integration reviewer"
+})
+```
+
+### Step 3: Spawn engineers
+
+Spawn one engineer per service **in parallel** (use multiple Agent tool calls in one message):
+
+```
+Agent({
+  prompt: "You are frndos-engineer for the <service> service. Read your agent definition at .agents/agents/frndos-engineer.md. Service: <service>. Directory: <dir>/. Service PRD: <path>. Track file: <path>. Branch: <branch>. Target branch: <target>. Feature slug: <slug>. Worker: <worker>. Present your implementation plan and WAIT for approval before coding.",
+  description: "<service>-engineer: implement <service>"
+})
+```
+
+**Target branches per service:**
+- `api`, `web` → `develop`
+- `ai-service`, `data-service` → `development`
+
+### Step 4: Require plan approval
+
+Each engineer presents their implementation plan. You (the lead) must approve each plan before the engineer starts coding. Review the plans for:
+- Alignment with service PRD
+- Reasonable task ordering
+- No scope creep
+
+### Step 5: Coordinate architect reviews
+
+When an engineer messages "done implementing, self-review passed":
+1. Update that engineer's status in `.workflow-state.json` to `architect_review`
+2. Assign the architect to review that service:
+   - Message the architect: "Review <service>-engineer's implementation. Service: <service>. Directory: <dir>/."
+3. The architect reviews incrementally — do NOT wait for all engineers to finish
+
+### Step 6: Handle architect feedback
+
+Based on architect's review:
+- **Approve:** Update engineer status, tell engineer to create PR
+- **Request changes:** Relay specifics to engineer, wait for fixes, re-request architect review
+- **Hold:** Inform engineer to wait, track the dependency, clear hold when resolved
+
+### Step 7: Track PR creation and review
+
+When an engineer reports they're creating a PR:
+1. Update engineer status to `creating_pr` in `.workflow-state.json`
+2. When engineer reports the PR URL:
+   - Set `pr_urls.<service>` in `.workflow-state.json`
+   - Set `agent_teams.engineers.<service>.pr_url` to the same URL
+   - Update engineer status to `pr_feedback`
+3. When engineer reports "PR merged. Done.":
+   - Update engineer status to `done`
+
+### Step 8: Transition to completion
+
+When ALL engineers report "PR merged. Done.":
+1. Verify all entries in `pr_urls` have merged PRs
+2. Verify all engineers have status `done`
+3. Transition phase to `completion`
+4. Delegate to `frndos-track` for cleanup
 
 ## RULES
 

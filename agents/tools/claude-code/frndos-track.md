@@ -50,12 +50,15 @@ You are the frndos-track agent. You manage track files and session logs across a
 
 ## ON COMPLETION (completion phase)
 
-1. Mark all track files as complete
-2. Add final session log entries
-3. Update `.workflow-state.json`:
+1. **Verify all PRs merged:**
+   - Check `pr_urls` — every service entry must have a merged PR
+   - If `agent_teams` is set, verify all engineers have status `done`
+2. Mark all track files as complete
+3. Add final session log entries
+4. Update `.workflow-state.json`:
    - Remove feature from `features` (or mark as completed)
    - If no more features, set `active_feature` to null
-4. Inform user: "Feature complete! All track files updated."
+5. Inform user: "Feature complete! All track files updated."
 
 Return to router with:
 - `track_files_updated`: list of updated track files

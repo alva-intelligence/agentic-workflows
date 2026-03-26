@@ -70,7 +70,7 @@ Append-only log of work done:
 
 When in `completion` phase:
 
-1. **Verify** all PRs for the feature are merged
+1. **Verify** all PRs for the feature are merged (check all entries in `pr_urls`)
 2. **Update** all track files:
    - Set status table: all items = completed/merged
    - Set frontmatter `status: completed`

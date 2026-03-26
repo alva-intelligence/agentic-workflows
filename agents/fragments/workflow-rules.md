@@ -64,6 +64,41 @@ When picking up another person's feature:
 - `wireframe_review` gate requires ALL wireframes to be approved
 - Only the wireframe owner (or unassigned) can create/edit a wireframe
 
+### Agent Teams (Parallel Implementation)
+
+When Claude Code's Agent Teams are available, the `implementation` phase uses parallel per-service engineers instead of a single sequential `frndos-implement` agent.
+
+**When it activates:**
+- Claude Code only (Cursor/OpenCode use the sequential fallback)
+- Orchestra detects the `Agent` tool is available
+- Sets `agent_teams.strategy = "agent_teams"` in workflow state
+
+**Transition shortcut:**
+- Agent Teams: `implementation` → `completion` (skips `pr_submission` + `pr_review`)
+- Each engineer handles their own PR creation — the lead doesn't need a separate PR phase
+
+**Fallback:**
+- If Agent Teams is not available, `implementation` → `pr_submission` → `pr_review` → `completion` (unchanged)
+
+**Cross-service communication:**
+- Engineers CAN read other service directories for context
+- Engineers MUST NOT write code outside their assigned service
+- Architect reviews integration across services as engineers finish
+
+**Plan approval:**
+- Lead MUST approve each engineer's implementation plan before they start coding
+- This prevents scope creep and ensures alignment with service PRDs
+
+**Self-review mandate:**
+- Every engineer MUST self-review their own code before notifying the lead
+- Self-review covers: bugs, patterns, conventions, security
+- Architect review covers: cross-service integration only (NOT code quality)
+
+**Engineer status flow:**
+```
+pending → planning → implementing → self_reviewing → architect_review → creating_pr → pr_feedback → done
+```
+
 ### Always Ask Before Executing
 
 **MANDATORY for every agent:** Before performing ANY action:

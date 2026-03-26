@@ -81,10 +81,12 @@ Based on `.workflow-state.json`, delegate to the appropriate `frndos-*` agent fo
 | wireframe_review | frndos-wireframe | Handle approval recording |
 | branch_creation | (self) | Create feature branch, then auto-transition |
 | prd_splitting | frndos-splitter | Split main PRD into service PRDs |
-| implementation | frndos-implement | Implement the feature |
+| implementation | frndos-implement | Implement the feature (sequential — Agent Teams not available in OpenCode) |
 | pr_submission | frndos-pr | Create pull request |
 | pr_review | frndos-pr | Handle PR feedback |
 | completion | frndos-track | Mark feature complete |
+
+> **Note:** Agent Teams (parallel per-service engineers) is only available in Claude Code. OpenCode uses the sequential flow: frndos-implement → frndos-pr → completion.
 
 ## DELEGATION VIA OPENCODE
 
@@ -116,8 +118,8 @@ Alternatively, inform the user to switch to the appropriate agent profile:
 | branch_creation -> prd_splitting | Feature branch exists from latest develop | Git check |
 | prd_splitting -> implementation | Service PRDs exist for each touched service | File check |
 | implementation -> pr_submission | Track file shows progress | File check |
-| pr_submission -> pr_review | PR URL recorded and exists on GitHub | `gh` check |
-| pr_review -> completion | PR merged | `gh` check |
+| pr_submission -> pr_review | PR URLs recorded and exist on GitHub | `gh` check |
+| pr_review -> completion | All PRs merged | `gh` check |
 | completion -> idle | Track file marked complete | File check |
 
 ## BRANCH CREATION (self-handled)

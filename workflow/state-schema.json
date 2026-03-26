@@ -31,7 +31,7 @@
     "feature": {
       "type": "object",
       "description": "State for a single feature being tracked through the workflow.",
-      "required": ["phase", "phase_entered", "prd_path", "wireframes", "wireframe_branch", "wireframe_pr_url", "branch", "service_prds", "pr_url"],
+      "required": ["phase", "phase_entered", "prd_path", "wireframes", "wireframe_branch", "wireframe_pr_url", "branch", "service_prds", "pr_urls"],
       "additionalProperties": false,
       "properties": {
         "phase": {
@@ -86,10 +86,20 @@
             "type": "string"
           }
         },
-        "pr_url": {
-          "description": "GitHub pull request URL for this feature, or null if not yet submitted.",
-          "type": ["string", "null"],
-          "format": "uri"
+        "pr_urls": {
+          "description": "Map of service names to their GitHub pull request URLs.",
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "null"],
+            "format": "uri"
+          }
+        },
+        "agent_teams": {
+          "description": "Agent Teams state for parallel implementation (Claude Code only). Null or absent when using sequential strategy.",
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/definitions/agent_teams" }
+          ]
         }
       }
     },
@@ -147,6 +157,49 @@
           "description": "ISO 8601 timestamp of when the approval decision was made, or null if pending.",
           "type": ["string", "null"],
           "format": "date-time"
+        }
+      }
+    },
+    "agent_teams": {
+      "type": "object",
+      "description": "Agent Teams state for parallel implementation. Tracks per-service engineer progress.",
+      "required": ["strategy", "engineers"],
+      "additionalProperties": false,
+      "properties": {
+        "strategy": {
+          "description": "Implementation strategy: agent_teams (parallel, Claude Code) or sequential (Cursor/OpenCode).",
+          "type": "string",
+          "enum": ["agent_teams", "sequential"]
+        },
+        "engineers": {
+          "description": "Map of service names to their engineer teammate state.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/engineer_state"
+          }
+        }
+      }
+    },
+    "engineer_state": {
+      "type": "object",
+      "description": "State for a single per-service engineer teammate.",
+      "required": ["status", "pr_url", "tasks_completed"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "description": "Current status of this engineer's work.",
+          "type": "string",
+          "enum": ["pending", "planning", "implementing", "self_reviewing", "architect_review", "creating_pr", "pr_feedback", "done"]
+        },
+        "pr_url": {
+          "description": "GitHub PR URL created by this engineer, or null.",
+          "type": ["string", "null"],
+          "format": "uri"
+        },
+        "tasks_completed": {
+          "description": "Number of tasks completed by this engineer.",
+          "type": "integer",
+          "minimum": 0
         }
       }
     }

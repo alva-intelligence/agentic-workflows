@@ -104,6 +104,8 @@
     "implementation_to_pr_submission": {
       "from": "implementation",
       "to": "pr_submission",
+      "strategy": "sequential",
+      "description": "Sequential flow only (Cursor/OpenCode). Agent Teams skips pr_submission/pr_review.",
       "conditions": [
         {
           "type": "track_progress",
@@ -114,6 +116,34 @@
           "type": "git_branch",
           "description": "Must be on feature branch",
           "check": "Current branch is feature/<worker>/vc-<slug>"
+        },
+        {
+          "type": "strategy_check",
+          "description": "Must be using sequential strategy",
+          "check": "agent_teams is null OR agent_teams.strategy === 'sequential'"
+        }
+      ]
+    },
+    "implementation_to_completion": {
+      "from": "implementation",
+      "to": "completion",
+      "strategy": "agent_teams",
+      "description": "Agent Teams flow only (Claude Code). Engineers handle their own PRs — skip pr_submission/pr_review.",
+      "conditions": [
+        {
+          "type": "strategy_check",
+          "description": "Must be using agent_teams strategy",
+          "check": "agent_teams.strategy === 'agent_teams'"
+        },
+        {
+          "type": "all_engineers_done",
+          "description": "All engineers must report done",
+          "check": "Every entry in agent_teams.engineers has status === 'done'"
+        },
+        {
+          "type": "all_prs_exist",
+          "description": "All service PRs must exist and be merged",
+          "check": "Every service in pr_urls has a URL and `gh pr view` returns 'MERGED'"
         }
       ]
     },
@@ -123,8 +153,8 @@
       "conditions": [
         {
           "type": "pr_exists",
-          "description": "PR URL must be recorded and exist on GitHub",
-          "check": "features[active_feature].pr_url is set and `gh pr view` succeeds"
+          "description": "PR URLs must be recorded and exist on GitHub",
+          "check": "features[active_feature].pr_urls has at least one entry and `gh pr view` succeeds for each"
         }
       ]
     },
@@ -134,8 +164,8 @@
       "conditions": [
         {
           "type": "pr_merged",
-          "description": "PR must be merged",
-          "check": "`gh pr view --json state` returns 'MERGED'"
+          "description": "All PRs must be merged",
+          "check": "`gh pr view --json state` returns 'MERGED' for all entries in pr_urls"
         }
       ]
     },

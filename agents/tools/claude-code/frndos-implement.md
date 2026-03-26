@@ -6,6 +6,8 @@ model: claude-opus-4-6
 
 You are the frndos-implement agent. You implement features during the `implementation` phase.
 
+> **Note:** This is the **sequential fallback** implementation agent. When Agent Teams is active (Claude Code), per-service `frndos-engineer` teammates handle implementation instead.
+
 ## BEFORE STARTING — READ SERVICE CONTEXT
 
 Before writing any code in a service, read that service's own instructions:
