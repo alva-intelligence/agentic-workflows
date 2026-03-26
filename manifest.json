@@ -1,5 +1,5 @@
 {
-  "version": "2.0.24",
+  "version": "2.0.25",
   "updated": "2026-03-26",
   "files": {
     "agents/fragments/session-protocol.md": {
@@ -8,7 +8,7 @@
       "type": "fragment"
     },
     "agents/fragments/workflow-rules.md": {
-      "sha256": "b0c62adfb5a571ca9ea58ee553ca2e65f8019d308be275ac26b85f09bae6f904",
+      "sha256": "fc34459507dd82da6337a739dd7f17fc0b4bcdf3cdecb20823a8f2beea5a9b90",
       "install_to": ".agentic-workflows/fragments/workflow-rules.md",
       "type": "fragment"
     },
@@ -53,17 +53,17 @@
       "type": "script"
     },
     "workflow/phases.json": {
-      "sha256": "36bbc16e9a76231db1ecae3df2689e510ed078e0ad53b432f38cce0d60a7a417",
+      "sha256": "7b16f783f913bbf45aeb092e6e8d83139fed6135166687672719155b768f05e0",
       "install_to": ".agentic-workflows/workflow/phases.json",
       "type": "workflow"
     },
     "workflow/gates.json": {
-      "sha256": "0da1ea942e75bc9f8a186c78e94def157815d0adba36f3017bef19ec440ad2b5",
+      "sha256": "8999532e923e03ae8fa0b806c85f57683112f3ccd3d56d5f9beb296b259e7f14",
       "install_to": ".agentic-workflows/workflow/gates.json",
       "type": "workflow"
     },
     "workflow/state-schema.json": {
-      "sha256": "af34643bbf9c0eed107be1147e7303f024b94d97f8e82dd4fd2e378e750b7786",
+      "sha256": "7baddfcd409540c7c7aaebd4db0c9ba2a2d0b129e48d7a6cd06b4f4e759cfd0d",
       "install_to": ".agentic-workflows/workflow/state-schema.json",
       "type": "workflow"
     },
@@ -123,7 +123,7 @@
       "type": "skill"
     },
     "agents/tools/claude-code/frndos-orchestra.md": {
-      "sha256": "9a04a9e4a25f360234f952ca607bb7ed5e424b9d520922696a4e9c7a9c22c28f",
+      "sha256": "546b1ff4adc7fa609ac0854e5d6e18de360fc6c6aa91dba165b967f11042995a",
       "install_to": ".agents/agents/frndos-orchestra.md",
       "type": "agent"
     },
