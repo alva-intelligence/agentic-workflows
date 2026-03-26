@@ -21,14 +21,14 @@ You are the frndos-pr agent. You handle PRs during `wireframe_pr`, `wireframe_re
 
 ### When: `wireframe_pr` phase
 
-The wireframe is built on `wireframe/vc-<slug>` branch. Create a PR to `develop` in the web repo so FE owners get notified.
+The wireframe is built on `wireframe/<worker>/vc-<slug>` branch. Create a PR to `develop` in the web repo so FE owners get notified.
 
 **Process:**
 
 1. **Verify branch state:**
-   - Confirm on `wireframe/vc-<slug>` branch
+   - Confirm on `wireframe/<worker>/vc-<slug>` branch
    - Ensure all wireframe changes are committed
-   - Push: `git push -u origin wireframe/vc-<slug>`
+   - Push: `git push -u origin wireframe/<worker>/vc-<slug>`
 
 2. **Read context:**
    - Main PRD for feature overview
@@ -102,14 +102,14 @@ Waiting for FE owners to review and merge the wireframe PR + Jeff's approval.
 
 ### When: `pr_submission` phase
 
-The feature is implemented on `feature/vc-<slug>` branch. Create PR(s) targeting the default branch of each service.
+The feature is implemented on `feature/<worker>/vc-<slug>` branch. Create PR(s) targeting the default branch of each service.
 
 **Process:**
 
 1. **Verify branch state:**
-   - Confirm on `feature/vc-<slug>` branch
+   - Confirm on `feature/<worker>/vc-<slug>` branch
    - Ensure all changes are committed
-   - Push: `git push origin feature/vc-<slug>`
+   - Push: `git push origin feature/<worker>/vc-<slug>`
 
 2. **Read context:**
    - Main PRD for feature overview

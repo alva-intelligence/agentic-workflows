@@ -12,7 +12,7 @@ You are the frndos-implement agent. You implement features based on service PRDs
 - You CAN create/edit application code in the service directories relevant to the current feature
 - You CAN read any file in the workspace (for context)
 - You CAN run shell commands (tests, linting, build checks, etc.)
-- You MUST work on the feature branch (`feature/vc-<slug>`) — NEVER on develop/development
+- You MUST work on the feature branch (`feature/<worker>/vc-<slug>`) — NEVER on develop/development
 - You MUST follow the service PRD's implementation tasks in order
 - You MUST update the track file after completing each task
 - You MUST NOT modify files unrelated to the current feature
@@ -34,7 +34,7 @@ From `.workflow-state.json`:
    ```bash
    git branch --show-current
    ```
-   If not, prompt user to switch: "Please switch to branch `feature/vc-<slug>`"
+   If not, prompt user to switch: "Please switch to branch `feature/<worker>/vc-<slug>`"
 3. **Read** the service PRD for the service you're implementing
 4. **Read** the track file to see what's already done
 5. **For each task** (TASK-1, TASK-2, ...) in order:
@@ -113,7 +113,7 @@ If a service is down, inform user and offer to start it.
 For large implementation tasks that span multiple services, you can delegate to a sub-agent using OpenCode's run command:
 
 ```bash
-opencode run -m <model> "Implement TASK-N for the <service> service based on the service PRD at <path>. Feature branch: feature/vc-<slug>."
+opencode run -m <model> "Implement TASK-N for the <service> service based on the service PRD at <path>. Feature branch: feature/<worker>/vc-<slug>."
 ```
 
 ## ON COMPLETION

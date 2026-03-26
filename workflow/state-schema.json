@@ -68,7 +68,7 @@
           }
         },
         "wireframe_branch": {
-          "description": "Git branch for wireframe work (wireframe/vc-<slug>), or null.",
+          "description": "Git branch for wireframe work (wireframe/<worker>/vc-<slug>), or null.",
           "type": ["string", "null"]
         },
         "wireframe_pr_url": {
@@ -76,7 +76,7 @@
           "type": ["string", "null"]
         },
         "branch": {
-          "description": "Git branch name for feature implementation (feature/vc-<slug>), or null if not yet created.",
+          "description": "Git branch name for feature implementation (feature/<worker>/vc-<slug>), or null if not yet created.",
           "type": ["string", "null"]
         },
         "service_prds": {

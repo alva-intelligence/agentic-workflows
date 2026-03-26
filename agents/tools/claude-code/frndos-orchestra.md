@@ -32,15 +32,15 @@ Run update check, load state, sync code, health checks, then route.
 |-------|-------|----------------|-------------|
 | idle | (self) | any | Ask user what to do: start new feature, resume existing, or list features |
 | prd_creation | frndos-prd | any | PRD creation from user input |
-| wireframe | frndos-wireframe | `wireframe/vc-<slug>` | Build wireframe pages on wireframe branch |
-| wireframe_pr | frndos-pr | `wireframe/vc-<slug>` | Create PR targeting develop for FE owner review |
-| wireframe_review | frndos-pr | `wireframe/vc-<slug>` | Waiting for FE owners to merge + Jeff approval |
-| branch_creation | (self) | `develop` → `feature/vc-<slug>` | Checkout develop, verify wireframe, create feature branch |
-| prd_splitting | frndos-splitter | `feature/vc-<slug>` | Split main PRD into service PRDs |
-| implementation | frndos-implement | `feature/vc-<slug>` | Implement the feature |
-| pr_submission | frndos-pr | `feature/vc-<slug>` | Create pull request |
-| pr_review | frndos-pr | `feature/vc-<slug>` | Handle PR feedback |
-| completion | frndos-track | `feature/vc-<slug>` | Mark feature complete |
+| wireframe | frndos-wireframe | `wireframe/<worker>/vc-<slug>` | Build wireframe pages on wireframe branch |
+| wireframe_pr | frndos-pr | `wireframe/<worker>/vc-<slug>` | Create PR targeting develop for FE owner review |
+| wireframe_review | frndos-pr | `wireframe/<worker>/vc-<slug>` | Waiting for FE owners to merge + Jeff approval |
+| branch_creation | (self) | `develop` → `feature/<worker>/vc-<slug>` | Checkout develop, verify wireframe, create feature branch |
+| prd_splitting | frndos-splitter | `feature/<worker>/vc-<slug>` | Split main PRD into service PRDs |
+| implementation | frndos-implement | `feature/<worker>/vc-<slug>` | Implement the feature |
+| pr_submission | frndos-pr | `feature/<worker>/vc-<slug>` | Create pull request |
+| pr_review | frndos-pr | `feature/<worker>/vc-<slug>` | Handle PR feedback |
+| completion | frndos-track | `feature/<worker>/vc-<slug>` | Mark feature complete |
 
 **CRITICAL: Before delegating to any agent, verify the current git branch matches the expected branch for that phase.** If it doesn't, switch to the correct branch first.
 
@@ -72,7 +72,7 @@ Use `@frndos-prd` to delegate, or spawn via the Task tool for background work.
 | Phase | Delegation |
 |-------|-----------|
 | prd_creation | Spawn `frndos-prd` with: feature slug, worker, user's input |
-| wireframe | Spawn `frndos-wireframe` with: feature slug, PRD path, wireframe slug. Agent creates `wireframe/vc-<slug>` branch from develop first |
+| wireframe | Spawn `frndos-wireframe` with: feature slug, PRD path, wireframe slug. Agent creates `wireframe/<worker>/vc-<slug>` branch from develop first |
 | wireframe_pr | Spawn `frndos-pr` with: feature slug, wireframe branch, target=develop, type=wireframe |
 | wireframe_review | Spawn `frndos-pr` with: feature slug, wireframe PR URL, check merge status |
 | prd_splitting | Spawn `frndos-splitter` with: feature slug, PRD path |
@@ -101,12 +101,12 @@ When phase is `branch_creation`:
    ls web/src/app/\(dashboard\)/wireframes/<slug>/ || echo "ERROR: wireframe not on develop"
    ```
 3. If wireframe files are NOT on develop, BLOCK: "The wireframe PR hasn't been merged yet. Current phase requires it."
-4. Explain plan: "Wireframe is on develop. I'll create branch `feature/vc-<slug>` from here."
+4. Explain plan: "Wireframe is on develop. I'll create branch `feature/<worker>/vc-<slug>` from here."
 5. Wait for confirmation
 6. Execute:
    ```bash
-   git checkout -b feature/vc-<slug>
-   git push -u origin feature/vc-<slug>
+   git checkout -b feature/<worker>/vc-<slug>
+   git push -u origin feature/<worker>/vc-<slug>
    ```
 7. Update `.workflow-state.json`: set branch, transition to `prd_splitting`
 8. Immediately delegate to `frndos-splitter`
@@ -125,5 +125,5 @@ When user says "switch to X" or `/workflow switch X`:
 1. Save current feature state
 2. Set active_feature to X
 3. Load X's phase
-4. If different branch needed, prompt: "Switch to branch `feature/vc-X`?"
+4. If different branch needed, prompt: "Switch to branch `feature/<worker>/vc-X`?"
 5. Immediately delegate to the appropriate agent for X's phase

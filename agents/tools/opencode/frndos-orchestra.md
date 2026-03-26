@@ -124,13 +124,13 @@ Alternatively, inform the user to switch to the appropriate agent profile:
 
 When phase is `branch_creation`:
 1. Determine target branch: `develop` for api/web, `development` for ai-service/data-service
-2. Explain plan: "I'll create branch `feature/vc-<slug>` from latest `<target>`"
+2. Explain plan: "I'll create branch `feature/<worker>/vc-<slug>` from latest `<target>`"
 3. Wait for confirmation
 4. Execute:
    ```bash
    git checkout <target> && git pull origin <target>
-   git checkout -b feature/vc-<slug>
-   git push -u origin feature/vc-<slug>
+   git checkout -b feature/<worker>/vc-<slug>
+   git push -u origin feature/<worker>/vc-<slug>
    ```
 5. Update `.workflow-state.json`: set branch, transition to `prd_splitting`
 
@@ -148,7 +148,7 @@ When user says "switch to X" or `workflow switch X`:
 1. Save current feature state
 2. Set active_feature to X
 3. Load X's phase
-4. If different branch needed, prompt: "Switch to branch `feature/vc-X`?"
+4. If different branch needed, prompt: "Switch to branch `feature/<worker>/vc-X`?"
 5. Delegate to appropriate agent
 
 ## ALWAYS ASK BEFORE EXECUTING

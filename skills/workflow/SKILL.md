@@ -93,7 +93,7 @@ Discover ALL features across the team — not just local ones. Scans committed a
 1. Fetch latest from all remotes: `git fetch --all` in each service dir
 2. Scan for features from multiple sources:
    - **PRDs:** `ls docs/prd/*.md` → extract slugs
-   - **Feature branches:** `git branch -r | grep 'feature/vc-'` in each service → extract slugs
+   - **Feature branches:** `git branch -r | grep 'feature/.*/vc-'` in each service → extract slugs
    - **Track files:** `find . -name '*.track.md'` across all services → extract slugs
    - **Wireframes:** `ls web/src/app/(dashboard)/wireframes/` → extract slugs
 3. For each unique slug found, reconstruct the phase (same logic as resume):
@@ -123,7 +123,7 @@ Resume a feature started by another team member.
 2. Scan committed artifacts to reconstruct phase:
    - PRD exists at `docs/prd/<slug>.md`? → past prd_creation
    - Wireframe directory exists with approved metadata.json? → past wireframe_review
-   - Feature branch `feature/vc-<slug>` exists? → past branch_creation
+   - Feature branch `feature/<worker>/vc-<slug>` exists? → past branch_creation
    - Service PRDs exist? → past prd_splitting
    - Track files show progress? → in implementation
    - PR URL in track file? → in pr_review
@@ -135,7 +135,7 @@ Resume a feature started by another team member.
    - Reconstructed phase
    - Last session log entry (who did what)
    - What's left to do (remaining tasks from track file)
-   - Which branch to checkout: `git checkout feature/vc-<slug>`
+   - Which branch to checkout: `git checkout feature/<worker>/vc-<slug>`
 
 ### `/workflow add-wireframe <wireframe-slug>`
 Add a new wireframe to the current feature.

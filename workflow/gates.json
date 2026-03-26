@@ -38,7 +38,7 @@
         {
           "type": "git_branch",
           "description": "Must be on wireframe branch",
-          "check": "Current branch is wireframe/vc-<slug> and all wireframe changes are committed"
+          "check": "Current branch is wireframe/<worker>/vc-<slug> and all wireframe changes are committed"
         }
       ]
     },
@@ -76,7 +76,7 @@
         {
           "type": "git_branch",
           "description": "Must be on develop first, then feature branch created from it",
-          "check": "Agent has: (1) checked out develop, (2) pulled latest, (3) verified wireframe files exist on develop, (4) created feature/vc-<slug> from develop"
+          "check": "Agent has: (1) checked out develop, (2) pulled latest, (3) verified wireframe files exist on develop, (4) created feature/<worker>/vc-<slug> from develop"
         },
         {
           "type": "wireframe_on_develop",
@@ -97,7 +97,7 @@
         {
           "type": "git_branch",
           "description": "Must be on feature branch",
-          "check": "Current branch is feature/vc-<slug>"
+          "check": "Current branch is feature/<worker>/vc-<slug>"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "git_branch",
           "description": "Must be on feature branch",
-          "check": "Current branch is feature/vc-<slug>"
+          "check": "Current branch is feature/<worker>/vc-<slug>"
         }
       ]
     },

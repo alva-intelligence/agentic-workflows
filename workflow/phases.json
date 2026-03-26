@@ -16,7 +16,7 @@
     },
     "wireframe": {
       "name": "Wireframe",
-      "description": "Building wireframe pages on a wireframe/vc-<slug> branch.",
+      "description": "Building wireframe pages on a wireframe/<worker>/vc-<slug> branch.",
       "agent": "frndos-wireframe",
       "next": ["wireframe_pr"],
       "allowed_actions": ["create_wireframe", "edit_wireframe", "add_wireframe"]

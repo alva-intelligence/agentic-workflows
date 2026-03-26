@@ -2,7 +2,7 @@
 prd: {{FEATURE_SLUG}}
 parent_prd: docs/prd/{{FEATURE_SLUG}}.md
 service: {{SERVICE_ID}}
-branch: feature/vc-{{FEATURE_SLUG}}
+branch: feature/{{WORKER}}/vc-{{FEATURE_SLUG}}
 pr_url: null
 status: in_progress
 ---

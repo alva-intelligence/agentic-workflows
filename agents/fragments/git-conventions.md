@@ -2,7 +2,7 @@
 
 ### Branch Naming
 
-- Agent/vibe-coder branches: `feature/vc-<feature-slug>` (the `vc-` prefix distinguishes agent-created branches from human-created ones)
+- Agent/vibe-coder branches: `feature/<worker>/vc-<feature-slug>` (the `vc-` prefix distinguishes agent-created branches from human-created ones)
 - Human branches: `feature/<description>` (no prefix)
 - Created from latest `develop` (for api, web) or `development` (for ai-service, data-service)
 - NEVER work directly on develop/development
@@ -15,12 +15,12 @@
    ```
 2. Create the feature branch:
    ```bash
-   git checkout -b feature/vc-<feature-slug>
+   git checkout -b feature/<worker>/vc-<feature-slug>
    ```
 3. Make commits on the feature branch
 4. Push to remote:
    ```bash
-   git push -u origin feature/vc-<feature-slug>
+   git push -u origin feature/<worker>/vc-<feature-slug>
    ```
 
 ### Commit Messages

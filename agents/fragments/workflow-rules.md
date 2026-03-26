@@ -12,7 +12,7 @@ idle → prd_creation → wireframe → wireframe_pr → wireframe_review → br
 1. **NEVER skip a phase.** If user asks to skip, respond: "I cannot skip phases. Current phase: [PHASE]. Required gate: [GATE]."
 2. **NEVER create a feature branch before wireframe PR is merged.**
 3. **NEVER start implementation before service PRDs exist.**
-4. **NEVER modify develop/development branch directly.** Wireframes go on `wireframe/vc-<slug>` branch, features on `feature/vc-<slug>` branch.
+4. **NEVER modify develop/development branch directly.** Wireframes go on `wireframe/<worker>/vc-<slug>` branch, features on `feature/<worker>/vc-<slug>` branch.
 5. **CHECK `.workflow-state.json` before ANY work.**
 6. **UPDATE `.workflow-state.json` after every phase transition.**
 7. **CHECK current git branch matches the expected branch for the phase** before doing any work.
@@ -22,23 +22,23 @@ idle → prd_creation → wireframe → wireframe_pr → wireframe_review → br
 | Phase | Expected Branch |
 |-------|----------------|
 | prd_creation | any (PRDs are in docs/, not branch-specific) |
-| wireframe | `wireframe/vc-<slug>` (created from develop) |
-| wireframe_pr | `wireframe/vc-<slug>` (PR targets develop) |
-| wireframe_review | `wireframe/vc-<slug>` (waiting for PR merge) |
-| branch_creation | `develop` → creates `feature/vc-<slug>` |
-| prd_splitting → completion | `feature/vc-<slug>` |
+| wireframe | `wireframe/<worker>/vc-<slug>` (created from develop) |
+| wireframe_pr | `wireframe/<worker>/vc-<slug>` (PR targets develop) |
+| wireframe_review | `wireframe/<worker>/vc-<slug>` (waiting for PR merge) |
+| branch_creation | `develop` → creates `feature/<worker>/vc-<slug>` |
+| prd_splitting → completion | `feature/<worker>/vc-<slug>` |
 
 ### Gate Conditions
 
 | Transition | Gate | Check Method |
 |-----------|------|-------------|
 | prd_creation → wireframe | PRD file exists with required frontmatter + sections | File check |
-| wireframe → wireframe_pr | Wireframe dir exists with .tsx + metadata.json, changes committed on `wireframe/vc-<slug>` | File + Git check |
+| wireframe → wireframe_pr | Wireframe dir exists with .tsx + metadata.json, changes committed on `wireframe/<worker>/vc-<slug>` | File + Git check |
 | wireframe_pr → wireframe_review | Wireframe PR exists targeting develop | `gh` check |
 | wireframe_review → branch_creation | Wireframe PR merged + Jeff approved | `gh` check + Manual confirmation |
-| branch_creation → prd_splitting | On `develop`, pulled latest, wireframe files verified, `feature/vc-<slug>` created | Git check |
-| prd_splitting → implementation | Service PRDs exist, on `feature/vc-<slug>` | File + Git check |
-| implementation → pr_submission | Track file shows progress, on `feature/vc-<slug>` | File + Git check |
+| branch_creation → prd_splitting | On `develop`, pulled latest, wireframe files verified, `feature/<worker>/vc-<slug>` created | Git check |
+| prd_splitting → implementation | Service PRDs exist, on `feature/<worker>/vc-<slug>` | File + Git check |
+| implementation → pr_submission | Track file shows progress, on `feature/<worker>/vc-<slug>` | File + Git check |
 | pr_submission → pr_review | PR URL recorded and exists on GitHub | `gh` check |
 | pr_review → completion | PR merged | `gh` check |
 | completion → idle | Track file marked complete | File check |
