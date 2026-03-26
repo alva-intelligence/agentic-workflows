@@ -1,5 +1,5 @@
 {
-  "version": "2.0.23",
+  "version": "2.0.24",
   "updated": "2026-03-26",
   "files": {
     "agents/fragments/session-protocol.md": {
@@ -33,7 +33,7 @@
       "type": "fragment"
     },
     "agents/fragments/service-registry.md": {
-      "sha256": "3f6830b1848f76ab75cbee1df81afa06e25e124e4ed37a9e836d48f37d99e461",
+      "sha256": "c00da0d84bc071e98d62cce9fc8beeea40bb17491daabe8cc1340f34c4df6e9a",
       "install_to": ".agentic-workflows/fragments/service-registry.md",
       "type": "fragment"
     },
@@ -88,7 +88,7 @@
       "type": "skill"
     },
     "skills/onboard/references/run-all-template.sh": {
-      "sha256": "09ce4297c9a29aa24a33416054bb4a25cd2e66f205dff6de126f81cc09d3ed72",
+      "sha256": "1661ea337833da3692d2e670782e977be2634d73615f8d9baadca301867615b3",
       "install_to": ".agents/skills/onboard/references/run-all-template.sh",
       "type": "reference"
     },
@@ -98,7 +98,7 @@
       "type": "reference"
     },
     "skills/onboard/references/launch.json": {
-      "sha256": "cb0125ffe80ba46d0f2729be80b465ca32ae4f77642ff470918931f26ec5e8f4",
+      "sha256": "d6270e33b30e672d905b39ee296fd351fd148880539289afb414c6781d04325d",
       "install_to": ".agents/skills/onboard/references/launch.json",
       "type": "reference"
     },
