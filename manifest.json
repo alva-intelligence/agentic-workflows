@@ -1,5 +1,5 @@
 {
-  "version": "2.0.17",
+  "version": "2.0.18",
   "updated": "2026-03-26",
   "files": {
     "agents/fragments/session-protocol.md": {
@@ -83,7 +83,7 @@
       "type": "template"
     },
     "skills/onboard/SKILL.md": {
-      "sha256": "13653d5ad9414a41ad473f05c9a6eb2dff3e3ffa55cc43626bff8931c2716314",
+      "sha256": "fcfc6f60d80b368af551350a37497ab7b75489265cd94ed070173823306ac701",
       "install_to": ".agents/skills/onboard/SKILL.md",
       "type": "skill"
     },
@@ -98,7 +98,7 @@
       "type": "reference"
     },
     "skills/onboard/references/launch.json": {
-      "sha256": "PLACEHOLDER",
+      "sha256": "cd4a2f08d911f9f8d6d9dd07002f86b91ffd411fcb947669265970cf3d2d5eb4",
       "install_to": ".agents/skills/onboard/references/launch.json",
       "type": "reference"
     },
@@ -238,7 +238,7 @@
       "type": "scaffold"
     },
     "flake.nix": {
-      "sha256": "468195c5dd339804de4eea85eac1017f0a8949d3526b80fd06eb3a0970d7d952",
+      "sha256": "149fa75c1128c2af9fbaebd729c38d4e0b8ac45e50943402add2b93d75891bd5",
       "install_to": "flake.nix",
       "type": "config"
     }
