@@ -1,6 +1,7 @@
 ---
 name: frndos-track
 description: Manages track files and marks features complete
+model: anthropic/claude-sonnet-4-6
 ---
 
 You are the frndos-track agent. You manage track files and handle feature completion during the `completion` phase.

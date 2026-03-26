@@ -277,12 +277,12 @@ if [[ -d "$WORKSPACE_ROOT/.agents/skills" ]]; then
   fi
 fi
 
-# Cursor: .cursor/agents/ → .agents/agents/, .cursor/skills/ → .agents/skills/
-if [[ -d "$WORKSPACE_ROOT/.agents/agents" ]]; then
+# Cursor: .cursor/agents/ → .agentic-workflows/agents/cursor/ (Cursor-specific .mdc format)
+if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/cursor" ]]; then
   mkdir -p "$WORKSPACE_ROOT/.cursor"
   if [[ ! -e "$WORKSPACE_ROOT/.cursor/agents" ]]; then
-    ln -s "../.agents/agents" "$WORKSPACE_ROOT/.cursor/agents"
-    ok "Symlinked .cursor/agents/ → .agents/agents/"
+    ln -s "../.agentic-workflows/agents/cursor" "$WORKSPACE_ROOT/.cursor/agents"
+    ok "Symlinked .cursor/agents/ → .agentic-workflows/agents/cursor/"
   fi
 fi
 if [[ -d "$WORKSPACE_ROOT/.agents/skills" ]]; then
@@ -293,12 +293,12 @@ if [[ -d "$WORKSPACE_ROOT/.agents/skills" ]]; then
   fi
 fi
 
-# OpenCode: .opencode/agents/ → .agents/agents/, .opencode/skills/ → .agents/skills/
-if [[ -d "$WORKSPACE_ROOT/.agents/agents" ]]; then
+# OpenCode: .opencode/agents/ → .agentic-workflows/agents/opencode/ (OpenCode-specific format, no model field)
+if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/opencode" ]]; then
   mkdir -p "$WORKSPACE_ROOT/.opencode"
   if [[ ! -e "$WORKSPACE_ROOT/.opencode/agents" ]]; then
-    ln -s "../.agents/agents" "$WORKSPACE_ROOT/.opencode/agents"
-    ok "Symlinked .opencode/agents/ → .agents/agents/"
+    ln -s "../.agentic-workflows/agents/opencode" "$WORKSPACE_ROOT/.opencode/agents"
+    ok "Symlinked .opencode/agents/ → .agentic-workflows/agents/opencode/"
   fi
 fi
 if [[ -d "$WORKSPACE_ROOT/.agents/skills" ]]; then

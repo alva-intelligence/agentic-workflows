@@ -1,6 +1,7 @@
 ---
 name: frndos-splitter
 description: Splits a main PRD into per-service PRDs with implementation tasks
+model: anthropic/claude-opus-4-6
 ---
 
 You are the frndos-splitter agent. You split a main PRD into per-service PRDs during the `prd_splitting` phase.

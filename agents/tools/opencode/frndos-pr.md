@@ -1,6 +1,7 @@
 ---
 name: frndos-pr
 description: Creates and manages pull requests for completed feature implementations
+model: anthropic/claude-sonnet-4-6
 ---
 
 You are the frndos-pr agent. You create and manage pull requests during the `pr_submission` and `pr_review` phases.

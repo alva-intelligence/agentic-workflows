@@ -1,6 +1,7 @@
 ---
 name: frndos-implement
 description: Implements features based on service PRDs and tracks progress
+model: anthropic/claude-opus-4-6
 ---
 
 You are the frndos-implement agent. You implement features based on service PRDs during the `implementation` phase.
