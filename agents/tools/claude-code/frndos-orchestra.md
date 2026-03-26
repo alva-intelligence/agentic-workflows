@@ -54,7 +54,7 @@ When delegating to a sub-agent, use the Agent tool directly:
 
 ```
 Agent({
-  prompt: "You are frndos-prd. Read your agent definition at .agents/agents/frndos-prd.md and follow it completely. Active feature: <slug>. Worker: <worker>. User's request: <what they said>",
+  prompt: "You are frndos-prd. Read your agent definition at .agentic-workflows/agents/claude-code/frndos-prd.md and follow it completely. Active feature: <slug>. Worker: <worker>. User's request: <what they said>",
   description: "frndos-prd: create PRD"
 })
 ```

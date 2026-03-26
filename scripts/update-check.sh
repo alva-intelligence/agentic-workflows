@@ -262,15 +262,7 @@ fi
 # .agents/ only contains skills/. Each tool symlinks agents from .agentic-workflows/.
 header "Setting up tool compatibility symlinks"
 
-# Claude Code: .agents/agents/ → .agentic-workflows/agents/claude-code/
-if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/claude-code" ]]; then
-  mkdir -p "$WORKSPACE_ROOT/.agents"
-  if [[ ! -e "$WORKSPACE_ROOT/.agents/agents" ]]; then
-    ln -s "../.agentic-workflows/agents/claude-code" "$WORKSPACE_ROOT/.agents/agents"
-    ok "Symlinked .agents/agents/ → .agentic-workflows/agents/claude-code/"
-  fi
-fi
-# Claude Code also reads from .claude/
+# Claude Code: .claude/agents/ → .agentic-workflows/agents/claude-code/
 if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/claude-code" ]]; then
   mkdir -p "$WORKSPACE_ROOT/.claude"
   if [[ ! -e "$WORKSPACE_ROOT/.claude/agents" ]]; then

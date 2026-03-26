@@ -629,8 +629,8 @@ The bootstrap installed frndOS agents to `.agentic-workflows/agents/<tool>/` and
 
 **Claude Code:** Verify `CLAUDE.md` symlink exists → `AGENTS.md`. Agents symlinked from `.agentic-workflows/agents/claude-code/`:
 ```bash
-mkdir -p .agents
-ln -sf ../.agentic-workflows/agents/claude-code .agents/agents
+mkdir -p .claude
+ln -sf ../.agentic-workflows/agents/claude-code .claude/agents
 ```
 
 **Cursor:** If user selected Cursor, check `.cursor/agents/` symlink exists pointing to Cursor-specific `.mdc` agents. If not:
