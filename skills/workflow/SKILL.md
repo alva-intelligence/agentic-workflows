@@ -86,20 +86,56 @@ Switch active feature context.
 6. If on a different git branch, inform user: "Feature `<slug>` is on branch `{branch}`. Switch with: `git checkout {branch}`"
 7. Save state
 
+### `/workflow list-all`
+Discover ALL features across the team — not just local ones. Scans committed artifacts and git branches.
+
+**Steps:**
+1. Fetch latest from all remotes: `git fetch --all` in each service dir
+2. Scan for features from multiple sources:
+   - **PRDs:** `ls docs/prd/*.md` → extract slugs
+   - **Feature branches:** `git branch -r | grep 'feature/'` in each service → extract slugs
+   - **Track files:** `find . -name '*.track.md'` across all services → extract slugs
+   - **Wireframes:** `ls web/src/app/(dashboard)/workflows/` → extract slugs
+3. For each unique slug found, reconstruct the phase (same logic as resume):
+   - PRD exists? Wireframe approved? Branch exists? Service PRDs? Track progress? PR?
+4. Also check local `.workflow-state.json` for any features only tracked locally
+5. Display a table:
+
+```
+All features (committed artifacts + local state):
+
+  Slug                        Phase              Last Activity         Worker
+  ─────────────────────────── ────────────────── ───────────────────── ──────────
+→ brand-health-dashboard      implementation     2026-03-20 (track)    fahrizky
+  user-analytics              pr_review          2026-03-18 (PR #42)   daffa
+  kv-generator                prd_creation       2026-03-15 (PRD)      arhen
+
+→ = active in your local .workflow-state.json
+```
+
+6. Show: "To pick up a feature: `/workflow resume <slug>`"
+
 ### `/workflow resume <slug>`
 Resume a feature started by another team member.
 
 **Steps:**
-1. Scan committed artifacts to reconstruct phase:
+1. Fetch latest: `git fetch --all` in each service dir
+2. Scan committed artifacts to reconstruct phase:
    - PRD exists at `docs/prd/<slug>.md`? → past prd_creation
    - Wireframe directory exists with approved metadata.json? → past wireframe_review
    - Feature branch `feature/<slug>` exists? → past branch_creation
    - Service PRDs exist? → past prd_splitting
    - Track files show progress? → in implementation
    - PR URL in track file? → in pr_review
-2. Create/update feature entry in `.workflow-state.json` with reconstructed state
-3. Set `active_feature` to `<slug>`
-4. Inform user of reconstructed state
+3. Read the latest session log from track files to show who last worked on it and what they did
+4. Create/update feature entry in `.workflow-state.json` with reconstructed state
+5. Set `active_feature` to `<slug>`
+6. Ask user for their worker name if not already set
+7. Inform user:
+   - Reconstructed phase
+   - Last session log entry (who did what)
+   - What's left to do (remaining tasks from track file)
+   - Which branch to checkout: `git checkout feature/<slug>`
 
 ### `/workflow add-wireframe <wireframe-slug>`
 Add a new wireframe to the current feature.
