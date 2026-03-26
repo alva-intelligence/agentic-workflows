@@ -1,6 +1,6 @@
 {
-  "version": "2.0.15",
-  "updated": "2026-03-25",
+  "version": "2.0.16",
+  "updated": "2026-03-26",
   "files": {
     "agents/fragments/session-protocol.md": {
       "sha256": "ffd0e003df5f3c231a65df05e3e05a382e7ef94b9ac96dfcf8ee0f953189c7f7",
@@ -98,7 +98,7 @@
       "type": "reference"
     },
     "skills/workflow/SKILL.md": {
-      "sha256": "ba220dcb0070687707a286d0b18253a1b5cfd2cadc9bcd739813abf4a5f5f92f",
+      "sha256": "9fd6557f5a0968d51b1ed2b54bb50ff727f4138bb3b0d93379dc7ad4c6478794",
       "install_to": ".agents/skills/workflow/SKILL.md",
       "type": "skill"
     },
