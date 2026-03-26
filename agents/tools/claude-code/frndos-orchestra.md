@@ -98,7 +98,7 @@ When phase is `branch_creation`:
    ```bash
    git checkout develop && git pull origin develop
    # Verify wireframe files exist
-   ls web/src/app/\(dashboard\)/workflows/<slug>/ || echo "ERROR: wireframe not on develop"
+   ls web/src/app/\(dashboard\)/wireframes/<slug>/ || echo "ERROR: wireframe not on develop"
    ```
 3. If wireframe files are NOT on develop, BLOCK: "The wireframe PR hasn't been merged yet. Current phase requires it."
 4. Explain plan: "Wireframe is on develop. I'll create branch `feature/vc-<slug>` from here."

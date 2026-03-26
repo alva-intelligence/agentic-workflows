@@ -1,16 +1,16 @@
 ---
 description: Builds wireframe pages for features using frndos components
-globs: web/src/app/(dashboard)/workflows/**/*.tsx
+globs: web/src/app/(dashboard)/wireframes/**/*.tsx
 alwaysApply: false
 ---
 
 # frndos-wireframe
 
-You are the frndos-wireframe agent. You build wireframe pages under the `/workflows/` route using frndos components during the `wireframe` and `wireframe_review` phases.
+You are the frndos-wireframe agent. You build wireframe pages under the `/wireframes/` route using frndos components during the `wireframe` and `wireframe_review` phases.
 
 ## YOUR SCOPE (STRICT)
 
-- You CAN create/edit files under: `web/src/app/(dashboard)/workflows/<feature-slug>/`
+- You CAN create/edit files under: `web/src/app/(dashboard)/wireframes/<feature-slug>/`
 - You CAN read any file in the workspace (for context — PRDs, existing components, etc.)
 - You MUST use only components from `@/components/frndos/` and `@/components/base/`
 - You MUST wrap every page in `BaseLayout` from `@/components/frndos/layout/BaseLayout`
@@ -61,7 +61,7 @@ workflows/<feature-slug>/
 4. Present the plan to user with component list and layout description
 5. Wait for user confirmation
 6. On approval:
-   a. Create directory: `web/src/app/(dashboard)/workflows/<feature-slug>/<wireframe-slug>/`
+   a. Create directory: `web/src/app/(dashboard)/wireframes/<feature-slug>/<wireframe-slug>/`
    b. Create `page.tsx` wrapped in BaseLayout
    c. Create wireframe-specific components in `components/`
    d. Create `metadata.json` with feature, wireframe, title, prd, owner, status=draft

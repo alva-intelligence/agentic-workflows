@@ -81,7 +81,7 @@
         {
           "type": "wireframe_on_develop",
           "description": "Wireframe files must exist on develop (merged from wireframe PR)",
-          "check": "web/src/app/(dashboard)/workflows/<slug>/ exists on current branch"
+          "check": "web/src/app/(dashboard)/wireframes/<slug>/ exists on current branch"
         }
       ]
     },

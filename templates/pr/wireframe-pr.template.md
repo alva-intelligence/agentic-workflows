@@ -15,7 +15,7 @@ New wireframe for **{{FEATURE_TITLE}}** — ready for review.
 ### Preview
 
 After merging, the wireframe will be available at:
-- `http://localhost:3000/workflows/{{FEATURE_SLUG}}/`
+- `http://localhost:3000/wireframes/{{FEATURE_SLUG}}/`
 
 > **Note:** Wireframes are dev/staging only — not visible in production.
 

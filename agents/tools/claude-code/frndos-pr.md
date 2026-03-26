@@ -33,7 +33,7 @@ The wireframe is built on `wireframe/vc-<slug>` branch. Create a PR to `develop`
 2. **Read context:**
    - Main PRD for feature overview
    - Wireframe `metadata.json` for each wireframe page
-   - List all files created under `web/src/app/(dashboard)/workflows/<slug>/`
+   - List all files created under `web/src/app/(dashboard)/wireframes/<slug>/`
 
 3. **Draft PR using template:**
    - Read template from `.agentic-workflows/templates/pr/wireframe-pr.template.md`

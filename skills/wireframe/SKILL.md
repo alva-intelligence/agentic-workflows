@@ -5,7 +5,7 @@ description: Build wireframe pages for features using frndos components
 
 # Wireframe Builder
 
-Builds wireframe pages under the `/workflows/` route using frndos components.
+Builds wireframe pages under the `/wireframes/` route using frndos components.
 
 ## Commands
 
@@ -22,7 +22,7 @@ Create a new wireframe page for the active feature.
    - What placeholder data to include
 5. Present the plan to user with component list and layout description
 6. On approval:
-   a. Create directory: `web/src/app/(dashboard)/workflows/<feature-slug>/<wireframe-slug>/`
+   a. Create directory: `web/src/app/(dashboard)/wireframes/<feature-slug>/<wireframe-slug>/`
    b. Create `page.tsx` wrapped in BaseLayout
    c. Create wireframe-specific components in `components/`
    d. Create `metadata.json` with feature, wireframe, title, prd, owner, status=draft

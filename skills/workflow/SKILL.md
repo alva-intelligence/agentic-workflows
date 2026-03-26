@@ -95,7 +95,7 @@ Discover ALL features across the team — not just local ones. Scans committed a
    - **PRDs:** `ls docs/prd/*.md` → extract slugs
    - **Feature branches:** `git branch -r | grep 'feature/vc-'` in each service → extract slugs
    - **Track files:** `find . -name '*.track.md'` across all services → extract slugs
-   - **Wireframes:** `ls web/src/app/(dashboard)/workflows/` → extract slugs
+   - **Wireframes:** `ls web/src/app/(dashboard)/wireframes/` → extract slugs
 3. For each unique slug found, reconstruct the phase (same logic as resume):
    - PRD exists? Wireframe approved? Branch exists? Service PRDs? Track progress? PR?
 4. Also check local `.workflow-state.json` for any features only tracked locally

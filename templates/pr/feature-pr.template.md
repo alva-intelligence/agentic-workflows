@@ -11,7 +11,7 @@
 
 ### Wireframe
 
-- [{{FEATURE_SLUG}} wireframe](/workflows/{{FEATURE_SLUG}}/)
+- [{{FEATURE_SLUG}} wireframe](/wireframes/{{FEATURE_SLUG}}/)
 
 ### Changes
 

@@ -2,7 +2,7 @@
 
 ### Location
 
-Wireframes live at: `web/src/app/(dashboard)/workflows/<feature-slug>/<wireframe-slug>/`
+Wireframes live at: `web/src/app/(dashboard)/wireframes/<feature-slug>/<wireframe-slug>/`
 
 ### Directory Structure
 
