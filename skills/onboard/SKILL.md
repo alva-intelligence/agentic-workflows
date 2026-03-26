@@ -633,6 +633,20 @@ mkdir -p .claude
 ln -sf ../.agentic-workflows/agents/claude-code .claude/agents
 ```
 
+Configure project settings with experimental features enabled:
+```bash
+cat > .claude/settings.json << 'SETTINGS'
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
+SETTINGS
+```
+
+This enables Agent Teams for the `implementation` phase (parallel per-service engineers + architect). The setting is project-level so all team members get it automatically.
+
 **Cursor:** If user selected Cursor, check `.cursor/agents/` symlink exists pointing to Cursor-specific `.mdc` agents. If not:
 ```bash
 mkdir -p .cursor
