@@ -21,9 +21,9 @@
         }
       ]
     },
-    "wireframe_to_wireframe_review": {
+    "wireframe_to_wireframe_pr": {
       "from": "wireframe",
-      "to": "wireframe_review",
+      "to": "wireframe_pr",
       "conditions": [
         {
           "type": "file_exists",
@@ -34,6 +34,22 @@
           "type": "metadata_exists",
           "description": "Each wireframe must have a metadata.json",
           "check": "metadata.json exists in each wireframe directory"
+        },
+        {
+          "type": "git_branch",
+          "description": "Must be on wireframe branch",
+          "check": "Current branch is wireframe/vc-<slug> and all wireframe changes are committed"
+        }
+      ]
+    },
+    "wireframe_pr_to_wireframe_review": {
+      "from": "wireframe_pr",
+      "to": "wireframe_review",
+      "conditions": [
+        {
+          "type": "pr_exists",
+          "description": "Wireframe PR must exist targeting develop",
+          "check": "features[active_feature].wireframe_pr_url is set and `gh pr view` succeeds"
         }
       ]
     },
@@ -42,8 +58,13 @@
       "to": "branch_creation",
       "conditions": [
         {
+          "type": "pr_merged",
+          "description": "Wireframe PR must be merged by FE owners",
+          "check": "`gh pr view <wireframe_pr_url> --json state` returns 'MERGED'"
+        },
+        {
           "type": "approval",
-          "description": "All wireframes must be approved by Jeff",
+          "description": "Jeff must have approved the wireframe (verbal or PR comment)",
           "check": "All wireframes in features[active_feature].wireframes have approval.status === 'approved'"
         }
       ]
@@ -54,8 +75,13 @@
       "conditions": [
         {
           "type": "git_branch",
-          "description": "Feature branch must exist from latest develop",
-          "check": "features[active_feature].branch exists and is checked out"
+          "description": "Must be on develop first, then feature branch created from it",
+          "check": "Agent has: (1) checked out develop, (2) pulled latest, (3) verified wireframe files exist on develop, (4) created feature/vc-<slug> from develop"
+        },
+        {
+          "type": "wireframe_on_develop",
+          "description": "Wireframe files must exist on develop (merged from wireframe PR)",
+          "check": "web/src/app/(dashboard)/workflows/<slug>/ exists on current branch"
         }
       ]
     },
@@ -67,6 +93,11 @@
           "type": "file_exists",
           "description": "Service PRDs must exist for each touched service",
           "check": "features[active_feature].service_prds has entries for all services listed in main PRD frontmatter"
+        },
+        {
+          "type": "git_branch",
+          "description": "Must be on feature branch",
+          "check": "Current branch is feature/vc-<slug>"
         }
       ]
     },
@@ -78,6 +109,11 @@
           "type": "track_progress",
           "description": "Track file must show progress",
           "check": "At least one task checked off in each service's track file"
+        },
+        {
+          "type": "git_branch",
+          "description": "Must be on feature branch",
+          "check": "Current branch is feature/vc-<slug>"
         }
       ]
     },

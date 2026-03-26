@@ -31,7 +31,7 @@
     "feature": {
       "type": "object",
       "description": "State for a single feature being tracked through the workflow.",
-      "required": ["phase", "phase_entered", "prd_path", "wireframes", "branch", "service_prds", "pr_url"],
+      "required": ["phase", "phase_entered", "prd_path", "wireframes", "wireframe_branch", "wireframe_pr_url", "branch", "service_prds", "pr_url"],
       "additionalProperties": false,
       "properties": {
         "phase": {
@@ -41,6 +41,7 @@
             "idle",
             "prd_creation",
             "wireframe",
+            "wireframe_pr",
             "wireframe_review",
             "branch_creation",
             "prd_splitting",
@@ -66,8 +67,16 @@
             "$ref": "#/definitions/wireframe"
           }
         },
+        "wireframe_branch": {
+          "description": "Git branch for wireframe work (wireframe/vc-<slug>), or null.",
+          "type": ["string", "null"]
+        },
+        "wireframe_pr_url": {
+          "description": "GitHub PR URL for wireframe review, or null.",
+          "type": ["string", "null"]
+        },
         "branch": {
-          "description": "Git branch name for this feature, or null if not yet created.",
+          "description": "Git branch name for feature implementation (feature/vc-<slug>), or null if not yet created.",
           "type": ["string", "null"]
         },
         "service_prds": {

@@ -28,18 +28,21 @@ Run update check, load state, sync code, health checks, then route.
 
 ## ROUTING TABLE
 
-| Phase | Agent | Description |
-|-------|-------|-------------|
-| idle | (self) | Ask user what to do: start new feature, resume existing, or list features |
-| prd_creation | frndos-prd | PRD creation from user input |
-| wireframe | frndos-wireframe | Build wireframe pages |
-| wireframe_review | frndos-wireframe | Handle approval recording |
-| branch_creation | (self) | Create feature branch, then auto-transition |
-| prd_splitting | frndos-splitter | Split main PRD into service PRDs |
-| implementation | frndos-implement | Implement the feature |
-| pr_submission | frndos-pr | Create pull request |
-| pr_review | frndos-pr | Handle PR feedback |
-| completion | frndos-track | Mark feature complete |
+| Phase | Agent | Expected Branch | Description |
+|-------|-------|----------------|-------------|
+| idle | (self) | any | Ask user what to do: start new feature, resume existing, or list features |
+| prd_creation | frndos-prd | any | PRD creation from user input |
+| wireframe | frndos-wireframe | `wireframe/vc-<slug>` | Build wireframe pages on wireframe branch |
+| wireframe_pr | frndos-pr | `wireframe/vc-<slug>` | Create PR targeting develop for FE owner review |
+| wireframe_review | frndos-pr | `wireframe/vc-<slug>` | Waiting for FE owners to merge + Jeff approval |
+| branch_creation | (self) | `develop` → `feature/vc-<slug>` | Checkout develop, verify wireframe, create feature branch |
+| prd_splitting | frndos-splitter | `feature/vc-<slug>` | Split main PRD into service PRDs |
+| implementation | frndos-implement | `feature/vc-<slug>` | Implement the feature |
+| pr_submission | frndos-pr | `feature/vc-<slug>` | Create pull request |
+| pr_review | frndos-pr | `feature/vc-<slug>` | Handle PR feedback |
+| completion | frndos-track | `feature/vc-<slug>` | Mark feature complete |
+
+**CRITICAL: Before delegating to any agent, verify the current git branch matches the expected branch for that phase.** If it doesn't, switch to the correct branch first.
 
 ## HOW TO DELEGATE
 
@@ -69,11 +72,12 @@ Use `@frndos-prd` to delegate, or spawn via the Task tool for background work.
 | Phase | Delegation |
 |-------|-----------|
 | prd_creation | Spawn `frndos-prd` with: feature slug, worker, user's input |
-| wireframe | Spawn `frndos-wireframe` with: feature slug, PRD path, wireframe slug |
-| wireframe_review | Spawn `frndos-wireframe` with: feature slug, approval request |
+| wireframe | Spawn `frndos-wireframe` with: feature slug, PRD path, wireframe slug. Agent creates `wireframe/vc-<slug>` branch from develop first |
+| wireframe_pr | Spawn `frndos-pr` with: feature slug, wireframe branch, target=develop, type=wireframe |
+| wireframe_review | Spawn `frndos-pr` with: feature slug, wireframe PR URL, check merge status |
 | prd_splitting | Spawn `frndos-splitter` with: feature slug, PRD path |
 | implementation | Spawn `frndos-implement` with: feature slug, service PRDs, track files |
-| pr_submission | Spawn `frndos-pr` with: feature slug, branch name |
+| pr_submission | Spawn `frndos-pr` with: feature slug, feature branch, target=develop |
 | pr_review | Spawn `frndos-pr` with: feature slug, PR URL |
 | completion | Spawn `frndos-track` with: feature slug, completion request |
 
@@ -90,16 +94,22 @@ Use `@frndos-prd` to delegate, or spawn via the Task tool for background work.
 
 When phase is `branch_creation`:
 1. Determine target branch: `develop` for api/web, `development` for ai-service/data-service
-2. Explain plan: "I'll create branch `feature/vc-<slug>` from latest `<target>`"
-3. Wait for confirmation
-4. Execute:
+2. **First, verify wireframe PR was merged and wireframe exists on develop:**
+   ```bash
+   git checkout develop && git pull origin develop
+   # Verify wireframe files exist
+   ls web/src/app/\(dashboard\)/workflows/<slug>/ || echo "ERROR: wireframe not on develop"
    ```
-   git checkout <target> && git pull origin <target>
+3. If wireframe files are NOT on develop, BLOCK: "The wireframe PR hasn't been merged yet. Current phase requires it."
+4. Explain plan: "Wireframe is on develop. I'll create branch `feature/vc-<slug>` from here."
+5. Wait for confirmation
+6. Execute:
+   ```bash
    git checkout -b feature/vc-<slug>
    git push -u origin feature/vc-<slug>
    ```
-5. Update `.workflow-state.json`: set branch, transition to `prd_splitting`
-6. Immediately delegate to `frndos-splitter`
+7. Update `.workflow-state.json`: set branch, transition to `prd_splitting`
+8. Immediately delegate to `frndos-splitter`
 
 ## IDLE STATE
 

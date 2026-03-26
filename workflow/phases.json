@@ -16,21 +16,28 @@
     },
     "wireframe": {
       "name": "Wireframe",
-      "description": "Building wireframe pages for the feature.",
+      "description": "Building wireframe pages on a wireframe/vc-<slug> branch.",
       "agent": "frndos-wireframe",
-      "next": ["wireframe_review"],
+      "next": ["wireframe_pr"],
       "allowed_actions": ["create_wireframe", "edit_wireframe", "add_wireframe"]
+    },
+    "wireframe_pr": {
+      "name": "Wireframe PR",
+      "description": "Creating PR for wireframe to notify FE owners for review.",
+      "agent": "frndos-pr",
+      "next": ["wireframe_review"],
+      "allowed_actions": ["create_wireframe_pr", "update_wireframe_pr"]
     },
     "wireframe_review": {
       "name": "Wireframe Review",
-      "description": "Waiting for wireframe approval from Jeff.",
-      "agent": "frndos-wireframe",
+      "description": "Wireframe PR under review by FE owners + Jeff approval.",
+      "agent": "frndos-pr",
       "next": ["branch_creation"],
-      "allowed_actions": ["record_approval", "request_changes"]
+      "allowed_actions": ["record_approval", "address_feedback", "request_changes"]
     },
     "branch_creation": {
       "name": "Branch Creation",
-      "description": "Creating the feature branch from latest develop.",
+      "description": "Wireframe PR merged. Checkout updated develop, verify wireframe exists, create feature branch.",
       "agent": "frndos-orchestra",
       "next": ["prd_splitting"],
       "allowed_actions": ["create_branch"]
