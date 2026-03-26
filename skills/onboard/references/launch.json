@@ -2,56 +2,39 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "postgresql",
+      "name": "api",
       "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "postgres", "-D", ".pgdata", "-k", "/tmp"],
-      "port": 5432
+      "runtimeArgs": ["develop", "--command", "bash", "-c", "cd api && php artisan serve --port=9191"],
+      "port": 9191
     },
     {
-      "name": "redis",
+      "name": "api-queue",
       "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "redis-server"],
-      "port": 6379
+      "runtimeArgs": ["develop", "--command", "bash", "-c", "cd api && php artisan queue:work database --timeout=3000 --tries=5 --queue=high,low,default,subscriptions"]
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "nix",
+      "runtimeArgs": ["develop", "--command", "bash", "-c", "cd web && bun run dev"],
+      "port": 3000
+    },
+    {
+      "name": "ai-service",
+      "runtimeExecutable": "nix",
+      "runtimeArgs": ["develop", "--command", "bash", "-c", "cd ai-service && source .venv/bin/activate && fastapi dev"],
+      "port": 8000
+    },
+    {
+      "name": "data-service",
+      "runtimeExecutable": "nix",
+      "runtimeArgs": ["develop", "--command", "bash", "-c", "cd data-service && source .venv/bin/activate && uvicorn app.main:app --reload --port 9999"],
+      "port": 9999
     },
     {
       "name": "mailhog",
       "runtimeExecutable": "nix",
       "runtimeArgs": ["develop", "--command", "mailhog"],
       "port": 8025
-    },
-    {
-      "name": "api",
-      "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "php", "artisan", "serve", "--port=9191"],
-      "cwd": "api",
-      "port": 9191
-    },
-    {
-      "name": "api-queue",
-      "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "php", "artisan", "queue:work", "database", "--timeout=3000", "--tries=5", "--queue=high,low,default,subscriptions"],
-      "cwd": "api"
-    },
-    {
-      "name": "web",
-      "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "bun", "run", "dev"],
-      "cwd": "web",
-      "port": 3000
-    },
-    {
-      "name": "ai-service",
-      "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "fastapi", "dev"],
-      "cwd": "ai-service",
-      "port": 8000
-    },
-    {
-      "name": "data-service",
-      "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "uvicorn", "app.main:app", "--reload", "--port", "9999"],
-      "cwd": "data-service",
-      "port": 9999
     }
   ]
 }
