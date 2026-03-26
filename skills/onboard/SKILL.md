@@ -275,23 +275,42 @@ for cmd in git gh; do
 done
 ```
 
-#### B.2 Install missing tools
+#### B.2 Install missing tools — version must match Nix flake
 
 For each missing tool, the agent runs the install command directly. If `brew` is not installed, tell user to install it first: https://brew.sh
 
-| Tool | Install Command |
-|------|----------------|
-| PHP 8.5 | `brew install php` |
-| Composer | `brew install composer` |
-| Bun | `brew install oven-sh/bun/bun` |
-| Node 22 | `brew install node@22` |
-| Python 3.12 | `brew install python@3.12` |
-| uv | `brew install uv` |
-| PostgreSQL | `brew install postgresql@18` |
-| Redis | `brew install redis` |
-| Mailhog | `brew install mailhog` |
-| git | `brew install git` |
-| gh | `brew install gh` |
+**Required versions (must match `flake.nix`):**
+
+| Tool | Required Version | Install Command | Verify |
+|------|-----------------|----------------|--------|
+| PHP | **8.5** | `brew install php@8.5` | `php -v` must show 8.5.x |
+| Composer | latest | `brew install composer` | `composer --version` |
+| Bun | latest | `brew install oven-sh/bun/bun` | `bun --version` |
+| Node | **22** | `brew install node@22` | `node -v` must show v22.x |
+| Python | **3.12** | `brew install python@3.12` | `python3 --version` must show 3.12.x |
+| uv | latest | `brew install uv` | `uv --version` |
+| PostgreSQL | **18** (with pgvector) | `brew install postgresql@18` | `psql --version` must show 18.x |
+| Redis | **8+** | `brew install redis` | `redis-server --version` |
+| Mailhog | latest | `brew install mailhog` | `command -v mailhog` |
+| git | latest | `brew install git` | `git --version` |
+| gh | latest | `brew install gh` | `gh --version` |
+
+**After installing, verify versions match:**
+```bash
+# Check major versions are correct
+php -v 2>&1 | grep -q "PHP 8.5" && echo "✓ PHP 8.5" || echo "✗ PHP version mismatch — need 8.5"
+node -v 2>&1 | grep -q "v22\." && echo "✓ Node 22" || echo "✗ Node version mismatch — need 22"
+python3 --version 2>&1 | grep -q "3.12" && echo "✓ Python 3.12" || echo "✗ Python version mismatch — need 3.12"
+psql --version 2>&1 | grep -q "18\." && echo "✓ PostgreSQL 18" || echo "✗ PostgreSQL version mismatch — need 18"
+```
+
+**If a version is wrong** (e.g., PHP 8.4 instead of 8.5), unlink the old version and link the correct one:
+```bash
+brew unlink php && brew link php@8.5
+brew unlink node && brew link node@22
+brew unlink python@3.13 && brew link python@3.12
+brew unlink postgresql@17 && brew link postgresql@18
+```
 
 Run the installs for missing tools. **The agent does this directly** — do NOT ask user to run them.
 
