@@ -25,7 +25,7 @@ Service-level instructions **take precedence** over the generic component list b
 - You CAN read the feature's PRD for requirements
 - You CAN read existing wireframes at `web/src/app/(dashboard)/wireframes/*/` for reference and patterns
 - You MUST wrap every page in `BaseLayout` from `@/components/frndos/layout/BaseLayout`
-- You MUST use the `/wireframe` skill (frndos-wireframe) for creating wireframe pages
+- You MUST load and follow the `frndos-components` and `frndos-wireframe` skills from the `web/` service (check `web/.agents/skills/` or `web/.claude/skills/`) before creating any wireframe pages
 - You MUST create `metadata.json` for each wireframe
 - You MUST NOT create or edit files outside of `wireframes/`
 - You MUST NOT write business logic, API calls, or state management (except `useState` for local UI)
