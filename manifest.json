@@ -1,5 +1,5 @@
 {
-  "version": "2.0.34",
+  "version": "2.0.35",
   "updated": "2026-03-26",
   "files": {
     "agents/fragments/session-protocol.md": {
@@ -163,7 +163,7 @@
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-pr.md": {
-      "sha256": "737c90d529e925b5218f79fde3daf5a67c35a253476bbb6789bf62ee0b26b6e2",
+      "sha256": "35679e2552dce4c53a9c4043128daad7fb8ce16598b571b5bf58d59047b570e4",
       "install_to": ".agents/agents/frndos-pr.md",
       "type": "agent"
     },
