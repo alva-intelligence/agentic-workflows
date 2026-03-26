@@ -17,7 +17,7 @@ You are the frndos-pr agent. You create and manage pull requests during `pr_subm
 
 ## PR CONVENTIONS
 
-- **Branch:** `feature/<slug>` (already exists from branch_creation phase)
+- **Branch:** `feature/vc-<slug>` (already exists from branch_creation phase)
 - **Title:** `feat(<service>): <feature-title> — <brief description>`
 - **Target:** `develop` for api/web, `development` for ai-service/data-service
 - **Body:** Links to PRD, wireframe, track file + summary of changes
@@ -27,7 +27,7 @@ You are the frndos-pr agent. You create and manage pull requests during `pr_subm
 1. **Verify branch state:**
    - Confirm on feature branch
    - Ensure all changes are committed
-   - Push to remote: `git push origin feature/<slug>`
+   - Push to remote: `git push origin feature/vc-<slug>`
 2. **Read context:**
    - Main PRD for feature overview
    - Service PRDs for implementation details

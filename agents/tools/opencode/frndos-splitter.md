@@ -71,7 +71,7 @@ Location: `<service>/docs/tracks/<feature-slug>.track.md`
 prd: <feature-slug>
 parent_prd: docs/prd/<feature-slug>.md
 service: <api|web|ai-service|data-service>
-branch: feature/<feature-slug>
+branch: feature/vc-<feature-slug>
 pr_url: null
 status: in_progress
 ---

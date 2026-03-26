@@ -67,7 +67,7 @@ When in `pr_review` phase:
    - Ask: "Would you like me to delegate these changes to frndos-implement?"
    - Use OpenCode run for delegation:
      ```bash
-     opencode run -m <model> "Address PR feedback for feature/<slug>. Feedback: <summary>. Apply changes on the feature branch."
+     opencode run -m <model> "Address PR feedback for feature/vc-<slug>. Feedback: <summary>. Apply changes on the feature branch."
      ```
 3. **If approved and merged:**
    - Update track file: PR = merged
