@@ -279,11 +279,22 @@ The agent checks each tool and takes the right action. **Do this directly — do
 | Tool | Pin | Check | Action |
 |------|-----|-------|--------|
 | PHP | **8.5** | `php -v \| grep "8.5"` | Missing → `brew install php@8.5`. Wrong version → `brew install php@8.5 && brew unlink php && brew link php@8.5 --force` |
-| Node | **22** | `node -v \| grep "v22\."` | Missing → `brew install node@22`. Wrong version → `brew install node@22 && brew unlink node && brew link node@22 --force` |
-| Python | **3.12** | `python3 -V \| grep "3.12"` | Missing → `brew install python@3.12`. Wrong version → `brew install python@3.12 && brew unlink python@3 && brew link python@3.12 --force` |
+| Node | **22** | `node -v \| grep "v22\."` | Missing → `brew install node@22`. Wrong version → **ask user** (see below) |
+| Python | **3.12** | `python3 -V \| grep "3.12"` | Missing → `brew install python@3.12`. Wrong version → **ask user** (see below) |
 | Bun | latest | `command -v bun` | Missing → `brew install oven-sh/bun/bun`. Installed → `brew upgrade bun` |
 | Composer | latest | `command -v composer` | Missing → `brew install composer`. Installed → `brew upgrade composer` |
 | uv | latest | `command -v uv` | Missing → `brew install uv`. Installed → `brew upgrade uv` |
+
+**If a pinned tool is installed but wrong version**, use the ask tool:
+
+> "You have **Node v23.8.0** installed, but frndOS pins **Node 22**. What would you like to do?"
+> - Install Node 22 alongside and switch to it (recommended)
+> - Keep my current version (v23) — I'll handle compatibility myself
+
+If user says **install and switch** → `brew install node@22 && brew unlink node && brew link node@22 --force`
+If user says **keep current** → skip, continue onboarding. Note in `.onboard-state.json` that version differs from pin.
+
+Apply the same pattern for Python, PHP, or any pinned tool with a version mismatch. **NEVER silently downgrade** — always ask first.
 
 **PostgreSQL — KEEP existing if version >= 16 (upgrading deletes data):**
 
