@@ -251,74 +251,90 @@ If anything is missing, fix `flake.nix` — do NOT install manually.
 
 ### Option B: Direct Install (Homebrew)
 
-#### B.1 Check what's already installed
+#### B.1 Check what's installed and version status
+
+First check if `brew` is available:
+```bash
+command -v brew &>/dev/null && echo "✓ Homebrew installed" || echo "✗ Homebrew not found — install from https://brew.sh"
+```
+
+Then check each tool. For each one, determine: **missing**, **correct version**, or **wrong version**.
 
 ```bash
-echo "=== Runtimes ==="
-for cmd in php bun node python3; do
+echo "=== Dev Tools (update to latest is fine) ==="
+for cmd in php bun node python3 composer uv pip git gh redis-cli mailhog; do
   command -v "$cmd" &>/dev/null && echo "✓ $cmd: $($cmd --version 2>&1 | head -1)" || echo "✗ $cmd: NOT FOUND"
 done
 
-echo "=== Package Managers ==="
-for cmd in composer uv pip; do
-  command -v "$cmd" &>/dev/null && echo "✓ $cmd" || echo "✗ $cmd: NOT FOUND"
-done
-
-echo "=== Databases & Services ==="
-for cmd in psql redis-cli mailhog; do
-  command -v "$cmd" &>/dev/null && echo "✓ $cmd" || echo "✗ $cmd: NOT FOUND"
-done
-
-echo "=== Dev Tools ==="
-for cmd in git gh; do
-  command -v "$cmd" &>/dev/null && echo "✓ $cmd" || echo "✗ $cmd: NOT FOUND"
-done
+echo "=== PostgreSQL (keep if >= 16) ==="
+command -v psql &>/dev/null && echo "✓ psql: $(psql --version 2>&1)" || echo "✗ psql: NOT FOUND"
 ```
 
-#### B.2 Install missing tools — version must match Nix flake
+#### B.2 Install or upgrade tools
 
-For each missing tool, the agent runs the install command directly. If `brew` is not installed, tell user to install it first: https://brew.sh
+The agent checks each tool and takes the right action. **Do this directly — do NOT ask user to run commands.**
 
-**Required versions (must match `flake.nix`):**
+**Tools that MUST match pinned versions — safe to upgrade (no data loss):**
 
-| Tool | Required Version | Install Command | Verify |
-|------|-----------------|----------------|--------|
-| PHP | **8.5** | `brew install php@8.5` | `php -v` must show 8.5.x |
-| Composer | latest | `brew install composer` | `composer --version` |
-| Bun | latest | `brew install oven-sh/bun/bun` | `bun --version` |
-| Node | **22** | `brew install node@22` | `node -v` must show v22.x |
-| Python | **3.12** | `brew install python@3.12` | `python3 --version` must show 3.12.x |
-| uv | latest | `brew install uv` | `uv --version` |
-| PostgreSQL | **18** (with pgvector) | `brew install postgresql@18` | `psql --version` must show 18.x |
-| Redis | **8+** | `brew install redis` | `redis-server --version` |
-| Mailhog | latest | `brew install mailhog` | `command -v mailhog` |
-| git | latest | `brew install git` | `git --version` |
-| gh | latest | `brew install gh` | `gh --version` |
+| Tool | Pin | Check | Action |
+|------|-----|-------|--------|
+| PHP | **8.5** | `php -v \| grep "8.5"` | Missing → `brew install php@8.5`. Wrong version → `brew install php@8.5 && brew unlink php && brew link php@8.5 --force` |
+| Node | **22** | `node -v \| grep "v22\."` | Missing → `brew install node@22`. Wrong version → `brew install node@22 && brew unlink node && brew link node@22 --force` |
+| Python | **3.12** | `python3 -V \| grep "3.12"` | Missing → `brew install python@3.12`. Wrong version → `brew install python@3.12 && brew unlink python@3 && brew link python@3.12 --force` |
+| Bun | latest | `command -v bun` | Missing → `brew install oven-sh/bun/bun`. Installed → `brew upgrade bun` |
+| Composer | latest | `command -v composer` | Missing → `brew install composer`. Installed → `brew upgrade composer` |
+| uv | latest | `command -v uv` | Missing → `brew install uv`. Installed → `brew upgrade uv` |
 
-**After installing, verify versions match:**
+**PostgreSQL — KEEP existing if version >= 16 (upgrading deletes data):**
+
 ```bash
-# Check major versions are correct
-php -v 2>&1 | grep -q "PHP 8.5" && echo "✓ PHP 8.5" || echo "✗ PHP version mismatch — need 8.5"
-node -v 2>&1 | grep -q "v22\." && echo "✓ Node 22" || echo "✗ Node version mismatch — need 22"
-python3 --version 2>&1 | grep -q "3.12" && echo "✓ Python 3.12" || echo "✗ Python version mismatch — need 3.12"
-psql --version 2>&1 | grep -q "18\." && echo "✓ PostgreSQL 18" || echo "✗ PostgreSQL version mismatch — need 18"
+pg_version=$(psql --version 2>/dev/null | grep -oE '[0-9]+' | head -1)
+if [ -z "$pg_version" ]; then
+  echo "✗ PostgreSQL not found — installing 18"
+  brew install postgresql@18
+elif [ "$pg_version" -ge 16 ]; then
+  echo "✓ PostgreSQL $pg_version — keeping (>= 16 is fine)"
+else
+  echo "⚠ PostgreSQL $pg_version is too old (need >= 16)"
+  # Ask user before upgrading — it will delete their data
+fi
 ```
 
-**If a version is wrong** (e.g., PHP 8.4 instead of 8.5), unlink the old version and link the correct one:
+**If PostgreSQL is < 16**, use the ask tool:
+> "Your PostgreSQL is version $pg_version. frndOS needs >= 16. Upgrading will delete existing databases. Should I upgrade?"
+> - Yes, upgrade (I'll restore from dump later)
+> - No, I'll handle it myself
+
+**Other services — install if missing, keep if exists:**
+
+| Tool | Check | Action |
+|------|-------|--------|
+| Redis | `command -v redis-cli` | Missing → `brew install redis`. Installed → keep |
+| Mailhog | `command -v mailhog` | Missing → `brew install mailhog`. Installed → keep |
+| git | `command -v git` | Missing → `brew install git`. Installed → keep |
+| gh | `command -v gh` | Missing → `brew install gh`. Installed → keep |
+
+#### B.3 Verify all versions after install
+
 ```bash
-brew unlink php && brew link php@8.5
-brew unlink node && brew link node@22
-brew unlink python@3.13 && brew link python@3.12
-brew unlink postgresql@17 && brew link postgresql@18
+php -v 2>&1 | grep -q "PHP 8.5" && echo "✓ PHP 8.5" || echo "✗ PHP — need 8.5"
+node -v 2>&1 | grep -q "v22\." && echo "✓ Node 22" || echo "✗ Node — need 22"
+python3 --version 2>&1 | grep -q "3.12" && echo "✓ Python 3.12" || echo "✗ Python — need 3.12"
+pg_version=$(psql --version 2>/dev/null | grep -oE '[0-9]+' | head -1)
+[ "$pg_version" -ge 16 ] 2>/dev/null && echo "✓ PostgreSQL $pg_version" || echo "✗ PostgreSQL — need >= 16"
+command -v bun &>/dev/null && echo "✓ Bun $(bun --version)" || echo "✗ Bun missing"
+command -v composer &>/dev/null && echo "✓ Composer" || echo "✗ Composer missing"
+command -v uv &>/dev/null && echo "✓ uv" || echo "✗ uv missing"
+command -v redis-cli &>/dev/null && echo "✓ Redis" || echo "✗ Redis missing"
 ```
 
-Run the installs for missing tools. **The agent does this directly** — do NOT ask user to run them.
+All pinned versions must match. If anything fails, fix before continuing.
 
-#### B.3 Start database services (if not already running)
+#### B.4 Start database services (if not already running)
 
 ```bash
-# Start PostgreSQL
-brew services start postgresql@18
+# Start PostgreSQL (use whatever version is installed)
+brew services start postgresql@$(psql --version 2>/dev/null | grep -oE '[0-9]+' | head -1) 2>/dev/null || brew services start postgresql
 
 # Start Redis
 brew services start redis
