@@ -23,17 +23,19 @@ err()     { printf "${RED}[err]${RESET}   %s\n" "$*"; }
 header()  { printf "\n${BOLD}${CYAN}── %s ──${RESET}\n" "$*"; }
 
 # ── Constants ────────────────────────────────────────────────────────────────
-REPO_URL_BASE="https://raw.githubusercontent.com/alva-intelligence/agentic-workflows/main"
 CURL_TIMEOUT=5
 BOOTSTRAP=false
+BRANCH_OVERRIDE=""
 
 # ── Parse flags ──────────────────────────────────────────────────────────────
 for arg in "$@"; do
   case "$arg" in
     --bootstrap) BOOTSTRAP=true ;;
+    --branch=*) BRANCH_OVERRIDE="${arg#--branch=}" ;;
     --help|-h)
-      echo "Usage: bash update-check.sh [--bootstrap]"
-      echo "  --bootstrap   First-time setup: download all files"
+      echo "Usage: bash update-check.sh [--bootstrap] [--branch=<branch>]"
+      echo "  --bootstrap        First-time setup: download all files"
+      echo "  --branch=<branch>  Use a specific branch (default: main, or AW_BRANCH env var)"
       exit 0
       ;;
     *)
@@ -42,6 +44,17 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+# ── Resolve branch ──────────────────────────────────────────────────────────
+# Priority: --branch flag > AW_BRANCH env var > persisted .branch file > "main"
+if [[ -n "$BRANCH_OVERRIDE" ]]; then
+  BRANCH="$BRANCH_OVERRIDE"
+elif [[ -n "${AW_BRANCH:-}" ]]; then
+  BRANCH="$AW_BRANCH"
+else
+  BRANCH="main"
+fi
+REPO_URL_BASE="https://raw.githubusercontent.com/alva-intelligence/agentic-workflows/$BRANCH"
 
 # ── Find workspace root ─────────────────────────────────────────────────────
 # Walk up from current directory looking for AGENTS.md or .workflow-state.json
@@ -62,11 +75,19 @@ find_workspace_root() {
 WORKSPACE_ROOT="$(find_workspace_root)"
 CACHE_DIR="$WORKSPACE_ROOT/.agentic-workflows"
 VERSION_FILE="$CACHE_DIR/.version"
+BRANCH_FILE="$CACHE_DIR/.branch"
 SCRIPTS_DIR="$CACHE_DIR/scripts"
+
+# Read persisted branch if no override was given
+if [[ -z "$BRANCH_OVERRIDE" ]] && [[ -z "${AW_BRANCH:-}" ]] && [[ -f "$BRANCH_FILE" ]]; then
+  BRANCH=$(cat "$BRANCH_FILE" | tr -d '[:space:]')
+  REPO_URL_BASE="https://raw.githubusercontent.com/alva-intelligence/agentic-workflows/$BRANCH"
+fi
 
 header "agentic-workflows update check"
 info "Workspace: $WORKSPACE_ROOT"
 info "Cache dir: $CACHE_DIR"
+info "Branch: $BRANCH"
 
 # ── Ensure cache directory exists ────────────────────────────────────────────
 mkdir -p "$CACHE_DIR"
@@ -316,8 +337,9 @@ if [[ -f "$WORKSPACE_ROOT/AGENTS.md" ]] && [[ ! -e "$WORKSPACE_ROOT/CLAUDE.md" ]
   ok "Symlinked CLAUDE.md → AGENTS.md"
 fi
 
-# ── Update local version ────────────────────────────────────────────────────
+# ── Update local version and branch ─────────────────────────────────────────
 echo "$REMOTE_VERSION" > "$VERSION_FILE"
+echo "$BRANCH" > "$CACHE_DIR/.branch"
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 header "Update summary"

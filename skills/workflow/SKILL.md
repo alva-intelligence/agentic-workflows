@@ -22,7 +22,7 @@ Show the current workflow state for the active feature.
    - Wireframes: list with approval status
    - Branch: `{branch}` or "not created"
    - Service PRDs: list with status
-   - PR: `{pr_url}` or "not submitted"
+   - PRs: list `{pr_urls}` entries (service → URL) or "not submitted"
 
 ### `/workflow list`
 Show ALL active features with their phases.

@@ -1,6 +1,6 @@
 # frndOS Agentic Workflows
 
-> **Version:** 2.0.0 | **Maintainer:** Alva Intelligence Engineering
+> **Maintainer:** Alva Intelligence Engineering
 
 ---
 
@@ -22,11 +22,12 @@ your development workspace and guides you through a structured feature developme
 workflow — from PRD creation to wireframing, implementation, and PR submission.
 
 What gets installed:
-  - 7 phase-scoped AI agents (orchestra, prd, wireframe, splitter, implement, pr, track)
-  - 5 skills (/onboard, /workflow, /prd, /prd-split, /wireframe)
-  - A 10-phase workflow state machine with gate enforcement
+  - 10 phase-scoped AI agents (orchestra, prd, wireframe, splitter, implement, engineer, architect, pr, track)
+  - 6 skills (/onboard, /workflow, /workflow-update, /prd, /prd-split, /wireframe)
+  - An 11-phase workflow state machine with gate enforcement
+  - Agent Teams support — parallel per-service engineers + architect (Claude Code)
   - Auto-updating instruction system (stays in sync with team changes)
-  - Templates for PRDs, service PRDs, and track files
+  - Templates for PRDs, service PRDs, track files, and PRs
 
 Supported tools: Claude Code, Cursor, OpenCode (and any tool supporting SKILL.md)
 ```
@@ -49,6 +50,15 @@ Use your **ask tool** (Claude Code: `AskUserQuestion`, Cursor: ask tool, OpenCod
 curl -sL "https://raw.githubusercontent.com/alva-intelligence/agentic-workflows/main/scripts/update-check.sh" \
   -o /tmp/aw-update-check.sh && bash /tmp/aw-update-check.sh --bootstrap
 ```
+
+**To bootstrap from a specific branch** (e.g., `claude-teams` for Agent Teams features):
+
+```bash
+curl -sL "https://raw.githubusercontent.com/alva-intelligence/agentic-workflows/claude-teams/scripts/update-check.sh" \
+  -o /tmp/aw-update-check.sh && bash /tmp/aw-update-check.sh --bootstrap --branch=claude-teams
+```
+
+The `--branch` flag is persisted — subsequent update checks automatically track the same branch. You can also set `AW_BRANCH=claude-teams` as an env var.
 
 This downloads agents, skills, fragments, templates, and workflow configs into `.agentic-workflows/`, `.agents/`, and generates `AGENTS.md`. The workspace directory stays a plain folder — NOT a git repo.
 
@@ -90,13 +100,36 @@ Phase-scoped agents with auto-delegation — orchestra routes, sub-agents do the
 
 ![Agent Architecture](./docs/agent-architecture.svg)
 
+### Agent Teams (Parallel Implementation)
+
+When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set (configured via `.claude/settings.json` during onboarding), the `implementation` phase uses Claude Code's Agent Teams API instead of a single sequential agent:
+
+| Role | Agent | Count | Description |
+|------|-------|-------|-------------|
+| **Lead** | frndos-orchestra | 1 | Creates the team, approves plans, coordinates reviews, tracks PRs |
+| **Architect** | frndos-architect | 1 | Cross-service integration reviewer (does NOT write code) |
+| **Engineer** | frndos-engineer | 1 per service | Implements, self-reviews, and creates PR for their assigned service |
+
+**How it works:**
+- Lead creates the team via natural language (not `Agent()` tool calls)
+- Each teammate is a persistent session with its own context
+- Communication happens via **mailbox** (`message` for 1:1, `broadcast` for all)
+- Engineers are spawned with **plan approval required** — they're in read-only mode until the lead approves
+- Shared task list tracks per-service chains: `plan → implement → self-review → architect-review → pr`
+- When all PRs are merged, lead shuts down teammates and cleans up the team
+
+**Sequential fallback:** Cursor, OpenCode, or when the env var is unset — uses `frndos-implement` → `frndos-pr` (unchanged).
+
 ### How auto-update works
 
-1. Edit files in this repo → push to `main`
+1. Edit files in this repo → push to `main` (or a feature branch)
 2. GitHub Action computes SHA-256 hashes, bumps VERSION, updates `manifest.json`
 3. On next agent session, `update-check.sh` compares local hashes vs manifest
 4. Only changed files are downloaded — fragments, agents, skills, etc.
 5. If fragments changed, `AGENTS.md` is regenerated automatically
+6. For non-trivial changes (settings, schema migrations), use `/workflow-update`
+
+**Branch tracking:** Workspaces bootstrapped with `--branch=<branch>` persist the branch in `.agentic-workflows/.branch` and automatically pull updates from that branch on subsequent checks.
 
 ### Repository structure
 
@@ -106,31 +139,42 @@ agentic-workflows/
     fragments/            # Markdown fragments assembled into AGENTS.md
     tools/
       claude-code/        # Agent definitions (.md) for Claude Code
+        frndos-orchestra  #   Router + lead (delegates, never implements)
+        frndos-prd        #   PRD creation
+        frndos-wireframe  #   Wireframe builder
+        frndos-splitter   #   Splits PRD into service PRDs
+        frndos-implement  #   Sequential implementation (fallback)
+        frndos-engineer   #   Per-service engineer (Agent Teams)
+        frndos-architect  #   Integration reviewer (Agent Teams)
+        frndos-pr         #   PR creation and review
+        frndos-track      #   Track file management
       cursor/             # Agent definitions (.mdc) for Cursor
       opencode/           # Agent definitions (.md) for OpenCode
     AGENTS.md.template    # Template with {{FRAGMENT:...}} markers
   scripts/
-    update-check.sh       # Downloads updates from this repo
+    update-check.sh       # Downloads updates (supports --branch=<branch>)
     generate-agents.sh    # Assembles AGENTS.md from fragments
   skills/
     onboard/              # /onboard — full workspace setup
-    workflow/              # /workflow — state machine management
-    prd/                   # /prd — PRD creation
-    prd-split/             # /prd-split — split PRD into service PRDs
-    wireframe/             # /wireframe — wireframe builder
+    workflow/             # /workflow — state machine management
+    workflow-update/      # /workflow-update — update + apply non-trivial changes
+    prd/                  # /prd — PRD creation
+    prd-split/            # /prd-split — split PRD into service PRDs
+    wireframe/            # /wireframe — wireframe builder
   templates/
-    prd/                   # PRD document templates
-    tracks/                # Track file templates
+    prd/                  # PRD document templates
+    pr/                   # PR body templates
+    tracks/               # Track file templates
   workflow/
-    phases.json            # 10-phase state machine definitions
-    gates.json             # Gate conditions per phase transition
-    state-schema.json      # JSON schema for .workflow-state.json
+    phases.json           # 11-phase state machine definitions
+    gates.json            # Gate conditions per phase transition
+    state-schema.json     # JSON schema for .workflow-state.json
   wireframe-scaffold/
-    layout.tsx             # Scaffold for /workflows route
-    page.tsx               # Scaffold for /workflows index
-  manifest.json            # File registry with SHA-256 hashes
-  VERSION                  # Semver (patch auto-bumped by CI)
-  flake.nix                # Nix flake for dev environment
+    layout.tsx            # Scaffold for /wireframes route
+    page.tsx              # Scaffold for /wireframes index
+  manifest.json           # File registry with SHA-256 hashes
+  VERSION                 # Semver (patch auto-bumped by CI)
+  flake.nix               # Nix flake for dev environment
 ```
 
 ### Making changes

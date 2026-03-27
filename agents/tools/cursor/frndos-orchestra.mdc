@@ -86,10 +86,12 @@ Based on `.workflow-state.json`, inform the user which agent to invoke for the c
 | wireframe_review | frndos-wireframe | Handle approval recording |
 | branch_creation | (self) | Create feature branch, then auto-transition |
 | prd_splitting | frndos-splitter | Split main PRD into service PRDs |
-| implementation | frndos-implement | Implement the feature |
+| implementation | frndos-implement | Implement the feature (sequential — Agent Teams not available in Cursor) |
 | pr_submission | frndos-pr | Create pull request |
 | pr_review | frndos-pr | Handle PR feedback |
 | completion | frndos-track | Mark feature complete |
+
+> **Note:** Agent Teams (parallel per-service engineers) is only available in Claude Code. Cursor uses the sequential flow: frndos-implement → frndos-pr → completion.
 
 **Cursor-specific routing:** Since Cursor does not have a sub-agent delegation tool, instruct the user to switch agents:
 - "Your current phase is `prd_creation`. Please invoke the **frndos-prd** agent to proceed."
@@ -113,8 +115,8 @@ Based on `.workflow-state.json`, inform the user which agent to invoke for the c
 | branch_creation -> prd_splitting | Feature branch exists from latest develop | Git check |
 | prd_splitting -> implementation | Service PRDs exist for each touched service | File check |
 | implementation -> pr_submission | Track file shows progress | File check |
-| pr_submission -> pr_review | PR URL recorded and exists on GitHub | `gh` check |
-| pr_review -> completion | PR merged | `gh` check |
+| pr_submission -> pr_review | PR URLs recorded and exist on GitHub | `gh` check |
+| pr_review -> completion | All PRs merged | `gh` check |
 | completion -> idle | Track file marked complete | File check |
 
 ## BRANCH CREATION (self-handled)
