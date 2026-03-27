@@ -137,6 +137,11 @@
       "install_to": ".agents/skills/wireframe/SKILL.md",
       "type": "skill"
     },
+    "skills/workflow-update/SKILL.md": {
+      "sha256": "3d8f2444106d473e259eb742a27be62fa064e1b65cb6a2a7239248f6c293a8f0",
+      "install_to": ".agents/skills/workflow-update/SKILL.md",
+      "type": "skill"
+    },
     "agents/tools/claude-code/frndos-orchestra.md": {
       "sha256": "0ef1a43ae4656b4266ed566a09d64aa6d578cc812c6eda1f968f99e1bf665f70",
       "install_to": ".agentic-workflows/agents/claude-code/frndos-orchestra.md",
