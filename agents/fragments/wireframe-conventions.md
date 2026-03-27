@@ -6,13 +6,17 @@ Wireframes live at: `web/src/app/(dashboard)/wireframes/<feature-slug>/<wirefram
 
 ### What is a Wireframe?
 
-A wireframe = **one feature page**. It represents the main entry point for a feature (e.g., a dashboard, a listing page, a settings panel). Sub-views like create forms, detail pages, wizard steps, and modals are **sub-pages within the same wireframe**, not separate wireframes.
+In this project, "wireframe" does NOT mean a rough layout sketch. A wireframe is a **fully-built static frontend** — it should look and feel like a real, polished production page (think Canva, Adobe Firefly, or any modern SaaS UI). It uses real components, real interactions, proper visuals, and realistic mock data. The only difference from production code is that it uses static/dummy data instead of live API calls.
+
+**A wireframe is the foundation that gets built on during implementation.** When the feature moves to the implementation phase, engineers wire up real API calls, state management, and business logic to the wireframe code that's already there. The UI should already be done.
+
+A wireframe = **one feature page**. It represents the main entry point for a feature (e.g., a dashboard, a listing page, an AI image editor). Sub-views like create forms, detail pages, wizard steps, and modals are **sub-pages within the same wireframe**, not separate wireframes.
 
 **Example:** A "Campaign Management" feature has ONE wireframe (`campaign-management`) containing:
-- Main page: campaign listing with filters and table
-- Sub-page `create/`: multi-step campaign creation wizard
-- Sub-page `[id]/`: campaign detail view with tabs
-- Sub-page `[id]/edit/`: campaign edit form
+- Main page: campaign listing with filters, search, and a polished data table
+- Sub-page `create/`: multi-step campaign creation wizard with form validation UX
+- Sub-page `[id]/`: campaign detail view with tabs, charts, and action buttons
+- Sub-page `[id]/edit/`: campaign edit form pre-filled with mock data
 
 These are all part of the same wireframe, not 4 separate wireframes.
 
@@ -59,9 +63,12 @@ Not every wireframe needs sub-pages — simple features may only have a single `
 
 - **MUST** use only components from `@/components/frndos/` and `@/components/base/`
 - **MUST** wrap every page in `BaseLayout` from `@/components/frndos/layout/BaseLayout`
+- **MUST** build pages that look production-ready — proper spacing, alignment, typography, visual hierarchy
+- **MUST** include all interactive UI states: hover, active, selected, disabled, empty states, loading skeletons
+- **MUST** use realistic placeholder data — real-looking names, dates, numbers, images (not "Lorem ipsum" or "Test 1")
 - **MUST NOT** implement business logic, API calls, or server-side state management
-- **CAN** use `useState` for local UI interactions (tabs, modals, toggles)
-- **CAN** hardcode realistic placeholder data (mock data that looks real)
+- **CAN** use `useState` for local UI interactions (tabs, modals, toggles, dropdowns, search filtering)
+- **CAN** create wireframe-specific components in `components/` for complex UI pieces
 - **MUST NOT** install new packages
 
 ### Available frndos Components
