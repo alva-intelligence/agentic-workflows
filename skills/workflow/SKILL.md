@@ -158,3 +158,33 @@ Show detailed progress for the active feature.
    - Service PRD status
    - Track file task completion percentage
    - Session log summary
+
+### `/workflow mode`
+Switch Claude Code between Agent Session and Team Session mode.
+
+**Steps:**
+1. Check if Claude Code is the active tool (`.claude/settings.json` exists or `.claude/` dir exists)
+   - If not Claude Code: "This command is only available for Claude Code."
+2. Read `.claude/settings.json` to determine current mode:
+   - If `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is `"1"`: current mode is **Team Session**
+   - Otherwise: current mode is **Agent Session**
+3. Show current mode and ask to switch:
+
+   > "Current mode: **Agent Session**"
+   > - Switch to Team Session (EXPERIMENTAL — parallel engineers + architect, more tokens)
+   > - Keep current mode
+
+   Or:
+
+   > "Current mode: **Team Session** (EXPERIMENTAL)"
+   > - Switch to Agent Session (sequential, single agent, recommended)
+   > - Keep current mode
+
+4. If user chooses to switch:
+   - Read current `.claude/settings.json`
+   - **To Team Session:** set `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` to `"1"`
+   - **To Agent Session:** remove `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` from `env` (or set to `"0"`)
+   - Write updated `.claude/settings.json` (preserve other settings)
+   - Update `.onboard-state.json`: set `claude_session_mode` to `"team"` or `"agent"`
+   - Inform user: "Switched to [mode]. Restart your agent session for changes to take effect."
+5. If user keeps current mode: "Keeping [current mode]. No changes made."

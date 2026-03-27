@@ -48,6 +48,7 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
   "status": "in_progress|completed",
   "services": ["api", "web", "ai-service", "data-service"],
   "tools": ["claude-code", "cursor"],
+  "claude_session_mode": "agent|team",
   "steps": {
     "github_access": "completed|skipped|pending",
     "questionnaire": "completed|pending",
@@ -144,12 +145,22 @@ Use the ask tool with these EXACT options (multi-select):
 
 (Can select multiple — this determines agent, skill, and MCP configuration)
 
-### 1.4 Which AI provider subscriptions?
+### 1.4 Claude Code session mode (only ask if Claude Code was selected in 1.3)
+
+> "Which session mode do you want for Claude Code?"
+> 1. **Agent Session** (recommended) — Single agent handles implementation sequentially. Reliable and predictable.
+> 2. **Team Session** (EXPERIMENTAL) — Spawns parallel engineer agents per service + an architect reviewer. Faster for multi-service features but consumes more tokens and hits context window limits sooner. Use with caution.
+
+Record the choice in `.onboard-state.json` as `"claude_session_mode": "agent"` or `"claude_session_mode": "team"`.
+
+If user did NOT select Claude Code in 1.3, skip this question entirely.
+
+### 1.5 Which AI provider subscriptions?
 
 - Anthropic: Claude Opus 4.6 (planning), Claude Sonnet 4.6 (coding)
 - OpenAI: GPT 5.3-codex (coding), GPT 5.4 (exploratory)
 
-### 1.5 Optional integrations
+### 1.6 Optional integrations
 
 - **Lark MCP** — Read PRDs directly from Lark doc URLs (skip copy-paste)
 - **Figma MCP** — Read designs from Figma, extract component specs
@@ -633,7 +644,9 @@ mkdir -p .claude
 ln -sf ../.agentic-workflows/agents/claude-code .claude/agents
 ```
 
-Configure project settings with experimental features enabled:
+Configure project settings based on the session mode chosen in Step 1.4:
+
+**If user chose "Team Session" (`claude_session_mode: "team"`):**
 ```bash
 cat > .claude/settings.json << 'SETTINGS'
 {
@@ -644,8 +657,20 @@ cat > .claude/settings.json << 'SETTINGS'
 }
 SETTINGS
 ```
+This enables Agent Teams for the `implementation` phase — parallel per-service engineers + architect. Warn user: "Team Session mode is experimental. It consumes more tokens and may hit context window limits faster."
 
-This enables Agent Teams for the `implementation` phase (parallel per-service engineers + architect). The setting is project-level so all team members get it automatically.
+**If user chose "Agent Session" (`claude_session_mode: "agent"`) or skipped the question:**
+```bash
+cat > .claude/settings.json << 'SETTINGS'
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {}
+}
+SETTINGS
+```
+Implementation uses the sequential single-agent flow (frndos-implement → frndos-pr).
+
+**Switching modes later:** The user can switch between Agent Session and Team Session at any time by running `/workflow mode`. See the workflow skill for details.
 
 **Cursor:** If user selected Cursor, check `.cursor/agents/` symlink exists pointing to Cursor-specific `.mdc` agents. If not:
 ```bash
