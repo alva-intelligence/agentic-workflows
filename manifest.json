@@ -169,12 +169,12 @@
     },
     "agents/tools/claude-code/frndos-engineer.md": {
       "sha256": "ca5d0427f095c2f49e072f8be19d5d52a2736ce345152c305beb83f08a0fe77f",
-      "install_to": ".agents/agents/frndos-engineer.md",
+      "install_to": ".agentic-workflows/agents/claude-code/frndos-engineer.md",
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-architect.md": {
       "sha256": "a70f62f263f18782e5a23524a0d928889794f5b242055619060e33dcfbfc66eb",
-      "install_to": ".agents/agents/frndos-architect.md",
+      "install_to": ".agentic-workflows/agents/claude-code/frndos-architect.md",
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-implement.md": {

@@ -710,24 +710,35 @@ All commands are wrapped with `nix develop --command` so they work even outside 
 
 Skills are installed via [skills.sh](https://skills.sh/) using `npx skills add`.
 
-**IMPORTANT: Always use `--yes` flag** — the skills CLI requires an interactive TTY for prompts. Without `--yes`, the install will hang in agent sessions.
+**IMPORTANT:**
+- Always use `--yes` flag — the skills CLI requires an interactive TTY for prompts. Without `--yes`, the install will hang in agent sessions.
+- Always use `-a` flag to target only the user's selected tools from Step 1.3. This prevents creating unnecessary editor folders.
+
+**Build the `-a` flags** from the user's tool selection in Step 1.3:
+- If Claude Code selected: `-a claude-code`
+- If Cursor selected: `-a cursor`
+- If OpenCode selected: `-a opencode`
+
+Example for a user who selected Claude Code + Cursor: `--yes -a claude-code -a cursor`
 
 **Always install (cross-service):**
 ```bash
-npx skills add https://github.com/github/awesome-copilot --skill git-commit --yes
-npx skills add https://github.com/github/awesome-copilot --skill prd --yes
+npx skills add https://github.com/github/awesome-copilot --skill git-commit --yes -a <tools>
+npx skills add https://github.com/github/awesome-copilot --skill prd --yes -a <tools>
 ```
 
 **If user works on Frontend (`web/`):**
 ```bash
-npx skills add anthropics/skills@frontend-design --yes
-npx skills add vercel-labs/agent-skills@vercel-react-best-practices --yes
-npx skills add vercel-labs/next-skills@next-best-practices --yes
-npx skills add busirocket/agents-skills@busirocket-tailwindcss-v4 --yes
-npx skills add sickn33/antigravity-awesome-skills@radix-ui-design-system --yes
+npx skills add anthropics/skills@frontend-design --yes -a <tools>
+npx skills add vercel-labs/agent-skills@vercel-react-best-practices --yes -a <tools>
+npx skills add vercel-labs/next-skills@next-best-practices --yes -a <tools>
+npx skills add busirocket/agents-skills@busirocket-tailwindcss-v4 --yes -a <tools>
+npx skills add sickn33/antigravity-awesome-skills@radix-ui-design-system --yes -a <tools>
 ```
 
-> **Note:** Some skills need full URL + `--skill` flag (e.g., `awesome-copilot`). Others use `owner/repo@skill-name` syntax. The `--yes` flag skips interactive prompts. Browse more at [skills.sh](https://skills.sh/) or search: `npx skills find <query>`.
+Replace `<tools>` with the actual `-a` flags for the user's selected tools (e.g., `-a claude-code -a cursor`).
+
+> **Note:** Some skills need full URL + `--skill` flag (e.g., `awesome-copilot`). Others use `owner/repo@skill-name` syntax. Browse more at [skills.sh](https://skills.sh/) or search: `npx skills find <query>`.
 
 ## Step 11: Configure MCP Servers
 

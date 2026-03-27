@@ -181,4 +181,4 @@ To add a new distributable file, add an entry to `manifest.json` with:
 - Commit messages with `[skip ci]` or `[manifest]` skip the update Action
 - All distributable files must be registered in `manifest.json`
 - Skills use the universal `.agents/skills/` path (symlinked to `.claude/`, `.cursor/`, `.opencode/`)
-- Agents use `.agents/agents/` (similarly symlinked)
+- Agents live in `.agentic-workflows/agents/<tool>/` (symlinked to `.claude/`, `.cursor/`, `.opencode/`)
