@@ -79,6 +79,121 @@ User points agent at this repo
 
 This repo is the single source of truth for frndOS AI agent instructions. It is NOT cloned into workspaces — instead, individual files are downloaded and cached locally via the auto-update mechanism.
 
+### See it work
+
+A complete feature lifecycle — from idea to merged PRs. The agent handles everything; you steer.
+
+```
+You:    /workflow start brand-health-dashboard
+Agent:  Feature "brand-health-dashboard" started. Phase: prd_creation.
+        [delegates to frndos-prd]
+
+You:    Here's the Lark doc: https://lark.com/doc/...
+        The dashboard should show brand sentiment over time,
+        top mentions, and alert thresholds.
+Agent:  [reads Lark doc via MCP, asks clarifying questions]
+        [drafts PRD with objectives, user stories, acceptance criteria]
+        [asks you to review before saving]
+You:    Looks good, but add a comparison view for multiple brands.
+Agent:  [updates PRD, saves to docs/prd/brand-health-dashboard.md]
+        PRD created. → Phase: wireframe.
+
+You:    /workflow next
+Agent:  [delegates to frndos-wireframe]
+        [reads PRD, scans existing frndos components, studies previous wireframes]
+        [presents plan: main dashboard page + detail sub-page + comparison view]
+You:    Go ahead.
+Agent:  [builds production-quality static frontend — real components, real interactions]
+        [creates wireframes/brand-health-dashboard/dashboard/ with page.tsx,
+         components/, [brandId]/page.tsx, compare/page.tsx, metadata.json]
+        [commits on wireframe/claude/vc-brand-health-dashboard branch]
+        Done. → Phase: wireframe_pr.
+
+Agent:  [delegates to frndos-pr]
+        [creates PR targeting develop, fills template, tags FE owners]
+        PR: github.com/alva-intelligence/frnd-web/pull/87
+        → Phase: wireframe_review. Waiting for FE owners + Jeff approval.
+
+You:    Jeff approved. FE owners merged.
+Agent:  [verifies PR merged on GitHub]
+        → Phase: branch_creation.
+        [checkouts develop, verifies wireframe on develop, creates feature branch]
+        Branch: feature/claude/vc-brand-health-dashboard
+        → Phase: prd_splitting.
+
+Agent:  [delegates to frndos-splitter]
+        [reads main PRD, determines affected services: api + web]
+        [generates api/docs/prd/brand-health-dashboard.md — endpoints, migrations, models]
+        [generates web/docs/prd/brand-health-dashboard.md — pages, state, API integration]
+        Service PRDs created. → Phase: implementation.
+```
+
+**From here, the path splits based on your session mode:**
+
+```
+━━━ Agent Session (sequential) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Agent:  [delegates to frndos-implement]
+        [reads both service PRDs, presents implementation plan]
+You:    Approved.
+Agent:  [implements API: migrations, models, controllers, tests]
+        [implements Web: wires wireframe to real API, state management, error handling]
+        [self-reviews, commits per task]
+        Implementation complete. → Phase: pr_submission.
+
+Agent:  [delegates to frndos-pr]
+        [creates PR per service targeting develop/development]
+        API PR: github.com/.../pull/201
+        Web PR: github.com/.../pull/88
+        → Phase: pr_review.
+
+You:    API reviewer requested changes on the pagination endpoint.
+Agent:  [reads feedback, fixes, pushes, comments on PR]
+        Changes addressed. Waiting for re-review.
+        [PR merged] → Phase: completion.
+
+━━━ Team Session (parallel, experimental) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Agent:  [creates agent team: architect + api-engineer + web-engineer]
+        [creates shared task list with per-service chains]
+        [engineers present plans in read-only mode → you approve each]
+
+        api-engineer:  [implements API service, self-reviews]
+                       → messages lead: "Done. Ready for architect review."
+        web-engineer:  [implements Web service, self-reviews]
+                       → messages lead: "Done. Ready for architect review."
+
+Agent:  [messages architect to review api-engineer's work]
+Architect: [reviews cross-service integration]
+           → "API contracts match frontend calls. Approved."
+Agent:  [messages api-engineer: "Create your PR."]
+        api-engineer: PR: github.com/.../pull/201
+
+Agent:  [messages architect to review web-engineer's work]
+Architect: → "Response shape mismatch on /api/brands/{id}/mentions"
+Agent:  [relays to web-engineer, who fixes and re-requests review]
+Architect: → "Fixed. Approved."
+        web-engineer: PR: github.com/.../pull/88
+
+Agent:  [all PRs merged → shuts down teammates → cleans up team]
+        → Phase: completion.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+```
+Agent:  [delegates to frndos-track]
+        [updates track file: all tasks complete, PRs merged]
+        [marks feature complete in .workflow-state.json]
+        Feature "brand-health-dashboard" complete!
+
+You:    /workflow start next-feature...
+```
+
+You described a dashboard. The agent wrote the PRD, built a polished static frontend,
+split the work into service PRDs, implemented across services, handled code review,
+and shipped merged PRs. You approved plans and steered — the agents did the rest.
+
 ### Workflow State Machine
 
 11 phases with gate enforcement — each phase has a dedicated agent and model assignment.
