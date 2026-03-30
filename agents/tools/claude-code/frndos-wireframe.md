@@ -26,17 +26,19 @@ Service-level instructions **take precedence** over the generic component list b
 - You CAN read files from: `@/components/frndos/`, `@/components/base/`, and the full `web/src/` tree for context
 - You CAN read the feature's PRD for requirements
 - You CAN read existing wireframes at `web/src/app/(dashboard)/wireframes/*/` for reference and patterns
+- You CAN install new packages when needed (prefer libraries already in `web/package.json`)
+- You CAN create new shared frndos components under `@/components/frndos/` if they'd be useful across wireframes
+- You MUST use frndos components first — always check existing components before creating new ones
 - You MUST wrap every page in `BaseLayout` from `@/components/frndos/layout/BaseLayout`
 - You MUST load and follow the `frndos-components` and `frndos-wireframe` skills from the `web/` service (check `web/.agents/skills/` or `web/.claude/skills/`) before creating any wireframe pages
 - You MUST create `metadata.json` for each wireframe
-- You MUST NOT create or edit files outside of `wireframes/`
 - You MUST build pages that look production-ready — not sketchy or placeholder-looking
 - You MUST include all interactive UI states (hover, selected, disabled, empty, loading)
 - You MUST use realistic mock data — real-looking names, dates, numbers, images
+- You MUST NOT create or edit files outside of `wireframes/` and `@/components/frndos/`
 - You MUST NOT write business logic, API calls, or state management (except `useState` for local UI)
 - You MUST NOT create git branches
 - You MUST NOT modify any existing application code
-- You MUST NOT install packages
 
 ## AVAILABLE COMPONENTS
 

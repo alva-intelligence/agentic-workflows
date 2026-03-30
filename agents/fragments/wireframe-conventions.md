@@ -61,15 +61,25 @@ Not every wireframe needs sub-pages — simple features may only have a single `
 
 ### Component Rules
 
-- **MUST** use only components from `@/components/frndos/` and `@/components/base/`
+**Use frndos components first:**
+1. **Always check `@/components/frndos/` and `@/components/base/` first** — use existing components as much as possible
+2. If a frndos component partially fits, **use it as a base** and extend or compose on top of it
+3. Do NOT reinvent components that already exist in frndos
+
+**When you need something new:**
+4. **Custom wireframe components** — for UI pieces specific to this wireframe, create them in the wireframe's `components/` directory. These are NOT frndos components — they are custom components built specifically for this wireframe
+5. **New shared frndos components** — if a component would be useful across multiple wireframes, place it under `@/components/frndos/` following existing patterns. This flags it for FE ownership review during PR
+
+**Libraries:**
+6. **CAN install new packages** when needed. Prefer libraries already used by the project or other wireframes to avoid duplication. Check `web/package.json` before adding anything new.
+
+**General rules:**
 - **MUST** wrap every page in `BaseLayout` from `@/components/frndos/layout/BaseLayout`
 - **MUST** build pages that look production-ready — proper spacing, alignment, typography, visual hierarchy
 - **MUST** include all interactive UI states: hover, active, selected, disabled, empty states, loading skeletons
 - **MUST** use realistic placeholder data — real-looking names, dates, numbers, images (not "Lorem ipsum" or "Test 1")
 - **MUST NOT** implement business logic, API calls, or server-side state management
 - **CAN** use `useState` for local UI interactions (tabs, modals, toggles, dropdowns, search filtering)
-- **CAN** create wireframe-specific components in `components/` for complex UI pieces
-- **MUST NOT** install new packages
 
 ### Available frndos Components
 
