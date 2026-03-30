@@ -1,6 +1,6 @@
 {
-  "version": "2.0.46",
-  "updated": "2026-03-27",
+  "version": "2.0.47",
+  "updated": "2026-03-30",
   "files": {
     "agents/fragments/session-protocol.md": {
       "sha256": "ffd0e003df5f3c231a65df05e3e05a382e7ef94b9ac96dfcf8ee0f953189c7f7",
@@ -23,7 +23,7 @@
       "type": "fragment"
     },
     "agents/fragments/wireframe-conventions.md": {
-      "sha256": "a919578412643a0e655aa74bbce5aa770349dbcf3f414e2ea0165ace494c2c6f",
+      "sha256": "f4081621be76475597b5dce244223860bef07defef9aa9b41f5552f4a951d2bf",
       "install_to": ".agentic-workflows/fragments/wireframe-conventions.md",
       "type": "fragment"
     },
@@ -158,7 +158,7 @@
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-wireframe.md": {
-      "sha256": "5f6083edabb97aca92ed566375a1451a083374178ca6513f9ba883faf82ea296",
+      "sha256": "65527ced68e7120b1985280e35b54b9e8e3a51e47c6c82eb6833e3d378047e31",
       "install_to": ".agentic-workflows/agents/claude-code/frndos-wireframe.md",
       "type": "agent"
     },
@@ -203,7 +203,7 @@
       "type": "agent"
     },
     "agents/tools/cursor/frndos-wireframe.mdc": {
-      "sha256": "f3e623ce699ca78bdf1bb0800101d7304351ac39585cb91fcddcf2909dfdc339",
+      "sha256": "7d8e19cb0ee03b7dfe5c1fecea138ac521dd24b87cbef0b18d8b26966a26ef7b",
       "install_to": ".agentic-workflows/agents/cursor/frndos-wireframe.mdc",
       "type": "agent"
     },
@@ -238,7 +238,7 @@
       "type": "agent"
     },
     "agents/tools/opencode/frndos-wireframe.md": {
-      "sha256": "08d78bb7fc0a6dbbee145868becdb5a96a36d0f6ebbd7800f6e8881aa9537ab5",
+      "sha256": "9273ec47ac5e5b4a37ba3dbf313def92e397e064f7ce697df1ea3876a8f1891e",
       "install_to": ".agentic-workflows/agents/opencode/frndos-wireframe.md",
       "type": "agent"
     },
