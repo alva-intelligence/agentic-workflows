@@ -92,6 +92,11 @@
       "install_to": ".agentic-workflows/templates/pr/feature-pr.template.md",
       "type": "template"
     },
+    "skills/setup-workspace/SKILL.md": {
+      "sha256": "6e42d512b2dd46824e96f8a838d013453933134f4449e90ef135df4ba2ca6e16",
+      "install_to": ".agents/skills/setup-workspace/SKILL.md",
+      "type": "skill"
+    },
     "skills/jj-workflow/SKILL.md": {
       "sha256": "5f896c5c8b41d6f0b78979687635dce26fd3b255f9975a54ca4ad7b13fd8740a",
       "install_to": ".agents/skills/jj-workflow/SKILL.md",
