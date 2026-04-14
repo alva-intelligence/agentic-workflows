@@ -817,7 +817,13 @@ See [references/mcp-configs.md](references/mcp-configs.md) for per-tool config t
 **1. Context7** (no credentials needed — just configure and move on)
 - Add to MCP config for the user's tool(s)
 
-**2. GitHub MCP** — requires a Personal Access Token. Use the ask tool:
+**2. Agentation** (no credentials needed — just configure)
+- Visual UI feedback → structured context for the agent. See [agentation.com/mcp](https://www.agentation.com/mcp).
+- Package: `agentation-mcp` (command: `npx -y agentation-mcp server`)
+- Add to MCP config for ALL user-selected tools (Claude Code, Cursor, OpenCode, Amp)
+- Fastest path: `npx add-mcp "npx -y agentation-mcp server"` auto-detects installed tools and writes the correct config to each
+
+**3. GitHub MCP** — requires a Personal Access Token. Use the ask tool:
 
 > "GitHub MCP needs a Personal Access Token. Do you have one?"
 > - Yes, I have a PAT ready
@@ -835,7 +841,7 @@ If **"No"**:
 2. **STOP AND WAIT** for user to create and provide the token
 3. Continue as above once provided
 
-**3. Laravel Boost** (API only, no credentials needed — just configure)
+**4. Laravel Boost** (API only, no credentials needed — just configure)
 - Only configure if user selected API service
 
 ### Optional MCPs — ask ONE AT A TIME (based on Step 1 answers)

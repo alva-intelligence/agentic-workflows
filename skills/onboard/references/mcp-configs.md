@@ -9,6 +9,9 @@ All MCP configs follow tool-specific formats. Merge these into the appropriate c
 | Claude Code | `.mcp.json` | `mcpServers` | `"command": "npx", "args": [...]` | `env` |
 | Cursor | `.cursor/mcp.json` | `mcpServers` | `"command": "npx", "args": [...]` | `env` |
 | OpenCode | `opencode.json` | `mcp` | `"type": "local", "command": ["npx", ...], "enabled": true` | `environment` |
+| Amp | `.amp/settings.json` | `amp.mcpServers` | `"command": "npx", "args": [...]` | `env` |
+
+> **Amp note:** The key `amp.mcpServers` is a flat property in `.amp/settings.json`, NOT nested under an `amp` object. Remote/HTTP MCPs use `"url"` and `"headers"` instead of `command`/`args`. User-level config at `~/.config/amp/settings.json` uses the same format. You can also use `amp mcp add <name> -- <cmd> <args>` or `amp mcp add <name> <url>` to add servers via CLI.
 
 ---
 
@@ -54,6 +57,94 @@ Package: `@upstash/context7-mcp`
     }
   }
 }
+```
+
+### Amp (`.amp/settings.json`)
+
+```json
+{
+  "amp.mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  }
+}
+```
+
+---
+
+## Agentation MCP (Required — all services)
+
+Package: `agentation-mcp`
+
+Turns visual UI feedback into structured context for coding agents: click elements in the browser, add notes, and the agent receives CSS selectors, file paths, React component trees, computed styles, and user feedback directly — no copy-paste. See [agentation.com/mcp](https://www.agentation.com/mcp).
+
+**No credentials required.**
+
+### Claude Code (`.mcp.json`)
+
+```json
+{
+  "mcpServers": {
+    "agentation": {
+      "command": "npx",
+      "args": ["-y", "agentation-mcp", "server"]
+    }
+  }
+}
+```
+
+Or via CLI: `claude mcp add agentation -- npx -y agentation-mcp server`
+
+### Cursor (`.cursor/mcp.json`)
+
+```json
+{
+  "mcpServers": {
+    "agentation": {
+      "command": "npx",
+      "args": ["-y", "agentation-mcp", "server"]
+    }
+  }
+}
+```
+
+### OpenCode (`opencode.json`)
+
+```json
+{
+  "mcp": {
+    "agentation": {
+      "type": "local",
+      "command": ["npx", "-y", "agentation-mcp", "server"],
+      "enabled": true
+    }
+  }
+}
+```
+
+### Amp (`.amp/settings.json`)
+
+```json
+{
+  "amp.mcpServers": {
+    "agentation": {
+      "command": "npx",
+      "args": ["-y", "agentation-mcp", "server"]
+    }
+  }
+}
+```
+
+Or via CLI: `amp mcp add agentation -- npx -y agentation-mcp server`
+
+### Auto-detect across installed tools
+
+The `add-mcp` utility writes the correct config into every detected tool in one command:
+
+```bash
+npx add-mcp "npx -y agentation-mcp server"
 ```
 
 ---
@@ -111,6 +202,22 @@ Package: `@modelcontextprotocol/server-github`
 }
 ```
 
+### Amp (`.amp/settings.json`)
+
+```json
+{
+  "amp.mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<your-github-pat>"
+      }
+    }
+  }
+}
+```
+
 **Credentials:** Use the same PAT from `gh auth` or generate one at https://github.com/settings/tokens
 
 ---
@@ -156,6 +263,19 @@ Configure inside `api/` directory only.
       "type": "local",
       "command": ["npx", "-y", "@nicholasgriffintn/laravel-boost-mcp"],
       "enabled": true
+    }
+  }
+}
+```
+
+### Amp (`api/.amp/settings.json`)
+
+```json
+{
+  "amp.mcpServers": {
+    "laravel-boost": {
+      "command": "npx",
+      "args": ["-y", "@nicholasgriffintn/laravel-boost-mcp"]
     }
   }
 }
@@ -216,6 +336,22 @@ Package: `@sentry/mcp-server`
 }
 ```
 
+### Amp (`.amp/settings.json`)
+
+```json
+{
+  "amp.mcpServers": {
+    "sentry": {
+      "command": "npx",
+      "args": ["-y", "@sentry/mcp-server"],
+      "env": {
+        "SENTRY_AUTH_TOKEN": "<your-sentry-token>"
+      }
+    }
+  }
+}
+```
+
 **Credentials:** Generate at https://sentry.io/settings/account/api/auth-tokens/
 
 ---
@@ -261,6 +397,19 @@ Package: `@larksuiteoapi/lark-mcp`
       "type": "local",
       "command": ["npx", "-y", "@larksuiteoapi/lark-mcp", "mcp", "-a", "<LARK_APP_ID>", "-s", "<LARK_APP_SECRET>"],
       "enabled": true
+    }
+  }
+}
+```
+
+### Amp (`.amp/settings.json`)
+
+```json
+{
+  "amp.mcpServers": {
+    "lark": {
+      "command": "npx",
+      "args": ["-y", "@larksuiteoapi/lark-mcp", "mcp", "-a", "<LARK_APP_ID>", "-s", "<LARK_APP_SECRET>"]
     }
   }
 }
@@ -325,6 +474,20 @@ Or manually in `.cursor/mcp.json`:
   }
 }
 ```
+
+### Amp (`.amp/settings.json`)
+
+```json
+{
+  "amp.mcpServers": {
+    "figma": {
+      "url": "https://mcp.figma.com/mcp"
+    }
+  }
+}
+```
+
+Or via CLI: `amp mcp add figma https://mcp.figma.com/mcp`
 
 **No API token needed** — authenticates via browser OAuth when first used.
 See: https://help.figma.com/hc/en-us/articles/32132100833559
