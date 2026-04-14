@@ -1,5 +1,5 @@
 {
-  "version": "2.0.53",
+  "version": "2.0.54",
   "updated": "2026-04-14",
   "files": {
     "agents/fragments/session-protocol.md": {
@@ -103,7 +103,7 @@
       "type": "skill"
     },
     "skills/onboard/SKILL.md": {
-      "sha256": "0d2cd3d6b1ffa038a9a38f5561abb9255d82dce39d32c2e5fdf2e44f97153565",
+      "sha256": "ea5ea43e4ddc5159eb0b2e51dbcf9ae81e2890a7bdbaaf244afc05ccd53a6093",
       "install_to": ".agents/skills/onboard/SKILL.md",
       "type": "skill"
     },
@@ -113,7 +113,7 @@
       "type": "reference"
     },
     "skills/onboard/references/mcp-configs.md": {
-      "sha256": "e822a84d3a1be14451097f6455407a0d5de2c63dfc34890c89d7e6c2def72525",
+      "sha256": "2343e8f43aa9c46764dbc50ff0548f26365c91be34bf24e26d060fabc6e42112",
       "install_to": ".agents/skills/onboard/references/mcp-configs.md",
       "type": "reference"
     },
