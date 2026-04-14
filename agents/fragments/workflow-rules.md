@@ -76,7 +76,7 @@ When Claude Code's Agent Teams are available, the `implementation` phase uses pa
 - Check `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` env var
 - If `1`: Agent Teams is enabled — use natural language team creation
 - Otherwise: fall back to sequential flow (frndos-implement → frndos-pr)
-- Cursor/OpenCode always use the sequential fallback
+- Cursor, OpenCode, and Amp always use the sequential fallback (Amp subagents have no inter-agent communication, so parallel Agent Teams is infeasible there)
 
 **Mechanism — natural language team creation:**
 - The lead creates the entire team via a single natural language prompt describing all teammates
@@ -143,6 +143,7 @@ pending → planning → implementing → self_reviewing → architect_review �
 - **Claude Code:** `AskUserQuestion` tool with structured options
 - **Cursor:** Built-in ask question tool
 - **OpenCode:** Question tool with select/text modes
+- **Amp:** No dedicated ask tool — ask as plain text and STOP until the user answers
 
 This ensures the agent blocks until the user responds and prevents accidentally proceeding without input.
 
@@ -160,9 +161,9 @@ When JJ (Jujutsu) is available and the user wants to work on multiple features s
 - JJ is used ONLY for workspace management: `jj workspace add`, `jj workspace list`, `jj workspace forget`.
 - JJ does NOT replace git for commits, branches, or diffs.
 
-**Claude Code only:**
-- JJ workspaces create separate working directories — useful for Claude Code sessions running in parallel terminals.
-- Cursor and OpenCode sessions don't benefit (they work within a single directory).
+**Best with terminal-based harnesses:**
+- JJ workspaces create separate working directories — useful for Claude Code and Amp sessions running in parallel terminals.
+- Cursor is IDE-integrated so benefits less; OpenCode also runs per-session and can use workspaces if desired.
 
 **Independence:**
 - Each workspace operates independently. A feature in workspace B does not wait for workspace A.
@@ -184,7 +185,7 @@ When JJ (Jujutsu) is available and the user wants to work on multiple features s
 
 **Lifecycle:**
 - Create: `/jj-workflow new <slug>` from primary workspace
-- Work: open a new Claude Code session in the new directory, run `/workflow start <slug>`
+- Work: open a new Claude Code or Amp session in the new directory, run `/workflow start <slug>` (or say "start feature `<slug>`" in Amp)
 - Complete: finish the feature normally, merge PRs
 - Clean up: `/jj-workflow cleanup <slug>` from primary workspace
 

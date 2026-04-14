@@ -331,6 +331,15 @@ if [[ -d "$WORKSPACE_ROOT/.agents/skills" ]]; then
   fi
 fi
 
+# Amp: .amp/agents/ → .agentic-workflows/agents/amp/ (Amp reads AGENTS.md + .agents/skills/ natively, so no skills symlink needed)
+if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/amp" ]]; then
+  mkdir -p "$WORKSPACE_ROOT/.amp"
+  if [[ ! -e "$WORKSPACE_ROOT/.amp/agents" ]]; then
+    ln -s "../.agentic-workflows/agents/amp" "$WORKSPACE_ROOT/.amp/agents"
+    ok "Symlinked .amp/agents/ → .agentic-workflows/agents/amp/"
+  fi
+fi
+
 # CLAUDE.md symlink to AGENTS.md (Claude Code reads CLAUDE.md)
 if [[ -f "$WORKSPACE_ROOT/AGENTS.md" ]] && [[ ! -e "$WORKSPACE_ROOT/CLAUDE.md" ]]; then
   ln -s "AGENTS.md" "$WORKSPACE_ROOT/CLAUDE.md"

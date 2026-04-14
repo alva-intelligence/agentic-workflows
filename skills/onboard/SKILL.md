@@ -13,6 +13,7 @@ This skill guides you through setting up a complete frndOS development workspace
 >   - **Claude Code:** Enter plan mode (`/plan` or Shift+Tab)
 >   - **Cursor:** Use chat mode (not agent mode)
 >   - **OpenCode:** Switch to Plan agent (Tab)
+>   - **Amp:** Amp has no explicit plan mode — explicitly state each plan in chat and wait for approval before acting.
 >
 > This ensures you present plans and questions to the user and wait for approval before executing.
 >
@@ -22,6 +23,7 @@ This skill guides you through setting up a complete frndOS development workspace
 >   - **Claude Code:** Exit plan mode (normal mode)
 >   - **Cursor:** Switch to agent mode
 >   - **OpenCode:** Switch to Build agent (Tab)
+>   - **Amp:** No mode switch needed — continue in the same session.
 >
 > **4. Create a todo checklist** based on user's Step 1 answers. Only include items for selected services/tools. Mark items as you complete them.
 >
@@ -36,6 +38,7 @@ When you need user input, you MUST use your tool's dedicated ask/question tool:
 - **Claude Code:** Use the `AskUserQuestion` tool with structured options
 - **Cursor:** Use the built-in ask question tool
 - **OpenCode:** Use the question tool with select/text modes
+- **Amp:** Amp has no dedicated ask tool — ask the question as plain text and STOP until the user responds. Do not proceed without an explicit answer.
 
 **NEVER** just print a question as plain text and hope the user responds. **ALWAYS** use the ask tool so the user gets a proper interactive prompt with selectable options. This prevents the agent from continuing without an answer.
 
@@ -140,9 +143,10 @@ Use the ask tool with these EXACT options (multi-select):
 | 1 | Claude Code | CLI Agent | Best for complex multi-service tasks, strong tool use |
 | 2 | OpenCode | CLI Agent | Lightweight, fast, configurable |
 | 3 | Cursor | Editor | Deep AI integration, multi-file editing, agent mode |
-| 4 | Codex | CLI Agent | OpenAI-native code generation |
-| 5 | Zed | Editor | Fast, lightweight, multiplayer |
-| 6 | Other | — | Type your own |
+| 4 | Amp | CLI Agent | Sourcegraph Amp — reads AGENTS.md + `.agents/skills/` natively, natural-language invocation |
+| 5 | Codex | CLI Agent | OpenAI-native code generation |
+| 6 | Zed | Editor | Fast, lightweight, multiplayer |
+| 7 | Other | — | Type your own |
 
 (Can select multiple — this determines agent, skill, and MCP configuration)
 
@@ -174,6 +178,7 @@ Neither is required. Workflow works without them.
 > - **Claude Code:** Exit plan mode (normal mode)
 > - **Cursor:** Switch to agent mode
 > - **OpenCode:** Switch to Build agent (Tab)
+> - **Amp:** No mode switch needed — continue.
 >
 > **Create a todo checklist now.** Based on the user's answers, create a task list covering Steps 2–12. Only include items relevant to the services, tools, and providers the user selected. Mark each item as you complete it.
 
@@ -388,11 +393,11 @@ All tools must be available. If any are missing, troubleshoot before continuing.
 
 Save the environment method in `.onboard-state.json` and proceed to Step 2.5. All subsequent steps (clone, deps, .env, DB) work the same regardless of Nix or direct install.
 
-## Step 2.5: JJ (Jujutsu) Setup — Claude Code Only
+## Step 2.5: JJ (Jujutsu) Setup — Terminal-based harnesses only
 
-**Skip this step entirely if the user did NOT select Claude Code in Step 1.3.**
+**Skip this step entirely if the user did NOT select at least one terminal-based harness (Claude Code or Amp) in Step 1.3.**
 
-JJ enables parallel feature development via isolated workspaces. It runs in colocated mode alongside git — all git commands remain unchanged.
+JJ enables parallel feature development via isolated workspaces — useful when you run one agent session per directory. It runs in colocated mode alongside git — all git commands remain unchanged.
 
 1. **Check if JJ is available:**
    ```bash
@@ -406,7 +411,7 @@ JJ enables parallel feature development via isolated workspaces. It runs in colo
 
 3. **If JJ is NOT found:**
    - Use the ask tool:
-     > "JJ (Jujutsu) enables parallel feature development — work on multiple features in separate directories simultaneously. It's optional and only useful with Claude Code."
+     > "JJ (Jujutsu) enables parallel feature development — work on multiple features in separate directories simultaneously. It's optional and only useful with terminal-based harnesses (Claude Code, Amp)."
      > - **Install JJ** (`brew install jj`) — recommended if you plan to work on multiple features in parallel
      > - **Skip** — I'll work on one feature at a time
    - If user chooses install:
@@ -441,6 +446,12 @@ echo "OK" | claude -p --model claude-sonnet-4-6 2>&1 | head -1
 ```bash
 opencode run -m anthropic/claude-opus-4-6 "respond with just OK" 2>&1 | head -5
 ```
+
+**Amp:**
+```bash
+command -v amp && amp --version 2>&1 | head -1
+```
+Amp manages model access internally via your Amp account — no per-model CLI verification needed. If `amp` is not found, ask the user to install it from [ampcode.com](https://ampcode.com).
 
 Report which models work and suggest fallbacks for any that fail.
 
@@ -715,6 +726,13 @@ ln -sf ../.agentic-workflows/agents/opencode .opencode/agents
 ln -sf ../.agents/skills .opencode/skills
 ```
 
+**Amp:** If user selected Amp, check `.amp/agents/` symlink exists pointing to Amp-specific agents. If not:
+```bash
+mkdir -p .amp
+ln -sf ../.agentic-workflows/agents/amp .amp/agents
+```
+> **Note:** Amp reads skills from `.agents/skills/` natively — no `.amp/skills/` symlink is needed. AGENTS.md at the workspace root is also read automatically.
+
 ### Dev Server Configuration (launch.json)
 
 For tools that support `launch.json` (Claude Code Desktop), generate the dev server config so the agent can start/stop/preview services automatically.
@@ -758,6 +776,7 @@ Skills are installed via [skills.sh](https://skills.sh/) using `npx skills add`.
 - If Claude Code selected: `-a claude-code`
 - If Cursor selected: `-a cursor`
 - If OpenCode selected: `-a opencode`
+- If Amp selected: skills.sh does not yet ship an `-a amp` target. Since Amp reads `.agents/skills/` natively, use another `-a` target that installs into `.agents/skills/` (typically `-a claude-code`) so the files land where Amp can find them. If the user only selected Amp, pass `-a claude-code` — Amp will still load the skills.
 
 Example for a user who selected Claude Code + Cursor: `--yes -a claude-code -a cursor`
 
@@ -789,6 +808,7 @@ Each tool reads MCP config from a different path:
 | Claude Code | `.mcp.json` (repo root) |
 | OpenCode | `opencode.json` (repo root) |
 | Cursor | `.cursor/mcp.json` |
+| Amp | `.amp/settings.json` (under `amp.mcpServers` key) — confirm exact path/key with user during install, Amp also supports user-level `~/.config/amp/settings.json` |
 
 ### Required MCPs — configure ONE AT A TIME
 

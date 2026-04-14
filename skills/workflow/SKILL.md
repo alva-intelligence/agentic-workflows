@@ -172,7 +172,7 @@ Switch Claude Code between Agent Session and Team Session mode.
 
 **Steps:**
 1. Check if Claude Code is the active tool (`.claude/settings.json` exists or `.claude/` dir exists)
-   - If not Claude Code: "This command is only available for Claude Code."
+   - If not Claude Code: "This command is only available for Claude Code. Cursor, OpenCode, and Amp all use the sequential flow (Amp subagents have no inter-agent communication, so parallel Agent Teams is infeasible there)."
 2. Read `.claude/settings.json` to determine current mode:
    - If `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is `"1"`: current mode is **Team Session**
    - Otherwise: current mode is **Agent Session**

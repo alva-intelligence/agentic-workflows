@@ -26,16 +26,16 @@ What gets installed:
   - 8 skills (/onboard, /workflow, /workflow-update, /prd, /prd-split, /wireframe, /jj-workflow, /setup-workspace)
   - An 11-phase workflow state machine with gate enforcement
   - Agent Teams support — parallel per-service engineers + architect (Claude Code)
-  - JJ workspace support — parallel features in isolated directories (Claude Code)
+  - JJ workspace support — parallel features in isolated directories (Claude Code, Amp)
   - Auto-updating instruction system (stays in sync with team changes)
   - Templates for PRDs, service PRDs, track files, and PRs
 
-Supported tools: Claude Code, Cursor, OpenCode (and any tool supporting SKILL.md)
+Supported tools: Claude Code, Cursor, OpenCode, Amp (and any tool supporting SKILL.md)
 ```
 
 ### Step 2: Ask for confirmation
 
-Use your **ask tool** (Claude Code: `AskUserQuestion`, Cursor: ask tool, OpenCode: question tool):
+Use your **ask tool** (Claude Code: `AskUserQuestion`, Cursor: ask tool, OpenCode: question tool; Amp has no dedicated ask tool — ask as plain text and wait):
 
 > "Would you like to set up frndOS and start the agentic workflow?"
 > - Yes, set it up
@@ -225,18 +225,18 @@ When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set (configured via `.claude/se
 - Shared task list tracks per-service chains: `plan → implement → self-review → architect-review → pr`
 - When all PRs are merged, lead shuts down teammates and cleans up the team
 
-**Sequential fallback:** Cursor, OpenCode, or when the env var is unset — uses `frndos-implement` → `frndos-pr` (unchanged).
+**Sequential fallback:** Cursor, OpenCode, Amp, or when the env var is unset — uses `frndos-implement` → `frndos-pr` (unchanged). Amp subagents have no inter-agent communication, so parallel Agent Teams is infeasible there.
 
 ### JJ Workspaces (Parallel Features)
 
-Work on multiple features simultaneously in isolated directories using [JJ (Jujutsu)](https://martinvonz.github.io/jj/) colocated workspaces. Each workspace gets its own Claude Code session and feature state machine, while sharing the same git commit graph.
+Work on multiple features simultaneously in isolated directories using [JJ (Jujutsu)](https://martinvonz.github.io/jj/) colocated workspaces. Each workspace gets its own terminal-based agent session (Claude Code or Amp) and feature state machine, while sharing the same git commit graph.
 
 ```
 Terminal 1 (primary):                    Terminal 2 (workspace):
   frndos/                                  frndos-feature-b/
   └─ feature: image-editor                 └─ feature: feature-b
      phase: implementation                    phase: prd_creation
-     Claude Code session A                    Claude Code session B
+     agent session A                          agent session B
 ```
 
 **How it works:**
@@ -251,7 +251,7 @@ Terminal 1 (primary):                    Terminal 2 (workspace):
 - `/jj-workflow list` — List all workspaces and their features
 - `/jj-workflow cleanup <slug>` — Remove a completed workspace
 
-**Requirements:** JJ installed (`brew install jj` or via `nix develop`), Claude Code only.
+**Requirements:** JJ installed (`brew install jj` or via `nix develop`). Best with terminal-based harnesses (Claude Code, Amp) — Cursor is IDE-integrated so benefits less.
 
 ### Creating a New Workspace for a Different Project
 
@@ -269,6 +269,8 @@ Then generates all configuration files — agents, fragments, skills, schemas, t
 ### Skills
 
 Skills are slash commands you invoke directly. They're the entry points for each workflow action.
+
+> **Amp note:** Amp has no slash commands — it auto-loads skills based on their `description` frontmatter when you express the intent in natural language (e.g., "start a new feature called user-profiles" loads the workflow skill). The commands below are the canonical names; use the equivalent phrasing in Amp.
 
 | Skill | What it does |
 |-------|-------------|
@@ -289,7 +291,7 @@ Skills are slash commands you invoke directly. They're the entry points for each
 | `/prd-split` | Split a main PRD into per-service PRDs (API, Web, AI, Data). |
 | `/wireframe` | Build production-quality static frontend pages for a feature. |
 | `/jj-workflow init` | Initialize JJ colocated mode in service repos. |
-| `/jj-workflow new <slug>` | Create a parallel workspace — isolated directory for a separate Claude Code session to work on another feature simultaneously. |
+| `/jj-workflow new <slug>` | Create a parallel workspace — isolated directory for a separate terminal-based agent session (Claude Code or Amp) to work on another feature simultaneously. |
 | `/jj-workflow list` | List all JJ workspaces with their feature, phase, and worker. |
 | `/jj-workflow status` | Show current workspace type (primary/secondary) and JJ state. |
 | `/jj-workflow cleanup <slug>` | Remove a completed workspace — forget JJ workspaces, delete directory, update registry. |
@@ -339,6 +341,7 @@ agentic-workflows/
         frndos-track      #   Track file management
       cursor/             # Agent definitions (.mdc) for Cursor
       opencode/           # Agent definitions (.md) for OpenCode
+      amp/                # Agent definitions (.md) for Amp (ampcode.com)
     AGENTS.md.template    # Template with {{FRAGMENT:...}} markers
   scripts/
     update-check.sh       # Downloads updates from this repo

@@ -5,13 +5,13 @@ description: JJ (Jujutsu) workspace management — create isolated working direc
 
 # JJ Workspace Manager
 
-Manages JJ (Jujutsu) workspaces for parallel feature development. Each workspace is an isolated working directory where a separate Claude Code session can work on a different feature independently.
+Manages JJ (Jujutsu) workspaces for parallel feature development. Each workspace is an isolated working directory where a separate terminal-based agent session (Claude Code or Amp) can work on a different feature independently.
 
 **Key principles:**
 - JJ runs in **colocated mode** — all git commands stay unchanged. JJ is ONLY used for workspace management.
 - The frndOS workspace is NOT a single repo. It contains 4 service repos (`api/`, `web/`, `ai-service/`, `data-service/`). JJ operations are applied **per-service-repo**, orchestrated at the top level.
 - This skill is **completely separate** from `/workflow`. The workflow skill handles the feature state machine; `/jj-workflow` handles workspace isolation.
-- Only useful with **Claude Code** — Cursor/OpenCode don't benefit from separate working directories.
+- Most useful with **terminal-based harnesses** (Claude Code, Amp) where you run one session per directory. Cursor is IDE-integrated so benefits less; OpenCode also works per-session and can use workspaces if desired.
 
 ## Commands
 
@@ -261,7 +261,7 @@ Remove a completed JJ workspace.
 
 - **JJ colocated mode only** — git commands remain unchanged everywhere. JJ is used exclusively for `workspace add`, `workspace list`, `workspace forget`.
 - **JJ is NOT used for commits, branches, or diffs** — all version control operations go through git.
-- **Claude Code only** — Cursor and OpenCode sessions don't benefit from separate working directories.
+- **Terminal-based harnesses** (Claude Code, Amp) benefit most — they run one session per directory. Cursor (IDE-integrated) benefits less; OpenCode also works per-session if desired.
 - **Each workspace is independent** — no cross-workspace phase dependencies. A feature in workspace B doesn't wait for workspace A.
 - **Committed changes propagate instantly** — since JJ workspaces share the same repo graph, any `git commit` in one workspace is immediately visible via `git log` in another.
 - **Port conflicts** — you cannot run the same services (e.g., two API servers on :9191) in two workspaces simultaneously. Stop services in one before starting in the other.
