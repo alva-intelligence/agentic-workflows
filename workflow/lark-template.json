@@ -1,0 +1,80 @@
+{
+  "$description": "Portable schema for the Lark 'FrnDOS Agentic Workflow Management' tasklist. The bootstrap script creates these sections + custom fields in the user's Lark tenant and stores the resulting GUIDs in the local workspace (.lark-sync.json). Agents reference sections/fields by NAME and resolve to GUIDs at call time. Phase is encoded as section membership (Kanban lane), not a custom field.",
+  "tasklist_name": "FrnDOS Agentic Workflow Management",
+  "sections": {
+    "$description": "Phase Kanban lanes. Order matters — Lark shows them left-to-right. 'PRD Creation' must be the default section so new features land there on /workflow start.",
+    "default": "PRD Creation",
+    "ordered": [
+      { "name": "PRD Creation", "phase_key": "prd_creation" },
+      { "name": "Wireframe", "phase_key": "wireframe" },
+      { "name": "Wireframe PR", "phase_key": "wireframe_pr" },
+      { "name": "Wireframe Review", "phase_key": "wireframe_review" },
+      { "name": "Branch Creation", "phase_key": "branch_creation" },
+      { "name": "PRD Splitting", "phase_key": "prd_splitting" },
+      { "name": "Implementation", "phase_key": "implementation" },
+      { "name": "PR Submission", "phase_key": "pr_submission" },
+      { "name": "PR Review", "phase_key": "pr_review" },
+      { "name": "Completion", "phase_key": "completion" }
+    ]
+  },
+  "custom_fields": [
+    {
+      "name": "Feature slug",
+      "type": "text",
+      "required": true,
+      "description": "Kebab-case unique key. Matches the workflow feature_slug."
+    },
+    {
+      "name": "Services",
+      "type": "multi_select",
+      "required": true,
+      "options": ["api", "web", "ai-service", "data-service"]
+    },
+    {
+      "name": "Source PRD",
+      "type": "text",
+      "description": "Lark doc URL (original brief) or local path for dev-authored PRDs."
+    },
+    {
+      "name": "Branch",
+      "type": "text",
+      "description": "Feature branch name, e.g. feature/<worker>/<slug>."
+    },
+    {
+      "name": "PRs",
+      "type": "text",
+      "description": "One line per service, e.g. 'api: <url>\\nweb: <url>'."
+    },
+    {
+      "name": "Wireframe PR",
+      "type": "text"
+    },
+    {
+      "name": "Wireframe skipped",
+      "type": "single_select",
+      "options": ["yes", "no"],
+      "default": "no"
+    },
+    {
+      "name": "Impl strategy",
+      "type": "single_select",
+      "options": ["vertical", "web-first-stubs"],
+      "description": "Implementation strategy. 'vertical' = API-first then web wires real endpoints; 'web-first-stubs' = build web UI with dummy data, then API, then swap stubs."
+    },
+    {
+      "name": "Session mode",
+      "type": "single_select",
+      "options": ["agent-session", "team-session"]
+    },
+    {
+      "name": "Parent feature",
+      "type": "text",
+      "description": "If this feature is a P0/P1 split of a parent PRD, the parent feature slug."
+    },
+    {
+      "name": "Last phase change",
+      "type": "datetime",
+      "datetime_format": "yyyy-mm-dd"
+    }
+  ]
+}

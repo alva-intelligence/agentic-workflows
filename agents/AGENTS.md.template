@@ -32,4 +32,8 @@
 
 ---
 
+{{FRAGMENT:testing-policy.md}}
+
+---
+
 {{FRAGMENT:service-registry.md}}

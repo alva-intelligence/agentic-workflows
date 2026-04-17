@@ -24,19 +24,37 @@ From `.workflow-state.json`:
 
 ## PROCESS
 
-1. **Verify** workflow state is in `prd_splitting` phase
-2. **Read** the main PRD from `.workflow-state.json` prd_path
-3. **Parse** the "Service Breakdown" section
-4. **For each service** listed in the PRD frontmatter `services` field:
-   a. Read the service PRD template from `.agentic-workflows/templates/prd/service-prd.template.md`
-   b. Extract relevant requirements, API endpoints, data model changes for this service
-   c. Generate implementation tasks (TASK-1, TASK-2, ...) from the requirements
-   d. Present the draft service PRD to user
-   e. Wait for user approval
-   f. On approval, write to `<service>/docs/prd/<slug>.md`
-   g. Create track file at `<service>/docs/tracks/<slug>.track.md` using the track template
-5. **Update** `.workflow-state.json` service_prds with paths
-6. **Report** summary: "Created service PRDs for: api, web, ai-service"
+### Step 1: Research phase (MANDATORY — read-only)
+
+Amp has no plan mode. Announce to the user: "Entering research phase — read-only." Do NOT write any files during Steps 1-4.
+
+### Step 2: Read main PRD and per-service context
+
+1. Verify workflow state is in `prd_splitting` phase
+2. Read main PRD from `.workflow-state.json` `prd_path`
+3. Parse "Service Breakdown"
+4. For each service, read enough code to understand existing patterns, integration points, and any active work in `<service>/docs/tracks/` that may conflict
+
+### Step 3: Relentless clarifying questions (MANDATORY)
+
+Before splitting, ask (plain text, wait) about EVERY ambiguity affecting the split. Prefer multiple small questions over one mega-question. Do NOT proceed until answered.
+
+### Step 4: Draft each service PRD
+
+For each service listed in PRD frontmatter `services`:
+a. Read service PRD template
+b. Extract relevant requirements, API endpoints, data model changes
+c. Generate implementation tasks (TASK-1, TASK-2, ...)
+d. Present draft to user
+e. Ask for approval (plain text, wait) — surface any remaining per-service ambiguities here
+f. On approval, write to `<service>/docs/prd/<slug>.md`
+g. Create track file at `<service>/docs/tracks/<slug>.track.md`
+
+### Step 5: Finalize
+
+- Announce: "Research phase complete."
+- Update `.workflow-state.json` `service_prds` with paths
+- Report: "Created service PRDs for: api, web, ai-service"
 
 ## SERVICE PRD REQUIRED FRONTMATTER
 
@@ -58,7 +76,7 @@ status: draft
 3. **Implementation Tasks** — Numbered task list (TASK-1, TASK-2, ...)
 4. **API Contract** — Endpoints this service exposes or consumes
 5. **Data Changes** — Migrations, schema changes for this service
-6. **Testing** — What to test, how to verify
+6. **Verification** — Manual verification steps. Automated tests are opt-in (see `.agentic-workflows/fragments/testing-policy.md`); include an automated-test subsection only if the user explicitly asked.
 
 ## TRACK FILE FORMAT
 

@@ -22,7 +22,7 @@ Service-level instructions **take precedence** over generic guidelines when they
 ## YOUR SCOPE
 
 - You CAN read/write code in ANY service directory relevant to the current feature
-- You CAN run commands (build, test, lint)
+- You CAN run commands (build, lint) — do NOT run tests unless the user has explicitly asked (see Testing Policy below)
 - You MUST follow the service PRD scope — only implement what's specified
 - You MUST update the track file after completing tasks
 - You MUST stay on the feature branch (never modify develop/development directly)
@@ -38,7 +38,7 @@ Service-level instructions **take precedence** over generic guidelines when they
 
 ### During work:
 1. **ALWAYS explain** what you plan to do before doing it
-2. **ALWAYS ask** if anything is unclear
+2. **ALWAYS ask** if anything is unclear — use `AskUserQuestion` for EVERY ambiguity. Prefer multiple small clarifying questions over one mega-question.
 3. **ALWAYS wait** for user confirmation before executing
 4. Follow existing code patterns and conventions in the service
 5. Write clean, readable code — no over-engineering
@@ -48,6 +48,50 @@ Service-level instructions **take precedence** over generic guidelines when they
 1. Update the track file — check off completed TASK-*
 2. Add a session log entry with what was done
 3. Inform user of progress
+
+## CLARIFYING QUESTIONS BEFORE IMPLEMENTATION (MANDATORY)
+
+Before starting implementation (before Step 3 in PROCESS below), you MUST use `AskUserQuestion` to surface EVERY remaining ambiguity from the service PRDs. Do not start coding with unresolved ambiguities.
+
+- Prefer multiple small targeted questions over one big question
+- Examples: "The PRD says 'cache for 5 minutes' — is that per-user or global?", "Should validation errors return 400 or 422?", "Empty list vs. null in the response — which?"
+- Record every answer either in the track file's Session Log or as a comment in the relevant service PRD
+
+Do NOT proceed to the "present plan" step until all answers are recorded.
+
+## TESTING POLICY
+
+**MUST NOT create tests, test files, or test suites in any service.** **MUST NOT run existing test suites** unless the user explicitly requests it in this session. If you believe tests would help, use `AskUserQuestion` to ask the user with the default answer being "No". See `.agentic-workflows/fragments/testing-policy.md` for the full policy.
+
+## IMPLEMENTATION STRATEGIES
+
+When presenting your implementation plan (Step 3 below), you MUST use `AskUserQuestion` to ask the user which strategy to use. Record the choice in `.workflow-state.json` as `features[<slug>].implementation_strategy`.
+
+### Option A: Vertical-per-service (default)
+
+Implement each service end-to-end in order: API first (routes, models, migrations, serializers, validation), then web wires to real API endpoints.
+
+Use when: the wireframe already exists and is approved, OR when the user prefers backend-first development.
+
+### Option B: Web-first with stubs
+
+Build the web UI first against dummy/static data matching the planned API contracts. Then implement the backend in parallel or after. Finally, swap the stubs for real API calls.
+
+Use when: wireframe was skipped (`features[<slug>].wireframe_skipped === true`), OR when the user wants to see and iterate on UI before committing to backend shapes, OR when fast visual feedback matters more than early backend validation.
+
+**Stub conventions (web-first):**
+- Put dummy data in `web/src/mocks/<feature>/` or co-located `*.stub.ts` files
+- Match the planned API contract from the api/docs/prd/<slug>.md exactly — same field names, types, and shapes
+- Mark stub usage with a TODO comment referencing the feature slug so swap-out is easy
+- Track "swap stubs" as its own TASK in the web track file
+
+Ask the user (via `AskUserQuestion`):
+
+> "Which implementation strategy for this feature?
+> - **Vertical-per-service** (default) — API first, then web wires to real endpoints
+> - **Web-first with stubs** — web UI with dummy data matching planned API contracts, then backend, then swap stubs (recommended when wireframe was skipped)"
+
+Default to "Vertical-per-service" unless `wireframe_skipped === true`, in which case default the suggestion to "Web-first with stubs" but still let the user choose.
 
 ## PROCESS
 
@@ -63,7 +107,7 @@ Service-level instructions **take precedence** over generic guidelines when they
    b. Wait for "go ahead"
    c. Implement
    d. Show the changes
-   e. Run tests if applicable
+   e. Run lint/type-check — do NOT run or write tests unless the user has explicitly asked (see Testing Policy)
    f. Update track file
 6. **When all tasks complete:**
    - Update track status

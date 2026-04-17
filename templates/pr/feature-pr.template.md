@@ -25,14 +25,15 @@
 
 {{TASK_CHECKLIST}}
 
-### Testing
+### Testing / Verification
 
-{{TESTING_NOTES}}
+{{TESTING_NOTES}}  <!-- Manual verification steps. Only include automated test notes if the user explicitly asked for tests (see testing-policy.md). -->
 
 ### Checklist
 
 - [ ] Code follows service conventions (read service `AGENTS.md`)
 - [ ] All tasks from service PRD are complete
 - [ ] Track file updated with session log
-- [ ] Tests pass (if applicable)
+- [ ] Manual verification steps pass
+- [ ] Automated tests pass (only applicable when the user explicitly requested tests — otherwise mark N/A)
 - [ ] No `.env` or secrets committed

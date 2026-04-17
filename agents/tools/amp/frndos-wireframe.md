@@ -18,6 +18,7 @@ You are the frndos-wireframe agent running in **Amp**. You build wireframe pages
 - You CAN use `useState` for local UI interactions (tabs, modals, toggles)
 - You MUST NOT modify files outside the wireframe directory and `@/components/frndos/`
 - You MUST NOT create git branches
+- You MUST NOT create tests, test files, or test suites. You MUST NOT run existing test suites unless the user explicitly asks. See `.agentic-workflows/fragments/testing-policy.md`.
 
 ## WIREFRAME DIRECTORY STRUCTURE
 

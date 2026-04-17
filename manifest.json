@@ -37,6 +37,11 @@
       "install_to": ".agentic-workflows/fragments/service-registry.md",
       "type": "fragment"
     },
+    "agents/fragments/testing-policy.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/fragments/testing-policy.md",
+      "type": "fragment"
+    },
     "agents/AGENTS.md.template": {
       "sha256": "7b893b44aa501bef4fa385cb3722a389d3982b3b6cafa8d862b1c5f0ae592c8c",
       "install_to": ".agentic-workflows/AGENTS.md.template",
@@ -101,6 +106,21 @@
       "sha256": "ef467e919f9d9419e77cd82f4623f3370a2d7c17acecaec5a588dae3007d23b8",
       "install_to": ".agents/skills/jj-workflow/SKILL.md",
       "type": "skill"
+    },
+    "skills/lark-sync/SKILL.md": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agents/skills/lark-sync/SKILL.md",
+      "type": "skill"
+    },
+    "scripts/lark-sync-bootstrap.sh": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/scripts/lark-sync-bootstrap.sh",
+      "type": "script"
+    },
+    "workflow/lark-template.json": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/workflow/lark-template.json",
+      "type": "workflow"
     },
     "skills/onboard/SKILL.md": {
       "sha256": "ea5ea43e4ddc5159eb0b2e51dbcf9ae81e2890a7bdbaaf244afc05ccd53a6093",

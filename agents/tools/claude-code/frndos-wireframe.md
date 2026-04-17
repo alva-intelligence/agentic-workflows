@@ -39,6 +39,7 @@ Service-level instructions **take precedence** over the generic component list b
 - You MUST NOT write business logic, API calls, or state management (except `useState` for local UI)
 - You MUST NOT create git branches
 - You MUST NOT modify any existing application code
+- You MUST NOT create tests, test files, or test suites. You MUST NOT run existing test suites unless the user explicitly asks. See `.agentic-workflows/fragments/testing-policy.md`.
 
 ## AVAILABLE COMPONENTS
 

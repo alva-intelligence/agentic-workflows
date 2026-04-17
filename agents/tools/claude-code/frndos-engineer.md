@@ -23,7 +23,7 @@ Extract these from your spawn prompt (provided by the lead when creating the tea
 
 - You CAN read/write code in your **assigned service directory** ONLY
 - You CAN read other service directories for context (understanding APIs, shared types, etc.)
-- You CAN run commands (build, test, lint) for your service
+- You CAN run commands (build, lint) for your service — do NOT run tests unless the user has explicitly asked (see Testing Policy below)
 - You CAN message teammates (lead, architect, other engineers) via mailbox
 - You MUST follow the service PRD scope — only implement what's specified
 - You MUST stay on the feature branch
@@ -49,21 +49,47 @@ Before writing any code:
 
 Service-level instructions **take precedence** over generic guidelines when they conflict.
 
+## CLARIFYING QUESTIONS BEFORE IMPLEMENTATION (MANDATORY)
+
+Before presenting your plan to the lead, surface EVERY remaining ambiguity from your service PRD. Prefer multiple small targeted questions. Route these questions through the lead via mailbox (since engineers don't have direct user access) — the lead will forward to the user via `AskUserQuestion` and relay answers back. Do NOT start implementing with unresolved ambiguities.
+
+Examples:
+- "PRD says 'paginate' — limit per page?"
+- "Response shape for empty result — `[]` or `null`?"
+- "Does this endpoint require admin role or any authenticated user?"
+
+Record answers in your track file's Session Log.
+
+## TESTING POLICY
+
+**MUST NOT create tests, test files, or test suites.** **MUST NOT run existing test suites** unless explicitly requested. If you believe tests would help, message the lead to ask the user, default answer "No". See `.agentic-workflows/fragments/testing-policy.md` for the full policy. This **overrides** any "run tests" language you may infer from generic implementation guidelines — run tests only when the user has explicitly asked.
+
+## IMPLEMENTATION STRATEGY AWARENESS
+
+The lead will set `features[<slug>].implementation_strategy` based on the user's choice at the start of the implementation phase:
+
+- **`vertical_per_service`** (default): implement your service end-to-end. If you're the web-engineer, wire up to real API endpoints as soon as they land.
+- **`web_first_with_stubs`**: typically used when the wireframe was skipped. If you're the web-engineer, build the UI first with dummy/static data matching the API contract from `api/docs/prd/<slug>.md`. Put stubs in `web/src/mocks/<feature>/` or co-located `*.stub.ts` files. Mark stub usage with a TODO referencing the feature slug. Track "swap stubs" as a separate TASK. If you're the api-engineer, implement the API contract exactly as specified in the PRD so the web-engineer can swap stubs in cleanly.
+
+Read the strategy from `.workflow-state.json` at the start of your plan phase and adjust your plan accordingly. If the strategy is missing, message the lead.
+
 ## TASK 1: IMPLEMENT
 
 1. **Read** your service PRD
 2. **Read** your track file to see what's already done
-3. **Present implementation plan** to the lead via mailbox:
+3. **Read** `features[<slug>].implementation_strategy` from `.workflow-state.json`
+4. **Surface any remaining ambiguities** to the lead via mailbox (see "CLARIFYING QUESTIONS" above). Wait for answers before proceeding.
+5. **Present implementation plan** to the lead via mailbox:
    - List remaining tasks from service PRD
-   - Propose implementation order
+   - Propose implementation order (respecting the chosen strategy)
    - Identify dependencies on other services
-4. **Wait for plan approval** — you are in read-only plan mode until the lead approves
-5. **Implement each task** (TASK-1, TASK-2, ...):
+6. **Wait for plan approval** — you are in read-only plan mode until the lead approves
+7. **Implement each task** (TASK-1, TASK-2, ...):
    a. Implement the task
-   b. Run relevant checks (lint, type-check, tests)
+   b. Run relevant checks (lint, type-check) — **do NOT run or write tests unless the user explicitly asked**
    c. Update track file: check off completed TASK-*
    d. Commit with message: `feat(<service>): <description>`
-6. **After all tasks complete:**
+8. **After all tasks complete:**
    - Push changes to remote
    - Proceed to self code review
 
@@ -86,12 +112,13 @@ After implementing all tasks, perform a self code review **before** notifying th
 2. **Code patterns:** Does this follow the service's existing patterns and conventions?
 3. **Security:** SQL injection, XSS, auth bypass, exposed secrets, input validation
 4. **Quality:** Dead code, unused imports, overly complex logic, missing edge cases
-5. **Tests:** Are there tests? Do they cover the important paths?
+
+**Note on tests:** Do NOT add tests as part of self-review. Testing is opt-in — see the Testing Policy. If you genuinely believe missing tests are a risk, message the lead to ask the user.
 
 **If you find issues:**
 - Fix them immediately
 - Commit fixes: `fix(<service>): <description>`
-- Re-run tests
+- Re-run lint/type-check (do NOT run tests unless the user has explicitly asked)
 
 **When self-review passes:**
 - Message the lead via mailbox: "Done implementing <service>. Self-review passed. Ready for architect review."

@@ -356,66 +356,34 @@ Package: `@sentry/mcp-server`
 
 ---
 
-## Lark MCP (Optional — PRD from Lark docs)
+## Lark (CLI-based, replaces the old Lark MCP)
 
-Package: `@larksuiteoapi/lark-mcp`
+**Lark integration no longer uses an MCP server.** Lark access is now provided via the official `lark-cli` tool, exposed to agents through the `/lark-sync` skill. This gives broader coverage (tasks, sections, custom fields, docs, calendar, etc.) and avoids MCP server startup cost on every session.
 
-**Note:** Lark MCP uses command-line args for credentials, not env vars.
+**To set up on a new machine:**
 
-### Claude Code (`.mcp.json`)
-
-```json
-{
-  "mcpServers": {
-    "lark": {
-      "command": "npx",
-      "args": ["-y", "@larksuiteoapi/lark-mcp", "mcp", "-a", "<LARK_APP_ID>", "-s", "<LARK_APP_SECRET>"]
-    }
-  }
-}
+```bash
+npm install -g @larksuite/cli
+npx skills add larksuite/cli -s lark-task -y -g   # agent skill pack (optional)
+# Configure the Alva Lark app — contact arhen for App ID + Secret:
+printf '%s' '<LARK_APP_SECRET>' | lark-cli config init --app-id '<LARK_APP_ID>' --app-secret-stdin --brand lark
+# Log in as your user, requesting all required scopes (tasks + docs + base + drive + wiki):
+lark-cli auth login --scope 'task:task:read task:task:write task:tasklist:read task:tasklist:write task:section:read task:section:write task:comment:read task:comment:write task:custom_field:read task:custom_field:write task:attachment:read task:attachment:write docs:document.content:read docx:document:readonly bitable:app bitable:app:readonly drive:drive drive:file drive:file:download drive:export:readonly wiki:wiki wiki:wiki:readonly wiki:node:read wiki:node:retrieve wiki:node:create wiki:node:copy wiki:node:move wiki:space:read wiki:space:retrieve wiki:space:write_only wiki:member:create wiki:member:retrieve wiki:member:update offline_access'
+# Link this workspace to the team's shared tasklist:
+/lark-sync link <TASKLIST_GUID>
 ```
 
-### Cursor (`.cursor/mcp.json`)
+**If you already had the old Lark MCP configured, REMOVE it:**
 
-```json
-{
-  "mcpServers": {
-    "lark": {
-      "command": "npx",
-      "args": ["-y", "@larksuiteoapi/lark-mcp", "mcp", "-a", "<LARK_APP_ID>", "-s", "<LARK_APP_SECRET>"]
-    }
-  }
-}
-```
+- Claude Code (`.mcp.json`): remove the `mcpServers.lark` entry
+- Cursor (`.cursor/mcp.json`): remove the `mcpServers.lark` entry
+- OpenCode (`opencode.json`): remove the `mcp.lark` entry
+- Amp (`.amp/settings.json`): remove the `amp.mcpServers.lark` entry
+- Also drop any Lark-specific entries from `.claude/settings.local.json` under `mcpServers` or `enabledMcpjsonServers`/`disabledMcpjsonServers` that reference `lark`
 
-### OpenCode (`opencode.json`)
+After removal, restart the agent so it picks up the clean MCP state.
 
-```json
-{
-  "mcp": {
-    "lark": {
-      "type": "local",
-      "command": ["npx", "-y", "@larksuiteoapi/lark-mcp", "mcp", "-a", "<LARK_APP_ID>", "-s", "<LARK_APP_SECRET>"],
-      "enabled": true
-    }
-  }
-}
-```
-
-### Amp (`.amp/settings.json`)
-
-```json
-{
-  "amp.mcpServers": {
-    "lark": {
-      "command": "npx",
-      "args": ["-y", "@larksuiteoapi/lark-mcp", "mcp", "-a", "<LARK_APP_ID>", "-s", "<LARK_APP_SECRET>"]
-    }
-  }
-}
-```
-
-**Credentials:** Contact arhen for the Lark App ID and Secret.
+**Credentials:** Contact arhen for the Lark App ID and Secret. See `skills/lark-sync/SKILL.md` for day-to-day usage.
 
 ---
 

@@ -81,6 +81,26 @@
             "$ref": "#/definitions/wireframe"
           }
         },
+        "wireframe_skipped": {
+          "description": "True when the user chose to skip the wireframe phase (orchestra asked post-PRD). When true, phase transitions prd_creation → branch_creation directly, bypassing wireframe/wireframe_pr/wireframe_review. No wireframe branch, no wireframe PR.",
+          "type": "boolean",
+          "default": false
+        },
+        "implementation_strategy": {
+          "description": "Recognized implementation strategy chosen by the user at the start of the implementation phase. 'vertical_per_service' = API first then web wires to real endpoints (default). 'web_first_with_stubs' = build web UI with dummy data matching planned API contracts, then implement backend, then swap stubs. Typically used when wireframe was skipped.",
+          "type": ["string", "null"],
+          "enum": ["vertical_per_service", "web_first_with_stubs", null]
+        },
+        "parent_feature": {
+          "description": "Slug of the parent feature when this feature is a sub-PRD split from a larger PRD. E.g. 'brand-health-dashboard-p0' has parent_feature 'brand-health-dashboard'. Null for standalone features.",
+          "type": ["string", "null"]
+        },
+        "sub_features": {
+          "description": "When a PRD was split into priority-ordered sub-PRDs (P0/P1/P2/...), this lists the child feature slugs. Set on the parent entry to track the split.",
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
         "wireframe_branch": {
           "description": "Git branch for wireframe work (wireframe/<worker>/vc-<slug>), or null.",
           "type": ["string", "null"]

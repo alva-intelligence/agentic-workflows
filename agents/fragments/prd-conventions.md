@@ -56,7 +56,7 @@ status: draft | in_progress | completed
 3. **Implementation Tasks** — Numbered task list (TASK-1, TASK-2, ...)
 4. **API Contract** — Endpoints this service exposes or consumes
 5. **Data Changes** — Migrations, schema changes for this service
-6. **Testing** — What to test, how to verify
+6. **Verification** — Manual verification steps (how to test by hand). Automated tests are opt-in — only include an automated-test subsection if the user explicitly asked for tests (see `.agentic-workflows/fragments/testing-policy.md`).
 
 ### Naming
 

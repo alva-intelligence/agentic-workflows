@@ -190,7 +190,7 @@ Present a table based on their phase selection:
 > |-----|---------|-------------|-------------------|
 > | Context7 | `@upstash/context7-mcp` | Library docs lookup | No |
 > | GitHub | `@modelcontextprotocol/server-github` | PR/issue management | Yes (PAT) |
-> | Lark | `@larksuiteoapi/lark-mcp` | Read docs from Lark | Yes (App ID/Secret) |
+> | Lark (CLI, not MCP) | `@larksuite/cli` | Read/write Lark docs + tasks via `/lark-sync` skill | Yes (App ID/Secret) |
 > | Figma | `@anthropics/figma-mcp` | Design specs from Figma | Yes (PAT) |
 >
 > "List the ones you need. You can also add custom MCPs."

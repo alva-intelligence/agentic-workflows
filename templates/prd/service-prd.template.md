@@ -54,11 +54,13 @@ This document covers the {{SERVICE_NAME}} implementation for the {{FEATURE_TITLE
 
 ## Testing
 
+> **Note:** Tests are opt-in per the Testing Policy (`.agentic-workflows/fragments/testing-policy.md`). Leave Unit/Integration Tests blank unless the user has explicitly asked for tests. Manual Verification is always useful — fill it in regardless.
+
 ### Unit Tests
-- {{TEST}}
+- {{TEST}}  <!-- Only populate if the user explicitly asked for tests -->
 
 ### Integration Tests
-- {{TEST}}
+- {{TEST}}  <!-- Only populate if the user explicitly asked for tests -->
 
 ### Manual Verification
 - {{STEP}}

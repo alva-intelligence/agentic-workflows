@@ -75,11 +75,16 @@ Transition to the next phase (if gate conditions are met).
 1. Read `.workflow-state.json`
 2. Get current phase for active feature
 3. Look up gate conditions from `.agentic-workflows/workflow/gates.json`
-4. Check EACH condition:
+4. **If the current phase has multiple possible next phases** (e.g., `prd_creation` can go to `wireframe` OR `branch_creation` when the user chose to skip wireframing), check `next_strategy` on the phase in `phases.json`:
+   - `prd_creation → wireframe` when `features[<slug>].wireframe_skipped` is falsy (default)
+   - `prd_creation → branch_creation` when `features[<slug>].wireframe_skipped === true` (orchestra asked the user after PRD creation and user chose skip)
+   - `implementation → pr_submission` for `sequential` strategy
+   - `implementation → completion` for `agent_teams` strategy
+5. Check EACH gate condition for the resolved transition:
    - If all pass → transition to next phase, update `phase` and `phase_entered`
    - If any fail → report which conditions failed and what's needed
-5. Save state
-6. Inform user of new phase and which agent will handle it
+6. Save state
+7. Inform user of new phase and which agent will handle it
 
 ### `/workflow switch <slug>`
 Switch active feature context.

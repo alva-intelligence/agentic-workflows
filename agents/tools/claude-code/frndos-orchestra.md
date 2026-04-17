@@ -53,8 +53,8 @@ echo $CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
 | Phase | Agent | Expected Branch | Description |
 |-------|-------|----------------|-------------|
 | idle | (self) | any | Ask user what to do: start new feature, resume existing, or list features |
-| prd_creation | frndos-prd | any | PRD creation from user input |
-| wireframe | frndos-wireframe | `wireframe/<worker>/vc-<slug>` | Build wireframe pages on wireframe branch |
+| prd_creation | frndos-prd | any | PRD creation from user input. When PRD is complete, orchestra MUST ask the user whether to proceed with wireframing or skip straight to branch creation. |
+| wireframe | frndos-wireframe | `wireframe/<worker>/vc-<slug>` | Build wireframe pages on wireframe branch (skipped if user chose skip_wireframe) |
 | wireframe_pr | frndos-pr | `wireframe/<worker>/vc-<slug>` | Create PR targeting develop for FE owner review |
 | wireframe_review | frndos-pr | `wireframe/<worker>/vc-<slug>` | Waiting for FE owners to merge + Jeff approval |
 | branch_creation | (self) | `develop` → `feature/<worker>/vc-<slug>` | Checkout develop, verify wireframe, create feature branch |
@@ -217,26 +217,64 @@ When ALL engineers report "PR merged. Done.":
 - When user's request doesn't match current phase, explain: "You're in [PHASE]. Delegating to frndos-[agent]."
 - Handle `/workflow` commands directly (status, list, start, next, switch, resume)
 
+## LARK SYNC HOOK (team visibility)
+
+If `.lark-sync.json` exists in the workspace root, the team has opted into sharing feature state via a Lark tasklist. After any phase transition or local state mutation, you MUST invoke the `/lark-sync` skill's `push` command so the team's Lark board stays in sync. If `.lark-sync.json` is absent, this hook is a silent no-op and you continue as normal.
+
+Trigger `/lark-sync push` after:
+- `/workflow start <slug>` completes (creates the Lark task in PRD Creation)
+- `/workflow next` successfully transitions phase (moves the Lark task to the new section, updates `Last phase change`)
+- Wireframe-skip decision recorded (updates `Wireframe skipped` + `Impl strategy` fields)
+- PR URL added to local state (updates `PRs` or `Wireframe PR` field)
+- Feature reaches `completion` (marks the Lark task complete)
+
+Lark sync is ADVISORY, not a gate: if `/lark-sync push` fails, log the error and continue — the local workflow is authoritative. Remind the user to run `/lark-sync push` manually once the issue clears.
+
+## POST-PRD DECISION: WIREFRAME OR SKIP (MANDATORY)
+
+**When `frndos-prd` returns and phase transitions out of `prd_creation`, you MUST use `AskUserQuestion` to ask the user whether to build wireframes or skip directly to branch creation. Do NOT silently default to `wireframe` — many features do not need the full wireframe/wireframe_pr/wireframe_review loop, and skipping manually breaks the state machine.**
+
+Use `AskUserQuestion` with this phrasing:
+
+> "PRD is complete. How would you like to proceed?
+> - **Build wireframes** (default) — creates a wireframe branch, builds polished static pages, opens a wireframe PR for FE owner review, then continues to implementation
+> - **Skip wireframes** — jumps straight to branch creation + PRD splitting + implementation (no wireframe branch, no wireframe PR)"
+
+**If user picks "Build wireframes":**
+- Keep `features[<slug>].wireframe_skipped = false` (or leave unset)
+- Transition phase: `prd_creation → wireframe`
+- Delegate to `frndos-wireframe`
+
+**If user picks "Skip wireframes":**
+- Set `features[<slug>].wireframe_skipped = true` in `.workflow-state.json`
+- Transition phase: `prd_creation → branch_creation` (skipping `wireframe`, `wireframe_pr`, `wireframe_review` entirely)
+- Handle branch creation yourself (see below), then delegate to `frndos-splitter`
+
 ## BRANCH CREATION (self-handled)
 
 When phase is `branch_creation`:
-1. Determine target branch: `develop` for api/web, `development` for ai-service/data-service
-2. **First, verify wireframe PR was merged and wireframe exists on develop:**
-   ```bash
-   git checkout develop && git pull origin develop
-   # Verify wireframe files exist
-   ls web/src/app/\(dashboard\)/wireframes/<slug>/ || echo "ERROR: wireframe not on develop"
-   ```
-3. If wireframe files are NOT on develop, BLOCK: "The wireframe PR hasn't been merged yet. Current phase requires it."
-4. Explain plan: "Wireframe is on develop. I'll create branch `feature/<worker>/vc-<slug>` from here."
-5. Wait for confirmation
-6. Execute:
+1. Determine base branch: `develop` for api/web, `development` for ai-service/data-service
+2. Check `features[<slug>].wireframe_skipped`:
+   - **If NOT skipped:** verify wireframe PR was merged and wireframe exists on develop:
+     ```bash
+     git checkout develop && git pull origin develop
+     # Verify wireframe files exist
+     ls web/src/app/\(dashboard\)/wireframes/<slug>/ || echo "ERROR: wireframe not on develop"
+     ```
+     If wireframe files are NOT on develop, BLOCK: "The wireframe PR hasn't been merged yet. Current phase requires it."
+   - **If skipped:** no wireframe verification. Just check out and pull the base branch:
+     ```bash
+     git checkout <base-branch> && git pull origin <base-branch>
+     ```
+3. Explain plan: "I'll create branch `feature/<worker>/vc-<slug>` from `<base-branch>`."
+4. Wait for confirmation (use `AskUserQuestion`)
+5. Execute:
    ```bash
    git checkout -b feature/<worker>/vc-<slug>
    git push -u origin feature/<worker>/vc-<slug>
    ```
-7. Update `.workflow-state.json`: set branch, transition to `prd_splitting`
-8. Immediately delegate to `frndos-splitter`
+6. Update `.workflow-state.json`: set branch, transition to `prd_splitting`
+7. Immediately delegate to `frndos-splitter`
 
 ## IDLE STATE
 

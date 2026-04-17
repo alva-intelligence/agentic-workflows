@@ -3,6 +3,8 @@
     "prd_creation_to_wireframe": {
       "from": "prd_creation",
       "to": "wireframe",
+      "strategy": "wireframe",
+      "description": "Default path — user chose to build wireframes before implementation.",
       "conditions": [
         {
           "type": "file_exists",
@@ -18,6 +20,39 @@
           "type": "sections_present",
           "description": "PRD must have required sections",
           "required_sections": ["Overview", "User Stories", "Requirements", "Service Breakdown", "Acceptance Criteria"]
+        },
+        {
+          "type": "user_choice",
+          "description": "User chose to proceed with wireframing (default path).",
+          "check": "features[active_feature].wireframe_skipped is not true"
+        }
+      ]
+    },
+    "prd_creation_to_branch_creation": {
+      "from": "prd_creation",
+      "to": "branch_creation",
+      "strategy": "skip_wireframe",
+      "description": "Skip path — user chose to skip wireframing and go directly to branch creation + PRD splitting + implementation. Orchestra MUST ask the user via the ask tool after PRD creation before taking this path. When taken, no wireframe branch is created, no wireframe PR is opened, and feature branch is created directly from the base branch (develop/development).",
+      "conditions": [
+        {
+          "type": "file_exists",
+          "description": "PRD file must exist",
+          "check": "features[active_feature].prd_path exists as a file"
+        },
+        {
+          "type": "frontmatter_valid",
+          "description": "PRD must have required frontmatter fields",
+          "required_fields": ["title", "slug", "author", "created", "status", "services"]
+        },
+        {
+          "type": "sections_present",
+          "description": "PRD must have required sections",
+          "required_sections": ["Overview", "User Stories", "Requirements", "Service Breakdown", "Acceptance Criteria"]
+        },
+        {
+          "type": "user_choice",
+          "description": "User explicitly chose to skip wireframing — captured via orchestra's ask tool and recorded in workflow state.",
+          "check": "features[active_feature].wireframe_skipped === true"
         }
       ]
     },
@@ -75,13 +110,13 @@
       "conditions": [
         {
           "type": "git_branch",
-          "description": "Must be on develop first, then feature branch created from it",
-          "check": "Agent has: (1) checked out develop, (2) pulled latest, (3) verified wireframe files exist on develop, (4) created feature/<worker>/vc-<slug> from develop"
+          "description": "Must be on base branch first, then feature branch created from it. Base branch is develop for api/web, development for ai-service/data-service.",
+          "check": "Agent has: (1) checked out base branch, (2) pulled latest, (3) (only if wireframe was NOT skipped) verified wireframe files exist on develop, (4) created feature/<worker>/vc-<slug> from base branch"
         },
         {
-          "type": "wireframe_on_develop",
-          "description": "Wireframe files must exist on develop (merged from wireframe PR)",
-          "check": "web/src/app/(dashboard)/wireframes/<slug>/ exists on current branch"
+          "type": "wireframe_on_develop_if_not_skipped",
+          "description": "Wireframe files must exist on develop when wireframe phase was used. If features[active_feature].wireframe_skipped === true, skip this check.",
+          "check": "features[active_feature].wireframe_skipped === true OR web/src/app/(dashboard)/wireframes/<slug>/ exists on current branch"
         }
       ]
     },

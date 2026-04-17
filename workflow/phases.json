@@ -9,14 +9,18 @@
     },
     "prd_creation": {
       "name": "PRD Creation",
-      "description": "Creating the main PRD from Lark notes or user input.",
+      "description": "Creating the main PRD from Lark notes or user input. On completion, orchestra MUST ask the user whether to proceed to wireframing or skip directly to branch_creation.",
       "agent": "frndos-prd",
-      "next": ["wireframe"],
-      "allowed_actions": ["create_prd", "edit_prd"]
+      "next": ["wireframe", "branch_creation"],
+      "next_strategy": {
+        "wireframe": "wireframe",
+        "skip_wireframe": "branch_creation"
+      },
+      "allowed_actions": ["create_prd", "edit_prd", "skip_wireframe"]
     },
     "wireframe": {
       "name": "Wireframe",
-      "description": "Building wireframe pages on a wireframe/<worker>/vc-<slug> branch.",
+      "description": "Building wireframe pages on a wireframe/<worker>/vc-<slug> branch. Optional — can be skipped via the skip_wireframe transition out of prd_creation.",
       "agent": "frndos-wireframe",
       "next": ["wireframe_pr"],
       "allowed_actions": ["create_wireframe", "edit_wireframe", "add_wireframe"]
