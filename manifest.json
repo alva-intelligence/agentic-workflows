@@ -1,9 +1,9 @@
 {
-  "version": "2.0.57",
+  "version": "2.0.58",
   "updated": "2026-04-18",
   "files": {
     "agents/fragments/session-protocol.md": {
-      "sha256": "65087ef26555e978cce63f82356fc4a4eeecd834e07dccf1f5cf63c13667ae7e",
+      "sha256": "dee62ad3f47fbec6b21c23d61cbf2eed59408cb035bcb879200485b8c3bd0928",
       "install_to": ".agentic-workflows/fragments/session-protocol.md",
       "type": "fragment"
     },
@@ -108,7 +108,7 @@
       "type": "skill"
     },
     "skills/lark-sync/SKILL.md": {
-      "sha256": "a62f2463a4ef5c4feb2c6c03f15da29751b7675f8edcfcf3786430732e2d3235",
+      "sha256": "d87c783bf8010b23f677f0415d218d62a407575c6e176f8d49da4ca4aeace086",
       "install_to": ".agents/skills/lark-sync/SKILL.md",
       "type": "skill"
     },
@@ -123,7 +123,7 @@
       "type": "workflow"
     },
     "workflow/lark-tenant.json": {
-      "sha256": "PLACEHOLDER",
+      "sha256": "b6c8c53f836892b758e75bd0a3e60f6445a1cca51b2a525ebb07241a2d386b82",
       "install_to": ".agentic-workflows/workflow/lark-tenant.json",
       "type": "workflow"
     },
