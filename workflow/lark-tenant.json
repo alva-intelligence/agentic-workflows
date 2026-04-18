@@ -1,0 +1,156 @@
+{
+  "$description": "Alva tenant-specific static Lark tokens. GUIDs are stable once created — treat this file as source-of-truth, regenerate via /lark-sync bootstrap only if the tasklist or wiki tree is reset. Per-user/per-feature dynamic tokens live in .lark-sync.json (gitignored).",
+  "tasklist": {
+    "guid": "81e7c3be-4702-43d3-9ced-2ef36661b5f4",
+    "name": "FrnDOS Agentic Workflow Management",
+    "url": "https://fcn.sg.larksuite.com/client/todo/task_list?guid=81e7c3be-4702-43d3-9ced-2ef36661b5f4"
+  },
+  "sections": {
+    "PRD Creation": {
+      "guid": "adca3fce-4f04-c4e7-bd22-abf1383d94ce",
+      "is_default": true
+    },
+    "Wireframe": {
+      "guid": "3bf9c331-57f8-401c-907b-bffcad29152e",
+      "is_default": false
+    },
+    "Wireframe PR": {
+      "guid": "10b35c37-e852-4f57-8d11-4c5929e452c2",
+      "is_default": false
+    },
+    "Wireframe Review": {
+      "guid": "f574a100-6802-4746-844e-368df9553179",
+      "is_default": false
+    },
+    "Branch Creation": {
+      "guid": "ad45b886-361a-4ed9-b154-b36d87bd0529",
+      "is_default": false
+    },
+    "PRD Splitting": {
+      "guid": "63b17499-fb48-411b-9b6f-a840878682b2",
+      "is_default": false
+    },
+    "Implementation": {
+      "guid": "785584d1-0dc3-49f4-a206-c6a60540b3aa",
+      "is_default": false
+    },
+    "PR Submission": {
+      "guid": "af0ca99e-5c34-4ad6-be98-af0523b3db96",
+      "is_default": false
+    },
+    "PR Review": {
+      "guid": "723a0a26-4c70-4b9c-8a1f-bee8ad4c24b9",
+      "is_default": false
+    },
+    "Completion": {
+      "guid": "b99cfcfd-2480-4762-bc96-6eee9be178d7",
+      "is_default": false
+    }
+  },
+  "fields": {
+    "Priority": {
+      "guid": "5b17e3ff-407c-4964-8d48-ad1a395fdf91",
+      "type": "single_select",
+      "options": {
+        "High": "d7aff674-0ef8-6397-9108-fb260e21bde9",
+        "Medium": "6238286f-b2e2-5ab8-e902-a3bb9dc242b0",
+        "Low": "9de7ca79-281c-0b3b-75d6-847a8c69a330"
+      }
+    },
+    "Report date": {
+      "guid": "ffa2509c-f3be-4874-aced-94591713a372",
+      "type": "datetime",
+      "options": {}
+    },
+    "Feature slug": {
+      "guid": "df4c78c7-3bf1-451d-89bc-d3f44966738c",
+      "type": "text",
+      "options": {}
+    },
+    "Source PRD": {
+      "guid": "595b6966-1095-4fef-a758-b430acf7026b",
+      "type": "text",
+      "options": {}
+    },
+    "Services": {
+      "guid": "24528bb1-ce15-4d4b-abb2-0bb550f6af81",
+      "type": "multi_select",
+      "options": {
+        "api": "c6358d93-8eae-41cc-9d5b-dbc38db5a966",
+        "web": "6538329e-1938-4b7c-b98b-a6a352d5c0c9",
+        "ai-service": "146c4da5-8767-45e2-9b27-bd4027de329b",
+        "data-service": "fc6a08a1-6a94-4ae2-8bc3-4fd399adb02b"
+      }
+    },
+    "Branch": {
+      "guid": "38b214de-f763-49a5-9ef9-dd1438d40505",
+      "type": "text",
+      "options": {}
+    },
+    "Wireframe PR": {
+      "guid": "4a08c0b2-db33-43ec-b8a6-189a10c5bd2b",
+      "type": "text",
+      "options": {}
+    },
+    "PRs": {
+      "guid": "c0f94ef7-0cb6-4810-bc8e-2bfc461062aa",
+      "type": "text",
+      "options": {}
+    },
+    "Wireframe skipped": {
+      "guid": "81c9d50b-4241-48ef-8e66-e9566a4f30a7",
+      "type": "single_select",
+      "options": {
+        "yes": "a5afefb3-d38a-4e7e-8344-f0551787a135",
+        "no": "543fe268-bd8b-4354-8d84-6a326c645800"
+      }
+    },
+    "Impl strategy": {
+      "guid": "f907c9c1-7c1f-4d36-822f-6fa54c285071",
+      "type": "single_select",
+      "options": {
+        "vertical": "804a7a70-986b-455e-b3c2-afe3c6f87fcd",
+        "web-first-stubs": "c9851819-d726-4696-9195-8f83769872f1"
+      }
+    },
+    "Parent feature": {
+      "guid": "5e948fc5-4386-4a25-b64c-b99db0c69c72",
+      "type": "text",
+      "options": {}
+    },
+    "Session mode": {
+      "guid": "8bf31c10-7655-4d03-96e9-8a8ac92f8640",
+      "type": "single_select",
+      "options": {
+        "agent-session": "28fd2871-c83d-40e6-b253-dca6ed582ea1",
+        "team-session": "8537c931-7fb0-45c3-9d21-b70c0f9b58b3"
+      }
+    },
+    "Last phase change": {
+      "guid": "c3a9d6f1-cf0c-41d7-9f15-de94e41fdcf6",
+      "type": "datetime",
+      "options": {}
+    },
+    "Wiki PRD": {
+      "guid": "a95482a1-df1d-44c7-81c9-f7f3d3cf3b3a",
+      "type": "text",
+      "options": {}
+    }
+  },
+  "wiki": {
+    "space_id": "7614015311473299165",
+    "space_url": "https://fcn.sg.larksuite.com/wiki/settings/7614015311473299165",
+    "agentic_universe": {
+      "node_token": "OHi7w3AuOiJoDjkmRHqlpG9ugFR",
+      "url": "https://fcn.sg.larksuite.com/wiki/OHi7w3AuOiJoDjkmRHqlpG9ugFR"
+    },
+    "agentic_prd": {
+      "node_token": "El2NwIY4biCfcLkzZvTl1FbEgxd",
+      "url": "https://fcn.sg.larksuite.com/wiki/El2NwIY4biCfcLkzZvTl1FbEgxd"
+    },
+    "users_area": {
+      "node_token": "QSxbweKzbiTxZBkgYyUliGzQgnf",
+      "url": "https://fcn.sg.larksuite.com/wiki/QSxbweKzbiTxZBkgYyUliGzQgnf"
+    }
+  }
+}

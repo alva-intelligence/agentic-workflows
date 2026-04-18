@@ -64,66 +64,116 @@ If the Lark app in use doesn't yet list these scopes under "Permissions", the te
                                           diagrams/bases for brainstorming
    ```
 
-**Local per-workspace** (`.lark-sync.json`, gitignored):
-- `tasklist_guid` — the shared tasklist
-- `sections.<name>.guid` — section GUIDs for phase lookup
-- `fields.<name>.guid` — custom field GUIDs
-- `fields.<name>.options.<value>.guid` — option GUIDs for single/multi select fields
-- `feature_task_guids` — map of local feature slug → Lark task GUID
-- `wiki.space_id` — the Lark wiki space hosting the Agentic Universe tree
-- `wiki.agentic_universe_node_token` — root folder node token
-- `wiki.agentic_prd_node_token` — parent for canonical synced PRDs
-- `wiki.users_area_node_token` — parent for per-user workspaces
-- `wiki.user_universe_node_token` — current user's "<Name>'s Universe" node
-- `wiki.feature_prd_docs` — map of feature_slug → { wiki_node_token, obj_token } for synced PRDs
-- `wiki.feature_user_folders` — map of feature_slug → wiki_node_token for user's per-feature folder
+**Static config** (`workflow/lark-tenant.json`, committed to repo):
+
+Stable GUIDs that never change once created by `/lark-sync bootstrap`. Committing them means no runtime discovery is needed — new teammates just pull the repo and already know the tasklist GUID, section GUIDs, field GUIDs, and wiki root tokens. If another org adopts this framework via `/setup-workspace`, they overwrite this file with their own tenant's GUIDs.
+
+- `tasklist.guid`, `tasklist.name`, `tasklist.url`
+- `sections.<name>.guid` — phase lane GUIDs (PRD Creation, Wireframe, etc.)
+- `fields.<name>.{guid, type, options.<value> = option_guid}` — custom field + option GUIDs
+- `wiki.space_id`
+- `wiki.agentic_universe.node_token` — root folder
+- `wiki.agentic_prd.node_token` — parent for canonical synced PRDs
+- `wiki.users_area.node_token` — parent for per-user workspaces
+
+**Dynamic local state** (`.lark-sync.json`, gitignored):
+
+Per-user / per-feature bits that change as work progresses. Created on first `/lark-sync link`, updated by every orchestra hook.
+
+- `feature_task_guids.<slug>` — Lark task GUID for each local feature
+- `wiki.user_universe.{node_token, title}` — the current user's "<Name>'s Universe" node
+- `wiki.feature_prd_docs.<slug>.{wiki_node_token, obj_token}` — synced PRD wiki docs
+- `wiki.feature_user_folders.<slug>.node_token` — per-feature folder under the user's universe
 
 ## Commands
 
 ### `/lark-sync bootstrap`
 
-One-time setup by the team owner. Reads `workflow/lark-template.json` and creates a new Lark tasklist with the required sections and custom fields. Team members use `/lark-sync link` afterward instead of running bootstrap again.
+One-time setup by the team owner. Reads `workflow/lark-template.json` (portable schema), creates the Lark tasklist + sections + custom fields + wiki Agentic Universe tree in the owner's tenant, then **writes `workflow/lark-tenant.json`** with every static GUID. The owner commits that file to the repo. Team members never re-run bootstrap.
 
 **Steps:**
-1. Verify `lark-cli auth status` shows a valid user token with all required scopes. If not, STOP with: "Run `lark-cli auth login --scope 'task:task:read task:task:write task:tasklist:read task:tasklist:write task:section:read task:section:write task:custom_field:read task:custom_field:write offline_access'`"
-2. Ask the user via the ask tool: "Name the new Lark tasklist? (Default: `FrnDOS Agentic Workflow Management`)"
-3. Run `scripts/lark-sync-bootstrap.sh <name>` — script creates tasklist, sections, and custom fields in order. On success it emits the new tasklist GUID.
-4. Write `.lark-sync.json` in the workspace root (runtime config with all GUIDs). Add `.lark-sync.json` to `.gitignore` if not already there.
-5. Report: "Tasklist created. GUID: `<guid>`. Share this GUID with teammates — they run `/lark-sync link <guid>` to connect their workspace."
+1. Verify `lark-cli auth status` shows a valid user token with all required scopes (see "Required scopes" table). If not, STOP with the canonical `lark-cli auth login --scope '<full list>'` command.
+2. Ask the user via the ask tool:
+   - "Name the new Lark tasklist? (Default: `FrnDOS Agentic Workflow Management`)"
+   - "Paste the URL of the Lark wiki space to host the Agentic Universe tree" — agent extracts the space_id from the URL (or user pastes the space_id directly).
+3. Run `scripts/lark-sync-bootstrap.sh <name> <wiki_space_id>` — the script:
+   - Creates the tasklist with the name
+   - Creates the 10 phase sections (PRD Creation → Completion), sets PRD Creation as default
+   - Creates all custom fields including options
+   - Creates the wiki tree: Agentic Universe → (Agentic's PRD, User's Area)
+   - Writes `workflow/lark-tenant.json` with every static GUID it just created
+   - Writes a minimal `.lark-sync.json` seeded with the owner's own user_universe data
+4. Report:
+   ```
+   Bootstrap complete. Next steps:
+     1. Review workflow/lark-tenant.json
+     2. git add workflow/lark-tenant.json && git commit -m "chore(lark-sync): initialize tenant config"
+     3. Push. Teammates will pick it up on their next session and auto-link.
+   ```
 
-### `/lark-sync link [tasklist_guid]`
+**Re-running bootstrap** (`--repair` mode): if `workflow/lark-tenant.json` already exists, bootstrap reads existing GUIDs, re-verifies each resource still exists in Lark, and ADDs only missing pieces (new fields added to the template, new sections, new options). Never destructive — no API calls that would lose data.
 
-Team members run this once to point their workspace at the team's existing tasklist. Also performs a **first-time backfill** — any local features already in `.workflow-state.json` that do NOT yet have a Lark task get pushed up so the whole team immediately sees them.
+### `/lark-sync link`
 
-**The `tasklist_guid` argument is optional.** If omitted, the skill searches for the tasklist by name — no team-lead handoff needed for new members.
+Fully-automatic first-time (and repeat) sync. Session protocol runs this automatically whenever `.lark-sync.json` is missing — users do NOT need to invoke it manually. It does three things:
+
+1. Auth + scope check
+2. Ensures per-user dynamic state (creates "<Worker>'s Universe" if missing)
+3. **Backfills every existing local feature** — creates missing Lark tasks, syncs PRD markdown to wiki, creates per-feature brainstorming folders
+
+No arguments. All static identifiers come from the committed `workflow/lark-tenant.json`. No runtime discovery, no API round-trips to resolve tasklist/wiki GUIDs.
 
 **Steps:**
-1. Verify `lark-cli auth status` (same as bootstrap).
-2. **Resolve the tasklist GUID:**
-   - If the user passed `<tasklist_guid>` explicitly: use it directly. Skip to step 3.
-   - Otherwise, auto-discover by name:
-     ```bash
-     NAME=$(jq -r '.tasklist_name' workflow/lark-template.json)   # or .agentic-workflows/workflow/lark-template.json
-     lark-cli task +tasklist-search --query "$NAME" --page-all
-     ```
-     - **Exactly one match** → use its GUID. Report to user: "Found `<NAME>` (GUID `<guid>`) — linking."
-     - **Multiple matches** → use the ask tool (Claude Code: `AskUserQuestion`) to let the user pick. List each candidate's GUID, owner name, and created date.
-     - **Zero matches** → STOP with: "No tasklist named `<NAME>` is visible to your Lark user. Either the team owner has not run `/lark-sync bootstrap` yet, or your Lark account does not have access to it. Ask the team lead to share the tasklist with you, then retry."
-3. Fetch the tasklist metadata — STOP if GUID is invalid or user lacks access.
-3. Fetch all sections and custom fields via `lark-cli api GET`. Build the name → GUID mapping.
-4. Validate the structure matches `workflow/lark-template.json`:
-   - All required sections present (names match `sections.ordered[].name`)
-   - All required custom fields present (names + types match)
-   - If missing: WARN listing what's missing and suggest the team owner re-run `/lark-sync bootstrap` or manually add.
-5. Write `.lark-sync.json` with tasklist_guid + mappings. Initialize `feature_task_guids` to `{}`.
-6. Fetch current tasks via `lark-cli task tasklists tasks --page-all`. For each task, fetch its "Feature slug" custom field value and populate `feature_task_guids[<slug>] = <task_guid>`.
-7. **Backfill local features → Lark** (first-time sync for existing workspaces):
-   - Read `.workflow-state.json`.
-   - For each feature in `features{}`:
-     - If the slug already exists in `feature_task_guids` (someone else on the team created it): add the current user as an assignee to that Lark task (don't duplicate). Warn if the Lark task's phase doesn't match local phase — ask the user via the ask tool which is correct, and update whichever side they choose.
-     - If the slug is NOT in Lark: run `/lark-sync push` for that feature to create a new task in the correct section with all its custom fields populated.
-   - Emit a summary: "Backfill complete: created `<N>` new tasks, joined `<M>` existing tasks, resolved `<K>` phase conflicts."
-8. Report: "Linked to `<tasklist_name>`. Found `<N>` existing team feature tasks. Backfilled `<M>` local features."
+
+#### 1. Preflight
+- Confirm `lark-cli auth status` shows `identity: user`, `tokenStatus: valid`, and every scope from the "Required scopes" table.
+- If anything is missing, guide the user through `lark-cli auth login --scope '<canonical list>'`. Do not continue with a partial token.
+- Confirm `workflow/lark-tenant.json` (or `.agentic-workflows/workflow/lark-tenant.json` in an installed workspace) exists and parses. This file is the source of all static GUIDs.
+
+#### 2. Load static tenant config
+- Read `workflow/lark-tenant.json`. Hold these in memory for the rest of the session:
+  - `tasklist.guid`
+  - `sections.<name>.guid`
+  - `fields.<name>.guid` and `fields.<name>.options.<value>` GUID maps
+  - `wiki.space_id`, `wiki.agentic_prd.node_token`, `wiki.users_area.node_token`
+- Smoke-test: `lark-cli task tasklists get --params '{"tasklist_guid":"<guid>"}'` — STOP if 404 (the committed GUID no longer exists in this tenant; team owner must rerun `/lark-sync bootstrap` and re-commit).
+
+#### 3. Ensure the user's personal wiki space
+- Read `.workflow-state.json.worker`. Titlecase with possessive: `"<Worker>'s Universe"`.
+- If `.lark-sync.json.wiki.user_universe.node_token` is already set, trust it.
+- Otherwise: search children of `wiki.users_area.node_token` for a node titled `"<Worker>'s Universe"`. If found, record its token. If not, create one via `POST /open-apis/wiki/v2/spaces/<space_id>/nodes` (obj_type=docx, parent=users_area, title). Save to `.lark-sync.json`.
+
+#### 4. Initialize (or load) `.lark-sync.json`
+Schema for dynamic state only (see "Data model"). Ensure `.lark-sync.json` is in `.gitignore`.
+
+#### 5. Backfill tasks (local features → Lark)
+- `lark-cli task tasklists tasks --page-all` → load current tasks; populate `feature_task_guids.<slug>` from each task's "Feature slug" custom field.
+- Read `.workflow-state.json`. For each local feature:
+  - **Slug has an existing Lark task** (teammate owns it): add current user as extra assignee via `lark-cli task +assign`. If Lark phase ≠ local phase, ask user which to keep via the ask tool; update the loser.
+  - **Slug NOT in Lark**: run the `/lark-sync push` payload logic — create a new task in the section matching local phase, populate all custom fields, include the managed "— Links —" description block.
+
+#### 6. Backfill wiki (local PRDs → wiki docx)
+For each local feature with `docs/prd/<slug>.md`:
+- Run the `/lark-sync push-prd <slug>` logic — import markdown → docx → wiki node under `wiki.agentic_prd.node_token` → save tokens in `.lark-sync.json.wiki.feature_prd_docs.<slug>` → refresh the task's "— Links —" block with the Working PRD URL.
+- Run `/lark-sync ensure-user-folder <slug>` to create the per-feature folder under `<Worker>'s Universe/`.
+
+#### 7. Report summary
+```
+Lark sync linked.
+
+Tasklist: <tenant.tasklist.name>
+  URL: <tenant.tasklist.url>
+  Tasks: <N existing in Lark> + <M backfilled from local> = <total>
+
+Wiki: <tenant.wiki.space_id>
+  Working PRDs synced: <K>
+  Your universe: "<Worker>'s Universe" (<created|existing>)
+  Per-feature folders: <F>
+
+Active feature: <slug> (<phase>)
+```
+
+All subsequent `/workflow start` and `/workflow next` will auto-sync incrementally via the orchestra hook. Users never re-run `/lark-sync link` unless `.lark-sync.json` is deleted or the team's tenant config is reset.
 
 ### `/lark-sync status`
 

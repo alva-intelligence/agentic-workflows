@@ -122,6 +122,11 @@
       "install_to": ".agentic-workflows/workflow/lark-template.json",
       "type": "workflow"
     },
+    "workflow/lark-tenant.json": {
+      "sha256": "PLACEHOLDER",
+      "install_to": ".agentic-workflows/workflow/lark-tenant.json",
+      "type": "workflow"
+    },
     "skills/onboard/SKILL.md": {
       "sha256": "ea5ea43e4ddc5159eb0b2e51dbcf9ae81e2890a7bdbaaf244afc05ccd53a6093",
       "install_to": ".agents/skills/onboard/SKILL.md",

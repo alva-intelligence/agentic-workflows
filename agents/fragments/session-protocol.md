@@ -105,18 +105,19 @@ Lark sync is **required** for all frndOS workspaces — the team depends on shar
 
 2. **`.lark-sync.json` exists in the workspace root** — this is the runtime GUID map produced by `/lark-sync link` or `/lark-sync bootstrap`.
 
-**If either check fails**, use your ask tool (Claude Code: `AskUserQuestion`; equivalents per harness) to guide the user:
+**Decision tree — do NOT ask before acting unless prerequisites are genuinely missing:**
 
-> "This workspace is not connected to the team's Lark tasklist. Lark sync is required so the team can see what everyone is working on. How would you like to proceed?
-> - **Link to the team's existing tasklist** (most common) — no GUID needed, the agent auto-discovers by name via `lark-cli task +tasklist-search`
-> - **Bootstrap a new tasklist** (first team member / team owner only)
-> - **Skip for this session** (BLOCK `/workflow start` and `/workflow next`; you can do read-only work only)"
+1. **lark-cli not installed** → Ask user for permission to install it (`npm install -g @larksuite/cli`) and wait. No other path forward.
+2. **lark-cli installed but config missing** (`lark-cli auth status` reports "not configured") → Ask the user for the Lark App ID and Secret (or point them to where the team shares these, per `skills/onboard/references/mcp-configs.md`). Wait for input, run `lark-cli config init`.
+3. **Config present but no user token OR scopes incomplete** → Announce: "Re-authenticating Lark with required scopes." Run `lark-cli auth login --scope '<canonical list>'`. Present the browser URL. Wait for completion. Do NOT ask first — the need is unambiguous.
+4. **Auth OK but `.lark-sync.json` missing** → Announce: "Linking workspace to the team's Lark tasklist and wiki. This is automatic and also backfills any existing local features." Then execute `/lark-sync link` (no args) directly. Do NOT ask; this is the expected first-run-after-update behavior for every user.
+5. **Everything present** → Continue silently.
 
-If the user picks "Link", execute `/lark-sync link` (no GUID argument) directly in this session — the skill auto-discovers the tasklist by name. If the user picks "Bootstrap", execute `/lark-sync bootstrap`. If the user has missing prerequisites (no lark-cli, no auth), walk them through install + `lark-cli config init` + `lark-cli auth login` before the link step — see `skills/onboard/references/mcp-configs.md` for the exact commands.
+The only time the agent asks the user a question in this step is: (a) to install a missing dependency, (b) to collect credentials the agent cannot know, (c) to disambiguate when `/lark-sync link` finds multiple matching tasklists or wiki spaces.
 
-If the user picks "Skip", record `{"lark_sync_deferred_until": "<next session start>"}` in `.workflow-state.json` so subsequent `/workflow start` / `/workflow next` calls BLOCK with: "Lark sync setup deferred. Run `/lark-sync link <GUID>` before continuing."
+**Migration semantics for existing users:** after an agentic-workflows update pulls this protocol into their workspace, the next session will reach Step 3.25, find `.lark-sync.json` missing, and auto-run `/lark-sync link`. That link command backfills every feature already in `.workflow-state.json` to Lark — tasks in the right sections, PRDs synced to wiki, per-user feature folders created. The user does nothing beyond authorizing the auth login in their browser when prompted. Do NOT gate this behind a confirmation question.
 
-**First-time sync for existing workspaces:** `/lark-sync link` also backfills — any feature already in your local `.workflow-state.json` that does not yet have a Lark task gets pushed up in the correct section. You should NOT need to do anything manual for existing features.
+**Graceful degradation:** if `/lark-sync link` partially fails (e.g., tasklist found but wiki not), record what succeeded in `.lark-sync.json` and tell the user the remaining gap. Do NOT block the entire session — let them work with what's available.
 
 ### Step 3.5: Feature branch recency check (MANDATORY)
 
