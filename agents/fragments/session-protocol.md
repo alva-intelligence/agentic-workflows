@@ -92,6 +92,7 @@ Lark sync is **required** for all frndOS workspaces — the team depends on shar
          elif .tokenStatus != "valid" then "MISSING: valid token (re-run lark-cli auth login)"
          elif ($s | index("task:custom_field:write") | not) then "MISSING: task:custom_field:write"
          elif ($s | index("docs:document.content:read") | not) then "MISSING: docs:document.content:read"
+         elif ($s | index("docx:document") | not) then "MISSING: docx:document (write — needed for PRD wiki sync)"
          elif ($s | index("bitable:app:readonly") | not) then "MISSING: bitable:app:readonly"
          elif ($s | index("drive:drive") | not) then "MISSING: drive:drive"
          elif ($s | index("wiki:wiki") | not) then "MISSING: wiki:wiki"

@@ -138,7 +138,11 @@ Amp reads `AGENTS.md` from the workspace root (and parent directories) at sessio
 
 If `.lark-sync.json` exists in the workspace root, the team has opted into sharing feature state via a Lark tasklist. After any phase transition or local state mutation, invoke the `lark-sync` skill's `push` command so the team's Lark board stays in sync. If `.lark-sync.json` is absent, this hook is a silent no-op.
 
-Trigger lark-sync push after: feature creation, phase transitions, wireframe-skip decision, PR URL recorded, feature reaching completion. Lark sync is advisory — if it fails, log the error and continue the local workflow.
+Trigger `lark-sync push` after: feature creation (also `ensure-user-folder` to scaffold the user's brainstorming folder), phase transitions, wireframe-skip decision, PR URL recorded, feature reaching completion.
+
+Trigger `lark-sync push-prd <slug>` whenever `docs/prd/<slug>.md` is created or edited — this mirrors the PRD into the Agentic's PRD wiki section so the team sees the current version, not a stale one.
+
+Lark sync is advisory — if a push fails, log the error and continue the local workflow.
 
 ## GATE CONDITIONS
 

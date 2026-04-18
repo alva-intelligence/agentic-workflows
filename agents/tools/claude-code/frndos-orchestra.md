@@ -222,11 +222,15 @@ When ALL engineers report "PR merged. Done.":
 If `.lark-sync.json` exists in the workspace root, the team has opted into sharing feature state via a Lark tasklist. After any phase transition or local state mutation, you MUST invoke the `/lark-sync` skill's `push` command so the team's Lark board stays in sync. If `.lark-sync.json` is absent, this hook is a silent no-op and you continue as normal.
 
 Trigger `/lark-sync push` after:
-- `/workflow start <slug>` completes (creates the Lark task in PRD Creation)
+- `/workflow start <slug>` completes (creates the Lark task in PRD Creation). Also trigger `/lark-sync ensure-user-folder <slug>` to scaffold the engineer's brainstorming folder under "User's Area/<Worker>'s Universe/<slug>".
 - `/workflow next` successfully transitions phase (moves the Lark task to the new section, updates `Last phase change`)
 - Wireframe-skip decision recorded (updates `Wireframe skipped` + `Impl strategy` fields)
 - PR URL added to local state (updates `PRs` or `Wireframe PR` field)
 - Feature reaches `completion` (marks the Lark task complete)
+
+Trigger `/lark-sync push-prd <slug>` after:
+- `frndos-prd` creates `docs/prd/<slug>.md` for the first time
+- ANY subsequent edit to the PRD file (follow-up brainstorming, clarifications, user edits). This keeps the team-visible PRD in "Agentic's PRD" in lockstep with the driving engineer's working copy.
 
 Lark sync is ADVISORY, not a gate: if `/lark-sync push` fails, log the error and continue — the local workflow is authoritative. Remind the user to run `/lark-sync push` manually once the issue clears.
 

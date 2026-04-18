@@ -75,6 +75,34 @@
       "name": "Last phase change",
       "type": "datetime",
       "datetime_format": "yyyy-mm-dd"
+    },
+    {
+      "name": "Wiki PRD",
+      "type": "text",
+      "description": "URL of the synced, agent-maintained PRD wiki page (in Agentic's PRD section). Updated on every local docs/prd/<slug>.md save. Distinct from Source PRD (which is the original stakeholder input)."
     }
-  ]
+  ],
+  "wiki": {
+    "$description": "Shared wiki structure under the team's Lark wiki space. Bootstrap creates these if missing; agents read node_tokens from .lark-sync.json at runtime. Space ID is tenant-specific and captured when linking.",
+    "root": "Agentic Universe",
+    "root_description_intro": "The shared hub for frndOS agentic-workflow activity. Every feature driven through /workflow gets tracked here automatically.",
+    "children": [
+      {
+        "name": "Agentic's PRD",
+        "purpose": "Canonical synced PRDs. One docx per feature, titled <slug>. Content is mirrored from local docs/prd/<slug>.md at every save. Humans MUST NOT edit these pages directly — they get overwritten. Contains only the final PRD — no brainstorming / Q&A / scratch work."
+      },
+      {
+        "name": "User's Area",
+        "purpose": "Per-engineer workspaces. One sub-page per user, named '<Name>'s Universe'. Each user page has per-feature subpages containing brainstorming artifacts (docs, tables, diagrams, bases, attachments) — whatever the engineer wants to share. Humans edit these freely; the agent only creates the empty scaffolding on first /workflow start per feature.",
+        "per_user_subtree": {
+          "$description": "Created when a user first runs /workflow start. Name derived from the current workspace's worker field.",
+          "title_template": "<worker>'s Universe",
+          "per_feature_subtree": {
+            "$description": "Created when the user starts a new feature. Empty folder — user populates with free-form content via Lark UI.",
+            "title_template": "<feature_slug>"
+          }
+        }
+      }
+    ]
+  }
 }

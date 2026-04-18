@@ -39,9 +39,9 @@ REQUIRED_SCOPES=(
   task:comment:read task:comment:write
   task:custom_field:read task:custom_field:write
   task:attachment:read task:attachment:write
-  # Docs / Docx
+  # Docs / Docx (read + write — agent syncs PRDs as wiki docx)
   docs:document.content:read
-  docx:document:readonly
+  docx:document docx:document:readonly docx:document:create docx:document:write_only
   # Base (Bitable)
   bitable:app bitable:app:readonly
   # Drive (full)

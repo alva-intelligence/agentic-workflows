@@ -28,7 +28,7 @@ The frndOS agentic workflow reads PRDs from Lark Docs, writes feature state to a
 | Capability | Scopes |
 |---|---|
 | Tasks (full CRUD) | `task:task:read`, `task:task:write`, `task:tasklist:read`, `task:tasklist:write`, `task:section:read`, `task:section:write`, `task:comment:read`, `task:comment:write`, `task:custom_field:read`, `task:custom_field:write`, `task:attachment:read`, `task:attachment:write` |
-| Docs / Docx (read PRDs) | `docs:document.content:read`, `docx:document:readonly` |
+| Docs / Docx (read original PRDs + write synced PRDs to wiki) | `docs:document.content:read`, `docx:document`, `docx:document:readonly`, `docx:document:create`, `docx:document:write_only` |
 | Base / Bitable | `bitable:app`, `bitable:app:readonly` |
 | Drive (full) | `drive:drive`, `drive:file`, `drive:file:download`, `drive:export:readonly` |
 | Wiki (all) | `wiki:wiki`, `wiki:wiki:readonly`, `wiki:node:read`, `wiki:node:retrieve`, `wiki:node:create`, `wiki:node:copy`, `wiki:node:move`, `wiki:space:read`, `wiki:space:retrieve`, `wiki:space:write_only`, `wiki:member:create`, `wiki:member:retrieve`, `wiki:member:update` |
@@ -37,7 +37,7 @@ The frndOS agentic workflow reads PRDs from Lark Docs, writes feature state to a
 **Canonical login command** (agents should use this exact string when guiding the user through auth):
 
 ```bash
-lark-cli auth login --scope 'task:task:read task:task:write task:tasklist:read task:tasklist:write task:section:read task:section:write task:comment:read task:comment:write task:custom_field:read task:custom_field:write task:attachment:read task:attachment:write docs:document.content:read docx:document:readonly bitable:app bitable:app:readonly drive:drive drive:file drive:file:download drive:export:readonly wiki:wiki wiki:wiki:readonly wiki:node:read wiki:node:retrieve wiki:node:create wiki:node:copy wiki:node:move wiki:space:read wiki:space:retrieve wiki:space:write_only wiki:member:create wiki:member:retrieve wiki:member:update offline_access'
+lark-cli auth login --scope 'task:task:read task:task:write task:tasklist:read task:tasklist:write task:section:read task:section:write task:comment:read task:comment:write task:custom_field:read task:custom_field:write task:attachment:read task:attachment:write docs:document.content:read docx:document docx:document:readonly docx:document:create docx:document:write_only bitable:app bitable:app:readonly drive:drive drive:file drive:file:download drive:export:readonly wiki:wiki wiki:wiki:readonly wiki:node:read wiki:node:retrieve wiki:node:create wiki:node:copy wiki:node:move wiki:space:read wiki:space:retrieve wiki:space:write_only wiki:member:create wiki:member:retrieve wiki:member:update offline_access'
 ```
 
 The `--recommend` flag is NOT sufficient — it only requests auto-approve scopes and omits `task:custom_field:*`, `bitable:*`, full `drive:*`, and `wiki:*`. Always pass `--scope` explicitly.
@@ -47,17 +47,36 @@ If the Lark app in use doesn't yet list these scopes under "Permissions", the te
 ## Data model
 
 **Shared across the team** (in Lark):
-- Tasklist: one per team, e.g. "FrnDOS Agentic Workflow Management"
-- Sections = phase Kanban lanes (PRD Creation → Wireframe → … → Completion)
-- Tasks = one per feature
-- Task custom fields = workflow metadata (slug, services, PRs, strategy, etc.)
+
+1. **Tasklist** — "FrnDOS Agentic Workflow Management"
+   - Sections = phase Kanban lanes (PRD Creation → Wireframe → … → Completion)
+   - Tasks = one per feature
+   - Task custom fields = workflow metadata (slug, services, PRs, strategy, etc.)
+2. **Wiki tree** — under a team-owned Lark wiki space:
+   ```
+   Agentic Universe                    ← root folder (docx)
+     ├─ Agentic's PRD                  ← canonical synced PRDs (agent-managed)
+     │    └─ <feature-slug>            ← docx per feature, content mirrored from
+     │                                     local docs/prd/<slug>.md
+     └─ User's Area                    ← per-engineer free-form workspace
+          └─ <Name>'s Universe         ← one per worker
+               └─ <feature-slug>       ← empty folder; humans add docs/tables/
+                                          diagrams/bases for brainstorming
+   ```
 
 **Local per-workspace** (`.lark-sync.json`, gitignored):
 - `tasklist_guid` — the shared tasklist
 - `sections.<name>.guid` — section GUIDs for phase lookup
 - `fields.<name>.guid` — custom field GUIDs
 - `fields.<name>.options.<value>.guid` — option GUIDs for single/multi select fields
-- `feature_task_guids` — map of local feature slug → Lark task GUID (so updates find the right task)
+- `feature_task_guids` — map of local feature slug → Lark task GUID
+- `wiki.space_id` — the Lark wiki space hosting the Agentic Universe tree
+- `wiki.agentic_universe_node_token` — root folder node token
+- `wiki.agentic_prd_node_token` — parent for canonical synced PRDs
+- `wiki.users_area_node_token` — parent for per-user workspaces
+- `wiki.user_universe_node_token` — current user's "<Name>'s Universe" node
+- `wiki.feature_prd_docs` — map of feature_slug → { wiki_node_token, obj_token } for synced PRDs
+- `wiki.feature_user_folders` — map of feature_slug → wiki_node_token for user's per-feature folder
 
 ## Commands
 
@@ -136,6 +155,39 @@ Push the active feature's local state to Lark. Called automatically by orchestra
    - Move section if phase changed: `lark-cli api POST /open-apis/task/v2/tasks/<task_guid>/add_tasklist` with new `section_guid`
 5. Write updated `.lark-sync.json`.
 
+### `/lark-sync push-prd [slug]`
+
+Sync the PRD for a feature from local markdown to its wiki docx under **Agentic's PRD**. Called automatically by orchestra after any PRD write; also usable manually.
+
+**Steps:**
+1. Resolve the target slug (arg or active feature from `.workflow-state.json`).
+2. Read the PRD source: `docs/prd/<slug>.md` — STOP if the file does not exist.
+3. Look up `.lark-sync.json.wiki.feature_prd_docs[<slug>]`:
+   - **If absent** (first-time sync for this feature):
+     a. Upload the markdown file to Drive: `POST /open-apis/drive/v1/medias/upload_all` with `file_type: "md"`, `parent_type: "explorer"`, `parent_node: <user's drive folder>` (or `ccm_import_open` — see below).
+     b. Create an import task: `POST /open-apis/drive/v1/import_tasks` with body `{ file_extension: "md", file_token: "<uploaded>", type: "docx", point: { mount_type: 2, mount_key: "<wiki_space_id>" }, file_name: "<slug>" }`. `mount_type:2` means wiki; the docx is created inside the space.
+     c. Poll `GET /open-apis/drive/v1/import_tasks/<ticket>` until `job_status == 0` (done). Extract the new `obj_token`.
+     d. Create a wiki node in the space that references the imported docx: `POST /open-apis/wiki/v2/spaces/<space_id>/nodes` with `{ obj_type: "docx", origin_node_token: "<imported node>", parent_node_token: "<agentic_prd_node_token>", title: "<slug>" }`. (If import already creates the wiki node under the mount point, this step is a no-op — use the returned node_token from step c.)
+     e. Record `feature_prd_docs[<slug>] = { wiki_node_token, obj_token }`.
+     f. Update the Lark task's "Wiki PRD" custom field with the wiki node URL: `https://<tenant>.larksuite.com/wiki/<wiki_node_token>`.
+   - **If present** (update):
+     a. Fetch the docx's root block: `GET /open-apis/docx/v1/documents/<obj_token>/blocks` — page 1 item 0 is the page root.
+     b. Delete all existing child blocks of the root: `POST /open-apis/docx/v1/documents/<obj_token>/blocks/<root>/children/batch_delete` with the index range of the current children.
+     c. Re-import the new markdown OR append freshly-converted blocks. The simplest robust approach: re-run the import flow to a temp docx, then swap (or, if the import API supports in-place replace, use that). A simpler first-pass implementation: convert markdown → docx blocks in-process (headings, paragraphs, bullets, numbered, code, table) and append via `POST /blocks/<root>/children`.
+     d. Append a trailing block: small italic line `"Last synced by <worker> at <ISO timestamp>."`
+4. Update `Last phase change` in the task if phase has advanced.
+5. Do NOT touch the User's Area per-feature folder during push-prd — that's the user's free-form space.
+
+### `/lark-sync ensure-user-folder [slug]`
+
+Idempotent: creates the current worker's User's Area folders if missing. Called automatically by `/workflow start`.
+
+**Steps:**
+1. Resolve worker name from `.workflow-state.json.worker`. Titlecase with possessive: `"Arhen's Universe"`.
+2. If `.lark-sync.json.wiki.user_universe_node_token` is absent: search children of `users_area_node_token` for a node titled `"<Worker>'s Universe"`. If found, save its token. If not, create one: `POST /open-apis/wiki/v2/spaces/<space>/nodes` with `{ obj_type: "docx", node_type: "origin", title: "<Worker>'s Universe", parent_node_token: "<users_area>" }`. Save.
+3. If `slug` argument given and `feature_user_folders[<slug>]` is absent: create a child folder under user universe titled `<slug>`. Save its node_token.
+4. Do NOT add content — humans populate User's Area freely.
+
 ### `/lark-sync pull`
 
 Fetch team-wide state from Lark and show it. Does NOT write to local `.workflow-state.json` — this is read-only team visibility.
@@ -158,16 +210,19 @@ Fetch team-wide state from Lark and show it. Does NOT write to local `.workflow-
 
 ## Orchestra auto-hooks
 
-When `.lark-sync.json` exists, the orchestra agent MUST call the corresponding `/lark-sync push` side-effect on these events:
+When `.lark-sync.json` exists, the orchestra agent MUST call the corresponding `/lark-sync` side-effects on these events:
 
 | Event | Action |
 |---|---|
-| `/workflow start <slug>` completes (feature row added to local state) | `push` — creates Lark task in PRD Creation section |
+| `/workflow start <slug>` completes | `push` — creates Lark task in PRD Creation section. `ensure-user-folder <slug>` — creates `<Worker>'s Universe/<slug>/` if missing. |
 | `/workflow next` transitions phase | `push` — moves task to target section, updates `Last phase change` |
+| `frndos-prd` saves or updates `docs/prd/<slug>.md` | `push-prd <slug>` — mirrors the markdown content into the wiki docx under Agentic's PRD. |
 | User sets wireframe_skipped, impl_strategy, parent_feature in local state | `push` — update the corresponding custom fields |
 | PR URL recorded in local state | `push` — updates PRs / Wireframe PR field |
-| Phase reaches `completion` | `push` with Lark "mark complete" (`lark-cli task +complete`) in addition to section move |
-| Feature archived/deleted locally | Do NOT delete the Lark task — leave an audit trail. Add a comment: "Feature archived locally by <worker> on <date>". |
+| Phase reaches `completion` | `push` with Lark "mark complete" (`lark-cli task +complete`) in addition to section move. Leave the PRD wiki page intact — it's the permanent record. |
+| Feature archived/deleted locally | Do NOT delete the Lark task or the PRD wiki page — leave an audit trail. Add a comment on the task: "Feature archived locally by <worker> on <date>". |
+
+`push-prd` is the most important addition: without it, the team's view of the PRD drifts from what the driving engineer has actually agreed in their working session. Treat it as equally critical to `push`.
 
 If a `push` call fails (network, auth expired), the orchestra MUST:
 - Log the failure with the error message
