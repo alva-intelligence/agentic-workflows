@@ -144,8 +144,20 @@ Push the active feature's local state to Lark. Called automatically by orchestra
 2. Build the task payload from the active feature's local state:
    - Title: `<slug> — <summary>` (summary from PRD front matter if available, else slug)
    - Section: map current phase_key → section GUID via `.lark-sync.json.sections`
-   - Custom fields: Feature slug, Services, Source PRD, Branch, PRs, Wireframe PR, Wireframe skipped, Impl strategy, Session mode, Parent feature, Last phase change=now
+   - Custom fields: Feature slug, Services, Source PRD, Branch, PRs, Wireframe PR, Wireframe skipped, Impl strategy, Session mode, Parent feature, Last phase change=now, Wiki PRD (if the feature has a synced doc)
    - Members: current worker as assignee (role=assignee)
+   - **Description must start with a managed "Links" block** so humans see the important URLs without scrolling through custom fields. Format:
+
+     ```
+     — Links —
+     📘 Working PRD (canonical, agent-synced): <wiki_prd_url or "not yet synced">
+     📋 Source PRD (original input): <source_prd_url or "not set">
+     🧠 My workspace (brainstorming): <user_feature_folder_url or "not created">
+     ———————————————
+     <free-form description below — updated by the user, not the agent>
+     ```
+
+     On every push, the agent rewrites ONLY the block between the two `—` delimiters. Anything the user wrote AFTER the closing delimiter is preserved. This lets the team add ad-hoc notes / blockers / screenshots without the agent clobbering them.
 3. If `feature_task_guids[slug]` does NOT exist:
    - Create task: `lark-cli task tasks create --data '<payload>'`
    - Immediately add task to the target section via `lark-cli api POST /open-apis/task/v2/tasks/<task_guid>/tasklists/<tasklist_guid>` with `section_guid` (tasks created with just `tasklists:[{tasklist_guid}]` land in the default section; moving to a non-default section requires the add_tasklist call)
@@ -170,6 +182,7 @@ Sync the PRD for a feature from local markdown to its wiki docx under **Agentic'
      d. Create a wiki node in the space that references the imported docx: `POST /open-apis/wiki/v2/spaces/<space_id>/nodes` with `{ obj_type: "docx", origin_node_token: "<imported node>", parent_node_token: "<agentic_prd_node_token>", title: "<slug>" }`. (If import already creates the wiki node under the mount point, this step is a no-op — use the returned node_token from step c.)
      e. Record `feature_prd_docs[<slug>] = { wiki_node_token, obj_token }`.
      f. Update the Lark task's "Wiki PRD" custom field with the wiki node URL: `https://<tenant>.larksuite.com/wiki/<wiki_node_token>`.
+     g. Also call `/lark-sync push` (or inline the equivalent) to refresh the task's description "Links" block so the 📘 Working PRD URL goes from `"not yet synced"` to the live URL. This is the moment the team first sees the synced PRD — do not skip it.
    - **If present** (update):
      a. Fetch the docx's root block: `GET /open-apis/docx/v1/documents/<obj_token>/blocks` — page 1 item 0 is the page root.
      b. Delete all existing child blocks of the root: `POST /open-apis/docx/v1/documents/<obj_token>/blocks/<root>/children/batch_delete` with the index range of the current children.
