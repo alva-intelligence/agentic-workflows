@@ -1,5 +1,5 @@
 {
-  "version": "2.0.56",
+  "version": "2.0.57",
   "updated": "2026-04-18",
   "files": {
     "agents/fragments/session-protocol.md": {
@@ -108,7 +108,7 @@
       "type": "skill"
     },
     "skills/lark-sync/SKILL.md": {
-      "sha256": "bd4cbfef2b817e9e232c2c1b9eb3f648a7bfbe6aeefb7404568a8ed6773f6346",
+      "sha256": "a62f2463a4ef5c4feb2c6c03f15da29751b7675f8edcfcf3786430732e2d3235",
       "install_to": ".agents/skills/lark-sync/SKILL.md",
       "type": "skill"
     },
