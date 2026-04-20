@@ -1,6 +1,6 @@
 {
-  "version": "2.0.58",
-  "updated": "2026-04-18",
+  "version": "2.0.59",
+  "updated": "2026-04-20",
   "files": {
     "agents/fragments/session-protocol.md": {
       "sha256": "dee62ad3f47fbec6b21c23d61cbf2eed59408cb035bcb879200485b8c3bd0928",
@@ -108,7 +108,7 @@
       "type": "skill"
     },
     "skills/lark-sync/SKILL.md": {
-      "sha256": "d87c783bf8010b23f677f0415d218d62a407575c6e176f8d49da4ca4aeace086",
+      "sha256": "0bda08a4637c1faa2745e78c02b4455bda1d546d798d3261866224bd2f7e7412",
       "install_to": ".agents/skills/lark-sync/SKILL.md",
       "type": "skill"
     },
