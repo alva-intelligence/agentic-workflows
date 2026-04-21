@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 460" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 500" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
   <defs>
     <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="10" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#444"/>
@@ -6,82 +6,115 @@
     <marker id="arrow-purple" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="10" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#9c36b5"/>
     </marker>
+    <marker id="arrow-green" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="10" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#2f9e44"/>
+    </marker>
     <filter id="shadow" x="-4%" y="-4%" width="108%" height="116%">
       <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.08"/>
     </filter>
   </defs>
 
-  <!-- Title -->
-  <text x="500" y="32" text-anchor="middle" font-size="22" font-weight="700" fill="#1e1e1e">frndOS Agent Architecture</text>
-  <text x="500" y="54" text-anchor="middle" font-size="13" fill="#757575">Phase-scoped agents with auto-delegation</text>
+  <text x="550" y="28" text-anchor="middle" font-size="20" font-weight="700" fill="#1e1e1e">frndOS Agent Architecture</text>
+  <text x="550" y="48" text-anchor="middle" font-size="12" fill="#757575">9 agents · 9 skills · Lark sync · jj workspaces · Agent Teams</text>
 
-  <!-- Orchestration Layer zone -->
-  <rect x="220" y="68" width="480" height="82" rx="12" fill="#e5dbff" stroke="#9c36b5" stroke-width="1" opacity="0.35"/>
-  <text x="232" y="82" font-size="11" fill="#7048a0" font-weight="600">ORCHESTRATION LAYER</text>
+  <!-- Orchestration zone -->
+  <rect x="230" y="60" width="490" height="80" rx="12" fill="#e5dbff" stroke="#9c36b5" stroke-width="1" opacity="0.35"/>
+  <text x="242" y="74" font-size="10" fill="#7048a0" font-weight="600">ORCHESTRATION LAYER</text>
 
   <!-- Developer -->
-  <rect x="30" y="88" width="140" height="48" rx="10" fill="#fff3bf" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
-  <text x="100" y="117" text-anchor="middle" font-size="15" font-weight="600" fill="#1e1e1e">Developer</text>
-  <line x1="170" y1="112" x2="250" y2="112" stroke="#f08c00" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="210" y="105" text-anchor="middle" font-size="11" fill="#946100">command</text>
+  <rect x="25" y="78" width="140" height="44" rx="10" fill="#fff3bf" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
+  <text x="95" y="105" text-anchor="middle" font-size="14" font-weight="600" fill="#1e1e1e">Developer</text>
+  <line x1="165" y1="100" x2="255" y2="100" stroke="#f08c00" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="210" y="93" text-anchor="middle" font-size="10" fill="#946100">command</text>
 
-  <!-- Orchestra Agent -->
-  <rect x="255" y="90" width="260" height="48" rx="10" fill="#d0bfff" stroke="#9c36b5" stroke-width="2" filter="url(#shadow)"/>
-  <text x="385" y="119" text-anchor="middle" font-size="17" font-weight="700" fill="#1e1e1e">frndos-orchestra</text>
+  <!-- Orchestra -->
+  <rect x="260" y="80" width="250" height="44" rx="10" fill="#d0bfff" stroke="#9c36b5" stroke-width="2" filter="url(#shadow)"/>
+  <text x="385" y="107" text-anchor="middle" font-size="16" font-weight="700" fill="#1e1e1e">frndos-orchestra</text>
+
+  <!-- Lark -->
+  <rect x="790" y="68" width="150" height="60" rx="10" fill="#c3fae8" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
+  <text x="865" y="93" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">Lark Sync</text>
+  <text x="865" y="110" text-anchor="middle" font-size="10" fill="#15803d">tasklist + wiki + docs</text>
+  <line x1="790" y1="98" x2="740" y2="98" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-green)"/>
 
   <!-- Delegation arrows -->
-  <line x1="310" y1="138" x2="100" y2="190" stroke="#9c36b5" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-purple)"/>
-  <line x1="340" y1="138" x2="260" y2="190" stroke="#9c36b5" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-purple)"/>
-  <line x1="375" y1="138" x2="435" y2="190" stroke="#9c36b5" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-purple)"/>
-  <line x1="410" y1="138" x2="600" y2="190" stroke="#9c36b5" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-purple)"/>
-  <line x1="445" y1="138" x2="765" y2="190" stroke="#9c36b5" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-purple)"/>
-  <line x1="475" y1="138" x2="905" y2="190" stroke="#9c36b5" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-purple)"/>
+  <line x1="300" y1="124" x2="80" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="330" y1="124" x2="210" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="360" y1="124" x2="350" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="390" y1="124" x2="490" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="410" y1="124" x2="620" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="430" y1="124" x2="750" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="450" y1="124" x2="870" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="470" y1="124" x2="990" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
 
-  <!-- Sub-Agent Layer zone -->
-  <rect x="20" y="180" width="950" height="120" rx="12" fill="#d3f9d8" stroke="#2f9e44" stroke-width="1" opacity="0.3"/>
-  <text x="32" y="194" font-size="11" fill="#15803d" font-weight="600">SUB-AGENT LAYER (phase-scoped)</text>
+  <!-- Sub-Agent zone -->
+  <rect x="15" y="165" width="1075" height="110" rx="12" fill="#d3f9d8" stroke="#2f9e44" stroke-width="1" opacity="0.3"/>
+  <text x="27" y="178" font-size="10" fill="#15803d" font-weight="600">SUB-AGENT LAYER (phase-scoped, 9 agents)</text>
 
-  <!-- Sub-agents -->
-  <rect x="30" y="208" width="140" height="46" rx="10" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
-  <text x="100" y="236" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">frndos-prd</text>
-  <text x="100" y="268" text-anchor="middle" font-size="11" fill="#757575">PRD Creation</text>
+  <rect x="22" y="192" width="108" height="40" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
+  <text x="76" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-prd</text>
+  <text x="76" y="244" text-anchor="middle" font-size="9" fill="#757575">PRD Creation</text>
 
-  <rect x="185" y="208" width="170" height="46" rx="10" fill="#d0bfff" stroke="#9c36b5" stroke-width="2" filter="url(#shadow)"/>
-  <text x="270" y="236" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">frndos-wireframe</text>
-  <text x="270" y="268" text-anchor="middle" font-size="11" fill="#757575">Wireframe</text>
+  <rect x="140" y="192" width="140" height="40" rx="8" fill="#d0bfff" stroke="#9c36b5" stroke-width="2" filter="url(#shadow)"/>
+  <text x="210" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-wireframe</text>
+  <text x="210" y="244" text-anchor="middle" font-size="9" fill="#757575">Wireframe</text>
 
-  <rect x="370" y="208" width="155" height="46" rx="10" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
-  <text x="447" y="236" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">frndos-splitter</text>
-  <text x="447" y="268" text-anchor="middle" font-size="11" fill="#757575">PRD Splitting</text>
+  <rect x="290" y="192" width="125" height="40" rx="8" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
+  <text x="352" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-splitter</text>
+  <text x="352" y="244" text-anchor="middle" font-size="9" fill="#757575">PRD Splitting</text>
 
-  <rect x="540" y="208" width="180" height="46" rx="10" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
-  <text x="630" y="236" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">frndos-implement</text>
-  <text x="630" y="268" text-anchor="middle" font-size="11" fill="#757575">Implementation</text>
+  <rect x="425" y="192" width="140" height="40" rx="8" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
+  <text x="495" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-implement</text>
+  <text x="495" y="244" text-anchor="middle" font-size="9" fill="#757575">Sequential impl</text>
 
-  <rect x="735" y="208" width="120" height="46" rx="10" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
-  <text x="795" y="236" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">frndos-pr</text>
-  <text x="795" y="268" text-anchor="middle" font-size="11" fill="#757575">PR + Reviews</text>
+  <rect x="575" y="192" width="130" height="40" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="2" filter="url(#shadow)"/>
+  <text x="640" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-engineer</text>
+  <text x="640" y="244" text-anchor="middle" font-size="9" fill="#757575">Team: per-service</text>
 
-  <rect x="870" y="208" width="130" height="46" rx="10" fill="#ffc9c9" stroke="#e03131" stroke-width="2" filter="url(#shadow)"/>
-  <text x="935" y="236" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">frndos-track</text>
-  <text x="935" y="268" text-anchor="middle" font-size="11" fill="#757575">Completion</text>
+  <rect x="715" y="192" width="130" height="40" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="2" filter="url(#shadow)"/>
+  <text x="780" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-architect</text>
+  <text x="780" y="244" text-anchor="middle" font-size="9" fill="#757575">Team: reviewer</text>
 
-  <!-- Skills Layer zone -->
-  <rect x="20" y="320" width="950" height="72" rx="12" fill="#dbe4ff" stroke="#1971c2" stroke-width="1" opacity="0.3"/>
-  <text x="32" y="334" font-size="11" fill="#2563eb" font-weight="600">SKILLS LAYER</text>
+  <rect x="855" y="192" width="95" height="40" rx="8" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
+  <text x="902" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-pr</text>
+  <text x="902" y="244" text-anchor="middle" font-size="9" fill="#757575">PR + Review</text>
 
-  <rect x="40" y="348" width="120" height="32" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="100" y="369" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">/onboard</text>
+  <rect x="960" y="192" width="105" height="40" rx="8" fill="#ffc9c9" stroke="#e03131" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1012" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-track</text>
+  <text x="1012" y="244" text-anchor="middle" font-size="9" fill="#757575">Completion</text>
 
-  <rect x="175" y="348" width="120" height="32" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="235" y="369" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">/workflow</text>
+  <!-- Skills zone -->
+  <rect x="15" y="295" width="1075" height="68" rx="12" fill="#dbe4ff" stroke="#1971c2" stroke-width="1" opacity="0.3"/>
+  <text x="27" y="308" font-size="10" fill="#2563eb" font-weight="600">SKILLS LAYER (9 skills)</text>
 
-  <rect x="310" y="348" width="90" height="32" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="355" y="369" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">/prd</text>
+  <rect x="22" y="318" width="90" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
+  <text x="67" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/onboard</text>
+  <rect x="120" y="318" width="90" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
+  <text x="165" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/workflow</text>
+  <rect x="218" y="318" width="65" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
+  <text x="250" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/prd</text>
+  <rect x="291" y="318" width="90" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
+  <text x="336" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/prd-split</text>
+  <rect x="389" y="318" width="95" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
+  <text x="436" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/wireframe</text>
+  <rect x="492" y="318" width="105" height="28" rx="6" fill="#c3fae8" stroke="#2f9e44" stroke-width="1"/>
+  <text x="544" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">/jj-workflow</text>
+  <rect x="605" y="318" width="95" height="28" rx="6" fill="#c3fae8" stroke="#2f9e44" stroke-width="1"/>
+  <text x="652" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">/lark-sync</text>
+  <rect x="708" y="318" width="130" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
+  <text x="773" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/setup-workspace</text>
+  <rect x="846" y="318" width="130" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
+  <text x="911" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/workflow-update</text>
 
-  <rect x="415" y="348" width="120" height="32" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="475" y="369" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">/prd-split</text>
-
-  <rect x="550" y="348" width="130" height="32" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="615" y="369" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">/wireframe</text>
+  <!-- Tools zone -->
+  <rect x="15" y="382" width="1075" height="52" rx="12" fill="#fff3bf" stroke="#f08c00" stroke-width="1" opacity="0.3"/>
+  <text x="27" y="395" font-size="10" fill="#946100" font-weight="600">SUPPORTED TOOLS</text>
+  <rect x="25" y="405" width="110" height="22" rx="5" fill="#fff3bf" stroke="#f08c00" stroke-width="1"/>
+  <text x="80" y="420" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">Claude Code</text>
+  <rect x="145" y="405" width="80" height="22" rx="5" fill="#fff3bf" stroke="#f08c00" stroke-width="1"/>
+  <text x="185" y="420" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">Cursor</text>
+  <rect x="235" y="405" width="90" height="22" rx="5" fill="#fff3bf" stroke="#f08c00" stroke-width="1"/>
+  <text x="280" y="420" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">OpenCode</text>
+  <rect x="335" y="405" width="55" height="22" rx="5" fill="#fff3bf" stroke="#f08c00" stroke-width="1"/>
+  <text x="362" y="420" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">Amp</text>
 </svg>
