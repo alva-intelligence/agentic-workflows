@@ -1,6 +1,6 @@
 {
-  "version": "2.0.59",
-  "updated": "2026-04-20",
+  "version": "2.0.60",
+  "updated": "2026-04-21",
   "files": {
     "agents/fragments/session-protocol.md": {
       "sha256": "dee62ad3f47fbec6b21c23d61cbf2eed59408cb035bcb879200485b8c3bd0928",
