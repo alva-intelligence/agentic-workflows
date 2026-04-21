@@ -77,3 +77,7 @@ Available frndos components (from `@/components/frndos/`):
 - MUST NOT implement business logic or API calls
 - CAN use useState for local UI state
 - CAN hardcode realistic placeholder data
+
+## Conventions
+
+Full wireframe conventions — directory layout, `metadata.json` schema, sub-page patterns, ownership, visibility gating, the rationale for "wireframe = polished static frontend" — live in `references/conventions.md`. Read it before creating or editing a wireframe.

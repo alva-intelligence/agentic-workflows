@@ -2,48 +2,13 @@
   "version": "2.0.60",
   "updated": "2026-04-21",
   "files": {
-    "agents/fragments/session-protocol.md": {
-      "sha256": "dee62ad3f47fbec6b21c23d61cbf2eed59408cb035bcb879200485b8c3bd0928",
-      "install_to": ".agentic-workflows/fragments/session-protocol.md",
-      "type": "fragment"
-    },
-    "agents/fragments/workflow-rules.md": {
-      "sha256": "d96a95ff361d3ddec3b434161626f35cecd5db04064227d20e75f8527df84593",
-      "install_to": ".agentic-workflows/fragments/workflow-rules.md",
-      "type": "fragment"
-    },
-    "agents/fragments/prd-conventions.md": {
-      "sha256": "806cf02099d5a8d2e851d13ca951a109c282925e640fb3eb4285125c5f8f8ef4",
-      "install_to": ".agentic-workflows/fragments/prd-conventions.md",
-      "type": "fragment"
-    },
-    "agents/fragments/track-conventions.md": {
-      "sha256": "3489bf5b91a427039c9d3c878f06e5a758ebdaf9b821672c80cc54dbc828960f",
-      "install_to": ".agentic-workflows/fragments/track-conventions.md",
-      "type": "fragment"
-    },
-    "agents/fragments/wireframe-conventions.md": {
-      "sha256": "f4081621be76475597b5dce244223860bef07defef9aa9b41f5552f4a951d2bf",
-      "install_to": ".agentic-workflows/fragments/wireframe-conventions.md",
-      "type": "fragment"
-    },
     "agents/fragments/git-conventions.md": {
       "sha256": "ed3ebb2bcbd86dd6b90b709972325d2d5c4b21671c87f0ad148bf6a34de6f90e",
       "install_to": ".agentic-workflows/fragments/git-conventions.md",
       "type": "fragment"
     },
-    "agents/fragments/service-registry.md": {
-      "sha256": "c00da0d84bc071e98d62cce9fc8beeea40bb17491daabe8cc1340f34c4df6e9a",
-      "install_to": ".agentic-workflows/fragments/service-registry.md",
-      "type": "fragment"
-    },
-    "agents/fragments/testing-policy.md": {
-      "sha256": "d88cd9ee84c7d1dd07f4f03bfbaccff912401a5fb0e92e16677d084589e08eea",
-      "install_to": ".agentic-workflows/fragments/testing-policy.md",
-      "type": "fragment"
-    },
     "agents/AGENTS.md.template": {
-      "sha256": "9c1b8f6c28d6eac4013719f088761cac81c8a31e757fcbe474535d6e28022483",
+      "sha256": "4023e04cb0c8148051732e7d81b876c641475a09d33c9dd9e32a8322a2c8261b",
       "install_to": ".agentic-workflows/AGENTS.md.template",
       "type": "template"
     },
@@ -103,12 +68,12 @@
       "type": "skill"
     },
     "skills/jj-workflow/SKILL.md": {
-      "sha256": "ef467e919f9d9419e77cd82f4623f3370a2d7c17acecaec5a588dae3007d23b8",
+      "sha256": "38d6089a45ab52bd96c722ea783ce14c0cf33dcf06f49b570b7bc5b695ed9bc8",
       "install_to": ".agents/skills/jj-workflow/SKILL.md",
       "type": "skill"
     },
     "skills/lark-sync/SKILL.md": {
-      "sha256": "0bda08a4637c1faa2745e78c02b4455bda1d546d798d3261866224bd2f7e7412",
+      "sha256": "29086f4f75a74347044e844559705a55f4cac2362a8ccd3578e07b186196b0dd",
       "install_to": ".agents/skills/lark-sync/SKILL.md",
       "type": "skill"
     },
@@ -128,7 +93,7 @@
       "type": "workflow"
     },
     "skills/onboard/SKILL.md": {
-      "sha256": "ea5ea43e4ddc5159eb0b2e51dbcf9ae81e2890a7bdbaaf244afc05ccd53a6093",
+      "sha256": "429da38c52a28eb2f3131775adb267907850a5a35ef70ef522525a58becb4a8c",
       "install_to": ".agents/skills/onboard/SKILL.md",
       "type": "skill"
     },
@@ -158,22 +123,22 @@
       "type": "reference"
     },
     "skills/workflow/SKILL.md": {
-      "sha256": "a5ae2df4bd887a91c26a7f3cf11040eed20dcb6e3c25536ab3cacbf0a4c6c998",
+      "sha256": "d745c7fa6234bf6b6a0a55d2e3c8f9ab46adee4a3ce719d447ddc61454c9a3da",
       "install_to": ".agents/skills/workflow/SKILL.md",
       "type": "skill"
     },
     "skills/prd/SKILL.md": {
-      "sha256": "ae23a80a7064ead6ce0e609975b1eba7c5baf288806eb52f9ba66a2c21bb663c",
+      "sha256": "d0124ee1af047484eb4f4cb121bb211e9e5cda72705c85e0ee4e1b5ee33e6e0b",
       "install_to": ".agents/skills/prd/SKILL.md",
       "type": "skill"
     },
     "skills/prd-split/SKILL.md": {
-      "sha256": "69708bd9e6561178c4b415a0edeff2c1760ef7ee63924c65d1b30400411f63e3",
+      "sha256": "dede800184076c1d1063586e667f116d161861d12f12955eb3b9beb1f76c8b03",
       "install_to": ".agents/skills/prd-split/SKILL.md",
       "type": "skill"
     },
     "skills/wireframe/SKILL.md": {
-      "sha256": "37f2d97f5f1e99c7500ca1d1c93615461ec0b087b1cb41b9b78fe12d39ee5d99",
+      "sha256": "02f948be37cd9b17b04e0865a6f7a1b1ffd74cac6853263cfc134b37b1477648",
       "install_to": ".agents/skills/wireframe/SKILL.md",
       "type": "skill"
     },
@@ -346,6 +311,170 @@
       "sha256": "d187c2e902950f9603ec49b6be8eaaaebdc2d8049237099336c28e8c20e79978",
       "install_to": "flake.nix",
       "type": "config"
+    },
+    "agents/fragments/session-protocol.core.md": {
+      "sha256": "d201a68e01ab47daf0a94088093a23e43cbff412c3ca74f93f85b9abbe255957",
+      "install_to": ".agentic-workflows/fragments/session-protocol.core.md",
+      "type": "fragment"
+    },
+    "agents/fragments/workflow-rules.core.md": {
+      "sha256": "75ebba9539ec96f10710d422be27878825f467c102a1c3feb23b14dd9b80157d",
+      "install_to": ".agentic-workflows/fragments/workflow-rules.core.md",
+      "type": "fragment"
+    },
+    "agents/fragments/service-registry.core.md": {
+      "sha256": "cf10f0c449ecf375966c5f6cb51d2cd1cc383eeadfbc108aca69b02848809216",
+      "install_to": ".agentic-workflows/fragments/service-registry.core.md",
+      "type": "fragment"
+    },
+    "skills/wireframe/references/conventions.md": {
+      "sha256": "f4081621be76475597b5dce244223860bef07defef9aa9b41f5552f4a951d2bf",
+      "install_to": ".agents/skills/wireframe/references/conventions.md",
+      "type": "reference"
+    },
+    "skills/prd/references/conventions.md": {
+      "sha256": "806cf02099d5a8d2e851d13ca951a109c282925e640fb3eb4285125c5f8f8ef4",
+      "install_to": ".agents/skills/prd/references/conventions.md",
+      "type": "reference"
+    },
+    "skills/prd-split/references/conventions.md": {
+      "sha256": "806cf02099d5a8d2e851d13ca951a109c282925e640fb3eb4285125c5f8f8ef4",
+      "install_to": ".agents/skills/prd-split/references/conventions.md",
+      "type": "reference"
+    },
+    "skills/workflow/references/track-conventions.md": {
+      "sha256": "3489bf5b91a427039c9d3c878f06e5a758ebdaf9b821672c80cc54dbc828960f",
+      "install_to": ".agents/skills/workflow/references/track-conventions.md",
+      "type": "reference"
+    },
+    "skills/workflow/references/testing-policy.md": {
+      "sha256": "d88cd9ee84c7d1dd07f4f03bfbaccff912401a5fb0e92e16677d084589e08eea",
+      "install_to": ".agents/skills/workflow/references/testing-policy.md",
+      "type": "reference"
+    },
+    "skills/workflow/references/session-checks.md": {
+      "sha256": "f5c30a34cbc87f4c9184ffdd5784f1e22394757c663e8129f91668b0284a1d92",
+      "install_to": ".agents/skills/workflow/references/session-checks.md",
+      "type": "reference"
+    },
+    "skills/workflow/references/agent-teams.md": {
+      "sha256": "577dc35609cd5eb399884923cef5c4152928d6341ac5ede2c593820a3b1b69c9",
+      "install_to": ".agents/skills/workflow/references/agent-teams.md",
+      "type": "reference"
+    },
+    "skills/onboard/references/service-registry.md": {
+      "sha256": "c00da0d84bc071e98d62cce9fc8beeea40bb17491daabe8cc1340f34c4df6e9a",
+      "install_to": ".agents/skills/onboard/references/service-registry.md",
+      "type": "reference"
+    },
+    "skills/onboard/references/external-steps.md": {
+      "sha256": "6dcbd7ea2f3f5e1e1f0d81a0727726dbaf1babd69588bad2f19eba2662468fba",
+      "install_to": ".agents/skills/onboard/references/external-steps.md",
+      "type": "reference"
+    },
+    "skills/lark-sync/references/session-check.md": {
+      "sha256": "c9bd257aa6026cc0838b17ff7aee7ff9f0a0b101cdcbc5dd3e5af91251207ea9",
+      "install_to": ".agents/skills/lark-sync/references/session-check.md",
+      "type": "reference"
+    },
+    "skills/jj-workflow/references/rules.md": {
+      "sha256": "dc3a49b2e1b6e95ed75fd3a2aea19bd6372e221e03d5c08a87bf390ea3c51c83",
+      "install_to": ".agents/skills/jj-workflow/references/rules.md",
+      "type": "reference"
     }
+  },
+  "agents/AGENTS.md.template": {
+    "sha256": "4023e04cb0c8148051732e7d81b876c641475a09d33c9dd9e32a8322a2c8261b"
+  },
+  "skills/wireframe/SKILL.md": {
+    "sha256": "02f948be37cd9b17b04e0865a6f7a1b1ffd74cac6853263cfc134b37b1477648"
+  },
+  "skills/prd/SKILL.md": {
+    "sha256": "d0124ee1af047484eb4f4cb121bb211e9e5cda72705c85e0ee4e1b5ee33e6e0b"
+  },
+  "skills/prd-split/SKILL.md": {
+    "sha256": "dede800184076c1d1063586e667f116d161861d12f12955eb3b9beb1f76c8b03"
+  },
+  "skills/workflow/SKILL.md": {
+    "sha256": "d745c7fa6234bf6b6a0a55d2e3c8f9ab46adee4a3ce719d447ddc61454c9a3da"
+  },
+  "skills/onboard/SKILL.md": {
+    "sha256": "429da38c52a28eb2f3131775adb267907850a5a35ef70ef522525a58becb4a8c"
+  },
+  "skills/lark-sync/SKILL.md": {
+    "sha256": "29086f4f75a74347044e844559705a55f4cac2362a8ccd3578e07b186196b0dd"
+  },
+  "skills/jj-workflow/SKILL.md": {
+    "sha256": "38d6089a45ab52bd96c722ea783ce14c0cf33dcf06f49b570b7bc5b695ed9bc8"
+  },
+  "agents/fragments/session-protocol.core.md": {
+    "sha256": "d201a68e01ab47daf0a94088093a23e43cbff412c3ca74f93f85b9abbe255957",
+    "install_to": ".agentic-workflows/fragments/session-protocol.core.md",
+    "type": "fragment"
+  },
+  "agents/fragments/workflow-rules.core.md": {
+    "sha256": "75ebba9539ec96f10710d422be27878825f467c102a1c3feb23b14dd9b80157d",
+    "install_to": ".agentic-workflows/fragments/workflow-rules.core.md",
+    "type": "fragment"
+  },
+  "agents/fragments/service-registry.core.md": {
+    "sha256": "cf10f0c449ecf375966c5f6cb51d2cd1cc383eeadfbc108aca69b02848809216",
+    "install_to": ".agentic-workflows/fragments/service-registry.core.md",
+    "type": "fragment"
+  },
+  "skills/wireframe/references/conventions.md": {
+    "sha256": "f4081621be76475597b5dce244223860bef07defef9aa9b41f5552f4a951d2bf",
+    "install_to": ".agents/skills/wireframe/references/conventions.md",
+    "type": "reference"
+  },
+  "skills/prd/references/conventions.md": {
+    "sha256": "806cf02099d5a8d2e851d13ca951a109c282925e640fb3eb4285125c5f8f8ef4",
+    "install_to": ".agents/skills/prd/references/conventions.md",
+    "type": "reference"
+  },
+  "skills/prd-split/references/conventions.md": {
+    "sha256": "806cf02099d5a8d2e851d13ca951a109c282925e640fb3eb4285125c5f8f8ef4",
+    "install_to": ".agents/skills/prd-split/references/conventions.md",
+    "type": "reference"
+  },
+  "skills/workflow/references/track-conventions.md": {
+    "sha256": "3489bf5b91a427039c9d3c878f06e5a758ebdaf9b821672c80cc54dbc828960f",
+    "install_to": ".agents/skills/workflow/references/track-conventions.md",
+    "type": "reference"
+  },
+  "skills/workflow/references/testing-policy.md": {
+    "sha256": "d88cd9ee84c7d1dd07f4f03bfbaccff912401a5fb0e92e16677d084589e08eea",
+    "install_to": ".agents/skills/workflow/references/testing-policy.md",
+    "type": "reference"
+  },
+  "skills/workflow/references/session-checks.md": {
+    "sha256": "f5c30a34cbc87f4c9184ffdd5784f1e22394757c663e8129f91668b0284a1d92",
+    "install_to": ".agents/skills/workflow/references/session-checks.md",
+    "type": "reference"
+  },
+  "skills/workflow/references/agent-teams.md": {
+    "sha256": "577dc35609cd5eb399884923cef5c4152928d6341ac5ede2c593820a3b1b69c9",
+    "install_to": ".agents/skills/workflow/references/agent-teams.md",
+    "type": "reference"
+  },
+  "skills/onboard/references/service-registry.md": {
+    "sha256": "c00da0d84bc071e98d62cce9fc8beeea40bb17491daabe8cc1340f34c4df6e9a",
+    "install_to": ".agents/skills/onboard/references/service-registry.md",
+    "type": "reference"
+  },
+  "skills/onboard/references/external-steps.md": {
+    "sha256": "6dcbd7ea2f3f5e1e1f0d81a0727726dbaf1babd69588bad2f19eba2662468fba",
+    "install_to": ".agents/skills/onboard/references/external-steps.md",
+    "type": "reference"
+  },
+  "skills/lark-sync/references/session-check.md": {
+    "sha256": "c9bd257aa6026cc0838b17ff7aee7ff9f0a0b101cdcbc5dd3e5af91251207ea9",
+    "install_to": ".agents/skills/lark-sync/references/session-check.md",
+    "type": "reference"
+  },
+  "skills/jj-workflow/references/rules.md": {
+    "sha256": "dc3a49b2e1b6e95ed75fd3a2aea19bd6372e221e03d5c08a87bf390ea3c51c83",
+    "install_to": ".agents/skills/jj-workflow/references/rules.md",
+    "type": "reference"
   }
 }

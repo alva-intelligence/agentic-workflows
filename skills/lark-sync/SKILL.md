@@ -13,7 +13,7 @@ Syncs workflow features to a shared Lark tasklist. Each feature = one Lark task;
 
 - **Manual commands:** `/lark-sync bootstrap`, `/lark-sync link`, `/lark-sync status`, `/lark-sync push`, `/lark-sync pull`, `/lark-sync setup-cli`
 - **Automatic:** orchestra calls `/lark-sync push` on every phase transition in `/workflow start`, `/workflow next`, and completion.
-- **Enforced at session start:** session-protocol Step 4 verifies Lark is set up. If not, the agent MUST walk the user through `/lark-sync setup-cli` + `/lark-sync link <GUID>` (or `/lark-sync bootstrap` for the team owner) BEFORE allowing any workflow commands.
+- **Enforced at session start:** the session protocol in `AGENTS.md` verifies Lark is set up by delegating to `references/session-check.md`. If setup is missing or incomplete, the agent MUST walk the user through `/lark-sync setup-cli` + `/lark-sync link <GUID>` (or `/lark-sync bootstrap` for the team owner) BEFORE allowing any workflow commands. Read `references/session-check.md` for the exact scope-verification jq snippet and the decision tree.
 
 ## Prerequisites
 

@@ -7,6 +7,12 @@ description: Full frndOS workspace onboarding — GitHub access, service setup, 
 
 This skill guides you through setting up a complete frndOS development workspace. Execute steps in order. Steps marked **STOP** require user input — wait for answers before proceeding.
 
+**References available:**
+- `references/service-registry.md` — Full service table (owners, env files, exact start/health commands, port-conflict check).
+- `references/external-steps.md` — Protocol for steps that need `sudo` or an interactive terminal the agent can't drive.
+- `references/mcp-configs.md` — Per-tool MCP config templates.
+- `references/claude-settings.json`, `references/launch.json`, `references/launch-direct.json`, `references/run-all-template.sh` — Workspace config scaffolding.
+
 ## Interaction Model — READ THIS FIRST
 
 > **1. Switch to plan mode first.** Before executing anything, switch to your CLI/editor's planning mode:

@@ -7,6 +7,8 @@ description: Split a main PRD into per-service PRDs
 
 Splits a main PRD into per-service PRDs based on the Service Breakdown section.
 
+**Read `references/conventions.md` first** for the service-PRD frontmatter, required sections (including Verification rules), and the naming convention shared with main PRDs.
+
 ## Commands
 
 ### `/prd split`

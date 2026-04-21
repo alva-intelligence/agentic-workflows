@@ -13,6 +13,8 @@ Manages JJ (Jujutsu) workspaces for parallel feature development. Each workspace
 - This skill is **completely separate** from `/workflow`. The workflow skill handles the feature state machine; `/jj-workflow` handles workspace isolation.
 - Most useful with **terminal-based harnesses** (Claude Code, Amp) where you run one session per directory. Cursor is IDE-integrated so benefits less; OpenCode also works per-session and can use workspaces if desired.
 
+Full behavioral rules (independence, commit propagation, port conflicts, hierarchy, lifecycle, secondary-workspace detection) live in `references/rules.md`. Read it before creating, switching, or cleaning up workspaces.
+
 ## Commands
 
 ### `/jj-workflow init`

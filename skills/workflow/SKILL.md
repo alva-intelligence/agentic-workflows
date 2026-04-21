@@ -7,6 +7,13 @@ description: Manage feature workflow state — status, transitions, context swit
 
 Manages the feature development workflow state machine.
 
+## References (load when needed)
+
+- `references/track-conventions.md` — Track-file location, frontmatter, required sections, session-log rules. Read when entering `implementation`, updating progress, or creating a new track file.
+- `references/testing-policy.md` — STRICT opt-in testing rules. Read before writing or running tests.
+- `references/session-checks.md` — Session-time procedures (feature branch recency check, service health checks, update-check + sync + conflict handling). Read when the session-start protocol in `AGENTS.md` delegates here.
+- `references/agent-teams.md` — Parallel-engineer protocol for the `implementation` phase when `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. Read before spawning or managing a team.
+
 ## Commands
 
 ### `/workflow status`

@@ -8,23 +8,11 @@
 
 ---
 
-{{FRAGMENT:session-protocol.md}}
+{{FRAGMENT:session-protocol.core.md}}
 
 ---
 
-{{FRAGMENT:workflow-rules.md}}
-
----
-
-{{FRAGMENT:prd-conventions.md}}
-
----
-
-{{FRAGMENT:track-conventions.md}}
-
----
-
-{{FRAGMENT:wireframe-conventions.md}}
+{{FRAGMENT:workflow-rules.core.md}}
 
 ---
 
@@ -32,8 +20,28 @@
 
 ---
 
-{{FRAGMENT:testing-policy.md}}
+{{FRAGMENT:service-registry.core.md}}
 
 ---
 
-{{FRAGMENT:service-registry.md}}
+## Skills Index (load-on-demand details)
+
+When a command/phase is invoked, load the matching skill's `SKILL.md`. Deep references live alongside as `references/*.md` and should be read when the skill needs them.
+
+| Skill | Use when | Deep references |
+|-------|---------|-----------------|
+| `onboard` | Fresh workspace setup, `/onboard`, verifying service env | `references/service-registry.md`, `references/external-steps.md`, `references/mcp-configs.md` |
+| `setup-workspace` | Bootstrapping the agentic-workflows install itself | — |
+| `workflow` | Phase transitions, `/workflow *`, implementation tracking | `references/track-conventions.md`, `references/testing-policy.md`, `references/session-checks.md`, `references/agent-teams.md` |
+| `prd` | `prd_creation` phase — authoring the main PRD | `references/conventions.md` |
+| `prd-split` | `prd_splitting` phase — splitting main PRD into per-service PRDs | `references/conventions.md` |
+| `wireframe` | `wireframe*` phases — building/editing wireframes | `references/conventions.md` |
+| `lark-sync` | Lark CLI auth, `/lark-sync link`, wiki/task sync | `references/session-check.md` |
+| `jj-workflow` | Parallel features via JJ workspaces | `references/rules.md` |
+| `workflow-update` | Updating the agentic-workflows instructions themselves | — |
+| `lark-task` (symlink) | Lark task CRUD primitives used by `lark-sync` | `references/*` (many) |
+
+**Rules when invoking a skill:**
+1. Read the skill's `SKILL.md` fully on invocation.
+2. Read the relevant `references/*.md` if the skill points to it or the task needs that depth.
+3. Do NOT inline references here — keep this file thin.
