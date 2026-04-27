@@ -132,7 +132,7 @@ height: aspect < 1 ? "100%" : undefined,
 
 The flex parent's `flex-1` already constrains the available area. The `aspectRatio` style keeps the bg image's correct shape inside that area.
 
-The "Version X / Apr 27" label that lives below the canvas (`KvCanvas.tsx:267-274`) stays. To preserve canvas height for the label, the wrapping flex column already gives the canvas all available height via `flex-1`; the label is a sibling at fixed height. No `calc()` needed.
+The "Version X / Apr 27" label that lives below the canvas (`KvCanvas.tsx:267-274`) is **removed** in this iteration. Stealing vertical room from a full-viewport canvas just for a passive label isn't worth it, and the same info will be re-surfaced cleanly in a follow-up (floating chip top-left, top-nav placement, or version sidebar — see Future Work). The version number is still available via the URL path and the (future) version sidebar.
 
 ### 3. Bigger default text overlay
 
@@ -237,10 +237,11 @@ For rotation: v1 keeps the simple non-rotation-aware anchor (`px, py + ph + 8`).
 8. Selected overlay's Transformer handle size scales between 6 and 12px, and its rotation arm distance scales between 18 and 32px, both based on the overlay's pixel dimensions.
 9. The color chip CSS-scales between 0.7× and 1.0× based on the selected overlay's pixel width, capped so it never appears wider than the overlay itself.
 10. The color chip hides during overlay drag/transform and reappears on `onDragEnd`/`onTransformEnd`.
-11. The "Version X / Apr 27" label remains visible directly below the canvas image, horizontally centered.
+11. The "Version X / Apr 27" label below the canvas image is removed; canvas reclaims that vertical space.
 
 ## Future work — known directions
 
+- **Re-surface the version label** — once we know what fits the new layout best, bring it back as one of: a floating chip top-left of the canvas (`v4 · Apr 25`, semi-transparent pill, design-tool standard), a slot in the top nav next to the file title, or the version sidebar. For v1 the info is intentionally hidden because passive context isn't worth canvas height.
 - Auto-collapse chat on tool change (`text`/`image`/`frame`) with a "user pinned" override flag — tiny addition once we see whether users want it.
 - Draggable chat panel — keep last-position in localStorage; works fine with `position: fixed`.
 - Frosted-glass chat backdrop — one CSS line (`backdrop-filter: blur(16px)` + translucent bg) once we want it.
