@@ -1,6 +1,6 @@
 {
   "version": "3.0.0",
-  "updated": "2026-04-28",
+  "updated": "2026-04-29",
   "files": {
     "agents/fragments/git-conventions.md": {
       "sha256": "cd3c543cd190656a03c47eacf4d0bb3ddeb9677cea386a8d614fd84ed61ab5d1",
@@ -63,7 +63,7 @@
       "type": "workflow"
     },
     "workflow/lark-tenant.json": {
-      "sha256": "9a5c0577829e8d23a78ec8ccd2a6f41f57974ec2e50521ec3df89caf35ecc19e",
+      "sha256": "e2ad0527d0a32395c7b5f34438822fd090f065793179ab040e0583aa4f8ac48e",
       "install_to": ".agentic-workflows/workflow/lark-tenant.json",
       "type": "workflow"
     },
