@@ -18,6 +18,8 @@ Every feature has a `phase_status` field on top of `phase`:
 
 **`completed` does NOT auto-advance.** The workflow stays on the phase until the user (or orchestra at user direction) explicitly triggers transition. Agents MUST flip `phase_status` to `completed` once their work is done, then **stop and ask the user** before transitioning.
 
+**Every `phase_status` flip MUST be followed by `/lark-sync push <slug>`** (advisory; log + continue on failure). Without this, the Lark task's `Phase status` custom field drifts from local state and the team's kanban view goes stale. Same rule applies to korlap card mutations: any GUI mutation of `.workflow-state.json` fires `/lark-sync push <slug>` fire-and-forget.
+
 ### Phase Transition Rules
 
 1. **NEVER skip a phase.** If the user asks to skip, respond: "I cannot skip phases. Current phase: [PHASE]. Required gate: [GATE]." Exception: `pr_submission → completion` is a legitimate transition (clean merge), not a skip.

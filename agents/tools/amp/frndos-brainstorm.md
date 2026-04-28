@@ -45,12 +45,12 @@ Q: <prompt>
   Or type your own answer.
 ```
 
-Wait for the user's reply. Record answer in `brainstorming.questions[i]`.
+Wait for the user's reply. Record answer in `brainstorming.questions[i]`. After each answer, call `/lark-sync push-brainstorming <slug>` (advisory; log + continue on failure).
 
 ### Step 4: Write the summary
 
-3–8 sentences. Save to `brainstorming.summary`; set `brainstorming.completed_at`.
+3–8 sentences. Save to `brainstorming.summary`; set `brainstorming.completed_at`. Call `/lark-sync push-brainstorming <slug>`.
 
 ### Step 5: Mark phase completed and stop
 
-Flip `features[active_feature].phase_status` to `"completed"`. Do NOT auto-advance. Tell the user: "Brainstorming complete. Run `/workflow next` to advance to PRD creation."
+Flip `features[active_feature].phase_status` to `"completed"`. Call `/lark-sync push <slug>` (updates Phase status field) and `/lark-sync push-brainstorming <slug>` (final mirror). Do NOT auto-advance. Tell the user: "Brainstorming complete. Run `/workflow next` to advance to PRD creation."

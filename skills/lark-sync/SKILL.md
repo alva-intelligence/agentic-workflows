@@ -245,6 +245,58 @@ Sync the PRD for a feature from local markdown to its wiki docx under **Agentic'
 4. Update `Last phase change` in the task if phase has advanced.
 5. Do NOT touch the User's Area per-feature folder during push-prd — that's the user's free-form space.
 
+### `/lark-sync push-brainstorming [slug]`
+
+Sync the brainstorming artifacts for a feature (questions, answers, summary, service-state snapshots) from `.workflow-state.json` to a wiki docx under **User's Area / `<Worker>'s Universe` / `<slug>` / Brainstorming**. Called automatically by `frndos-brainstorm` after every state change; also usable manually.
+
+**Steps:**
+1. Resolve the target slug (arg or active feature). Read `features[<slug>].brainstorming` from `.workflow-state.json`. STOP with a no-op if no brainstorming object exists or `questions` is empty AND `summary` is null.
+2. Render markdown:
+
+   ```markdown
+   # Brainstorming: <feature-slug>
+
+   > Type: <feature|bug|improvement>
+   > Worker: <worker>
+   > Updated: <ISO>
+
+   ## Initial request
+
+   <initial_request verbatim>
+
+   ## Service state snapshots
+
+   ### <service>
+   <snapshot text>
+
+   ...
+
+   ## Questions
+
+   ### Q<n>: <prompt>
+
+   - [x] **<chosen-label>** (Recommended) — <description>
+   - [ ] <other-label> — <description>
+
+   ...
+
+   ## Summary
+
+   <brainstorming.summary verbatim>
+   ```
+
+   - Mark the chosen answer with `[x]`. Mark the option flagged `recommended: true` with `(Recommended)` regardless of whether it was the chosen answer.
+   - For "Other" free-text answers, render a single `[x] Other — <answer-text>` line.
+3. Ensure the user-feature folder exists. Run `/lark-sync ensure-user-folder <slug>` first.
+4. Look up `.lark-sync.json.user_brainstorming_docs[<worker>][<slug>]`:
+   - **If absent** (first-time sync): create the docx via the same import flow as `push-prd` (`POST /open-apis/drive/v1/import_tasks` with `file_extension: "md"`, `type: "docx"`, mounted in the wiki space), then move the resulting wiki node under the user-feature folder titled `Brainstorming`. Save `{ wiki_node_token, obj_token }` to `.lark-sync.json.user_brainstorming_docs[<worker>][<slug>]`.
+   - **If present** (update): replace the docx body in place using the same `blocks/batch_delete` + re-import pattern as `push-prd`. Append the trailing line `Last synced by <worker> at <ISO timestamp>.`.
+5. Write the docx URL back into `features[<slug>].brainstorming.lark_doc_url` in `.workflow-state.json`. This field is purely for traceability — gates do not check it.
+6. Do NOT touch the parent user-feature folder content; that remains the user's free-form space.
+7. Failure handling: advisory. Log + continue. Local `.workflow-state.json` is authoritative.
+
+This is the brainstorming-specific counterpart to `push-prd`. The PRD lives in `Agentic's PRD` (team-canonical, agent-managed); the brainstorming doc lives under the engineer's `User's Area` (engineer-canonical, agent-managed). They never touch each other.
+
 ### `/lark-sync ensure-user-folder [slug]`
 
 Idempotent: creates the current worker's User's Area folders if missing. Called automatically by `/workflow start`.
@@ -275,23 +327,44 @@ Fetch team-wide state from Lark and show it. Does NOT write to local `.workflow-
    ★ = your active feature
    ```
 
-## External callers (korlap GUI)
+## External callers (korlap GUI + every agent harness)
 
-When korlap is installed (`.korlap/marker.json` exists), its Docs pane includes a "Sync to Lark wiki" button per document. korlap does NOT reimplement any sync logic in Rust — it invokes the same commands documented above, with one fixed contract:
+The kanban-mirror contract is **single source of truth**: every mutation of `features[<slug>]` in `.workflow-state.json` MUST be followed by a `/lark-sync push <slug>` call. Mutations from korlap (kanban GUI) AND from the CLI (agents handling `/workflow *` commands, `phase_status` flips, PR URL writes, etc.) all share this contract.
 
-- **Supported entry point:** `/lark-sync push-prd <slug>` — mirrors `docs/prd/<slug>.md` to the wiki node under `Agentic's PRD`. This is the single external command korlap is allowed to call for doc-to-wiki sync in v1.
-- **Which files qualify:** only files whose path matches `docs/prd/<slug>.md`. The button must be **disabled or hidden** for:
-  - `docs/tracks/<slug>.md` — engineering internal logs; no team wiki destination by design in v1
-  - `docs/service-prds/<slug>.md` — per-service PRDs stay local in v1
-  - Anything else under `docs/`
-- **Slug derivation:** extract `<slug>` from the filename (the stem of `docs/prd/<slug>.md`). Do not infer from frontmatter or content.
-- **Invocation:** korlap shells out to the same slash-command path the agent uses (e.g., via the session protocol) or, if invoking from outside an agent session, reads `workflow/lark-tenant.json` and `.lark-sync.json`, confirms `lark-cli auth status` is valid, and runs the steps in the `/lark-sync push-prd` block. Do NOT bypass these preflight checks — broken auth silently degrades the sync.
-- **Failure handling:** if `push-prd` fails (auth expired, network, hook-blocked), korlap surfaces the stderr as a toast and leaves the local markdown unchanged. Lark sync is advisory — the local file is authoritative.
+### Supported entry points (external)
+
+| Entry point | What it does | Who calls it |
+|---|---|---|
+| `/lark-sync push <slug>` | Sync the feature's local state to the Lark task — section, all custom fields (incl. `Phase status`), description Links block. One-way (local → Lark). | korlap on every kanban card mutation; CLI agents on every `.workflow-state.json` mutation |
+| `/lark-sync push-prd <slug>` | Mirror `docs/prd/<slug>.md` to the wiki docx under `Agentic's PRD`. | korlap "Sync to Lark wiki" button on `docs/prd/<slug>.md`; `frndos-prd` on every PRD save |
+| `/lark-sync push-brainstorming <slug>` | Mirror `features[<slug>].brainstorming` to the wiki docx under `User's Area/<Worker>'s Universe/<slug>/Brainstorming`. | `frndos-brainstorm` on every state change (answer recorded, summary written, phase_status flip); korlap if it exposes a brainstorming editor |
+
+### korlap-specific contract
+
+korlap does NOT reimplement any sync logic in Rust — it invokes the slash commands above. After every write to `.workflow-state.json` (drag-drop, card field edit, phase_status toggle), korlap fires `/lark-sync push <slug>` fire-and-forget. Toast the stderr on failure.
+
+For doc-to-wiki sync, korlap's "Sync to Lark wiki" button qualifies on:
+- `docs/prd/<slug>.md` → `/lark-sync push-prd <slug>`
+
+The button must be **disabled or hidden** for:
+- `docs/tracks/<slug>.md` — engineering internal logs; no team wiki destination by design in v1
+- `docs/service-prds/<slug>.md` — per-service PRDs stay local in v1
+- Anything else under `docs/`
+
+Slug derivation: extract from the filename (stem of `docs/prd/<slug>.md`). Do not infer from frontmatter or content.
+
+### Preflight (every external entry point)
+
+Read `workflow/lark-tenant.json` and `.lark-sync.json`. Confirm `lark-cli auth status` is valid. Do NOT bypass — broken auth silently degrades the sync.
+
+### Failure handling
+
+Lark sync is advisory. If a call fails (auth expired, network, hook-blocked), surface the stderr (toast in korlap; log line in CLI) and leave local state unchanged. Local `.workflow-state.json` is authoritative.
 
 **Explicitly NOT in v1:**
-- `push-doc` as a generic "sync any path" command. Adding one would need a routing table mapping paths to wiki destinations, which only exists for PRDs today. Introduce one only when tracks/service-PRDs gain wiki homes.
+- `push-doc` as a generic "sync any path" command. Adding one would need a routing table mapping paths to wiki destinations, which only exists for PRDs and brainstorming today. Introduce one only when tracks/service-PRDs gain wiki homes.
 - Bidirectional pull (Lark wiki → local markdown). v1 is write-through only; any Lark edits are overwritten on next push.
-- Batch sync ("sync all PRDs"). Orchestra hooks push one feature at a time for mass-patch safety; korlap's GUI must preserve this — one button click = one feature, not fan-out across the board.
+- Batch sync ("sync all PRDs"). Orchestra hooks push one feature at a time for mass-patch safety; korlap's GUI must preserve this — one card mutation = one push, not fan-out across the board.
 
 ## Orchestra auto-hooks
 
@@ -299,15 +372,18 @@ When `.lark-sync.json` exists, the orchestra agent MUST call the corresponding `
 
 | Event | Action |
 |---|---|
-| `/workflow start <slug>` completes | `push` — creates Lark task in PRD Creation section. `ensure-user-folder <slug>` — creates `<Worker>'s Universe/<slug>/` if missing. |
-| `/workflow next` transitions phase | `push` — moves task to target section, updates `Last phase change` |
+| `/workflow start <slug>` completes | `push` — creates Lark task in Brainstorming section. `ensure-user-folder <slug>` — creates `<Worker>'s Universe/<slug>/` if missing. |
+| `/workflow next` transitions phase | `push` — moves task to target section, updates `Last phase change`, sets `Phase status = inprogress` for the new phase |
+| Any agent flips `phase_status` (`inprogress` ↔ `completed`) | `push` — updates the `Phase status` custom field. **Mandatory after every flip.** |
+| `frndos-brainstorm` records an answer, writes the summary, or flips `phase_status` | `push-brainstorming <slug>` — mirrors brainstorming object to the User's Area docx. Also call `push <slug>` on the `phase_status` flip. |
 | `frndos-prd` saves or updates `docs/prd/<slug>.md` | `push-prd <slug>` — mirrors the markdown content into the wiki docx under Agentic's PRD. |
-| User sets implementation_strategy, parent_feature, or phase_status in local state | `push` — update the corresponding custom fields |
+| User sets `implementation_strategy`, `parent_feature`, or `phase_status` in local state | `push` — update the corresponding custom fields |
 | PR URL recorded in local state | `push` — updates PRs field |
+| Self-review or security audit summary written | `push` — refreshes the description Links block (no dedicated field today) |
 | Phase reaches `completion` | `push` with Lark "mark complete" (`lark-cli task +complete`) in addition to section move. Leave the PRD wiki page intact — it's the permanent record. |
-| Feature archived/deleted locally | Do NOT delete the Lark task or the PRD wiki page — leave an audit trail. Add a comment on the task: "Feature archived locally by <worker> on <date>". |
+| Feature archived/deleted locally | Do NOT delete the Lark task, PRD wiki page, or brainstorming wiki page — leave an audit trail. Add a comment on the task: "Feature archived locally by <worker> on <date>". |
 
-`push-prd` is the most important addition: without it, the team's view of the PRD drifts from what the driving engineer has actually agreed in their working session. Treat it as equally critical to `push`.
+`push-prd` and `push-brainstorming` are equally critical to `push`. Without `push-prd`, the team's view of the PRD drifts from what the driving engineer agreed in their working session. Without `push-brainstorming`, the engineer's brainstorming context (what was asked, what was chosen, why) lives only on their machine — invisible to teammates picking up the feature later.
 
 If a `push` call fails (network, auth expired), the orchestra MUST:
 - Log the failure with the error message

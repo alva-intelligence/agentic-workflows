@@ -36,12 +36,12 @@ Skill: `skills/brainstorm/SKILL.md`.
 
 ### Step 3: Ask one question at a time
 
-Use OpenCode's `question` tool. Recommended option first, labeled `(Recommended)`. Record `answer` in `brainstorming.questions[i]`. Regenerate downstream questions if an answer changes context.
+Use OpenCode's `question` tool. Recommended option first, labeled `(Recommended)`. Record `answer` in `brainstorming.questions[i]`. After each answer, call `/lark-sync push-brainstorming <slug>` (advisory). Regenerate downstream questions if an answer changes context.
 
 ### Step 4: Write the summary
 
-3–8 sentences. Save to `brainstorming.summary`; set `brainstorming.completed_at`.
+3–8 sentences. Save to `brainstorming.summary`; set `brainstorming.completed_at`. Call `/lark-sync push-brainstorming <slug>`.
 
 ### Step 5: Mark phase completed and stop
 
-Flip `features[active_feature].phase_status` to `"completed"`. Do NOT auto-advance. Tell the user: "Brainstorming complete. Run `/workflow next` to advance to PRD creation."
+Flip `features[active_feature].phase_status` to `"completed"`. Call `/lark-sync push <slug>` (updates Phase status field) and `/lark-sync push-brainstorming <slug>` (final mirror). Do NOT auto-advance. Tell the user: "Brainstorming complete. Run `/workflow next` to advance to PRD creation."
