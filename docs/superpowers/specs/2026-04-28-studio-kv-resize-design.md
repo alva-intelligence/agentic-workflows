@@ -458,6 +458,8 @@ New `studio_activities.action` values:
 - **Exports vanish on new source generation.** Acceptable because exports are tied to a specific source — if the source changes, exports are out of date anyway.
 - **Overlays not re-rendered.** Resize works on the server-side image, not the canvas with overlays applied. This is acceptable for v1 because most KVs are designed with overlays as a layout aid; for shipping, users can either flatten overlays or live with overlay-less exports.
 - **Soft delete only protects direct deletion.** Cascade from `kv_generations` is hard. Acceptable because exports without a source are meaningless.
+- **No `Last-Event-ID` support on the SSE stream.** Reconnect strategy is "re-fetch via `GET /resize-exports`, then re-subscribe to stream." Acceptable because exports are idempotent and the full state is always available via the list endpoint.
+- **No server-side crop_window bounds validation.** Spec edge case "crop_window outside source bounds -> 422" is enforced client-side (the crop modal clamps). Out-of-bounds crops would 4xx at the AI service when PIL tries to crop, which surfaces as `status='failed'` with the error. v2 may store source w/h on `kv_generations` to enable server-side validation.
 
 ## Future work
 
