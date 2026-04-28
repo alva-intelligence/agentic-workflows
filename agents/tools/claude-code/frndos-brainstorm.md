@@ -52,6 +52,7 @@ For each question, call `AskUserQuestion`:
 - Put the recommended option **first** with `(Recommended)` appended to its label
 - Record the user's answer in `brainstorming.questions[i].answer`
 - If the user picks "Other", store their text verbatim
+- After recording each answer, call `/lark-sync push-brainstorming <slug>` (advisory; log + continue on failure) so the User's Area docx tracks progress in real time
 - If an answer changes downstream context, regenerate the remaining questions before continuing
 
 ### Step 4: Write the summary
@@ -62,11 +63,13 @@ Once all questions are answered, write a `summary` (3–8 sentences) capturing:
 - Key trade-offs accepted
 - Any open follow-ups for the PRD phase
 
-Save to `features[active_feature].brainstorming.summary`. Set `brainstorming.completed_at` to the current ISO timestamp.
+Save to `features[active_feature].brainstorming.summary`. Set `brainstorming.completed_at` to the current ISO timestamp. Call `/lark-sync push-brainstorming <slug>` to mirror the final state into the User's Area docx.
 
 ### Step 5: Mark phase completed and stop
 
 - Flip `features[active_feature].phase_status` to `"completed"` in `.workflow-state.json`
+- Call `/lark-sync push <slug>` to update the Lark task's `Phase status` field (advisory; log + continue on failure)
+- Call `/lark-sync push-brainstorming <slug>` once more (final-state mirror)
 - Do **not** transition to `prd_creation` automatically. Tell the user: "Brainstorming complete. Run `/workflow next` to advance to PRD creation."
 
 ## ON COMPLETION

@@ -1,5 +1,5 @@
 {
-  "version": "3.0.0",
+  "version": "3.0.1",
   "updated": "2026-04-29",
   "files": {
     "agents/fragments/git-conventions.md": {
@@ -13,7 +13,7 @@
       "type": "fragment"
     },
     "agents/fragments/workflow-rules.core.md": {
-      "sha256": "bc5b47f361b5a280e8112f39bdcfe37b8b1e7c887c1d109b08ad753834a6e8a2",
+      "sha256": "3b41267d54b6b5cb82de30d1e41b8ac07120baacf50afb20b2163daf0a70b1b4",
       "install_to": ".agentic-workflows/fragments/workflow-rules.core.md",
       "type": "fragment"
     },
@@ -53,7 +53,7 @@
       "type": "workflow"
     },
     "workflow/state-schema.json": {
-      "sha256": "46041a7c01a29730f661885a1315cdd0e1729dbc21bb46d7326891a49f1960e3",
+      "sha256": "947f693f51c28f08546a029b9059e9598c217bb9f89bddfbcd02c2060b48c6c3",
       "install_to": ".agentic-workflows/workflow/state-schema.json",
       "type": "workflow"
     },
@@ -98,7 +98,7 @@
       "type": "skill"
     },
     "skills/lark-sync/SKILL.md": {
-      "sha256": "5481b3e925b964b5f3512f366edf45187fe78c445a2eec74371d1cec8c298a63",
+      "sha256": "3ca076f0ad37b4d4100a05914fd4115f4459fde60b26092f5498dc07d1a35cd3",
       "install_to": ".agents/skills/lark-sync/SKILL.md",
       "type": "skill"
     },
@@ -223,7 +223,7 @@
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-brainstorm.md": {
-      "sha256": "89bd8006bfcc2cee0ba58049e592515585a29efd675e3a9fb92e5ea62624fc2f",
+      "sha256": "cd651338f4e1f2f3ceed96ce39fa34e3ae1b07be75f025544c231d7e429360d3",
       "install_to": ".agentic-workflows/agents/claude-code/frndos-brainstorm.md",
       "type": "agent"
     },
@@ -263,7 +263,7 @@
       "type": "agent"
     },
     "agents/tools/cursor/frndos-brainstorm.mdc": {
-      "sha256": "e359797a2d89a4d6febb2a8d54ef84f37bb065d62d4658433b4724685bb4af6a",
+      "sha256": "b15e2b5af09d808344dc2d7491a6cc8bce0779e9576a98ab269a1d60f853b22a",
       "install_to": ".agentic-workflows/agents/cursor/frndos-brainstorm.mdc",
       "type": "agent"
     },
@@ -303,7 +303,7 @@
       "type": "agent"
     },
     "agents/tools/amp/frndos-brainstorm.md": {
-      "sha256": "30b5464fbc219fcc4bb49fd3db951c8cfcdb8949e85ad87f9acc273728151347",
+      "sha256": "76eba686b70f24291f972b0a1babda431e2ac104d6630b5b9e200ff0f9b542e1",
       "install_to": ".agentic-workflows/agents/amp/frndos-brainstorm.md",
       "type": "agent"
     },
@@ -343,7 +343,7 @@
       "type": "agent"
     },
     "agents/tools/opencode/frndos-brainstorm.md": {
-      "sha256": "a82d8957ba39e445c4154f66bdbd79fc09d2af408005dc775e77065342b45000",
+      "sha256": "56f7a593c22e19374354f3abf768a255738842c463ca2b7217472705afcb12a8",
       "install_to": ".agentic-workflows/agents/opencode/frndos-brainstorm.md",
       "type": "agent"
     },

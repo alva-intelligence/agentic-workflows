@@ -163,6 +163,11 @@
         "completed_at": {
           "type": ["string", "null"],
           "format": "date-time"
+        },
+        "lark_doc_url": {
+          "description": "URL of the synced Brainstorming docx in the user's Lark wiki area (User's Area/<Worker>'s Universe/<slug>/Brainstorming). Written by /lark-sync push-brainstorming. Null until first sync.",
+          "type": ["string", "null"],
+          "format": "uri"
         }
       }
     },
