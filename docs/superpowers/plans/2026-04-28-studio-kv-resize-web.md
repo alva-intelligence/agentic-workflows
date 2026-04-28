@@ -358,7 +358,7 @@ function toExport(w: WireExport): KvResizeExport {
 }
 
 export async function listResizeExports(fileId: string): Promise<KvResizeExport[]> {
-  const resp = await fetch(`/api/studio/files/${fileId}/resize-exports`, {
+  const resp = await fetch(`/api/v1/studio/files/${fileId}/resize-exports`, {
     credentials: "include",
   });
   if (!resp.ok) throw new Error(`listResizeExports failed: ${resp.status}`);
@@ -374,7 +374,7 @@ export async function createResizeExports(
     cropWindows?: Partial<Record<PlatformId, CropWindow>>;
   },
 ): Promise<KvResizeExport[]> {
-  const resp = await fetch(`/api/studio/files/${fileId}/resize-exports`, {
+  const resp = await fetch(`/api/v1/studio/files/${fileId}/resize-exports`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -396,7 +396,7 @@ export async function regenerateResizeExport(
   cropWindow?: CropWindow,
 ): Promise<KvResizeExport> {
   const resp = await fetch(
-    `/api/studio/files/${fileId}/resize-exports/${exportId}/regenerate`,
+    `/api/v1/studio/files/${fileId}/resize-exports/${exportId}/regenerate`,
     {
       method: "POST",
       credentials: "include",
@@ -414,7 +414,7 @@ export async function deleteResizeExport(
   exportId: string,
 ): Promise<void> {
   const resp = await fetch(
-    `/api/studio/files/${fileId}/resize-exports/${exportId}`,
+    `/api/v1/studio/files/${fileId}/resize-exports/${exportId}`,
     { method: "DELETE", credentials: "include" },
   );
   if (!resp.ok) throw new Error(`delete failed: ${resp.status}`);
@@ -521,7 +521,7 @@ export function connectResizeStream(
   onUpdate: (row: KvResizeExport) => void,
 ): ResizeStreamHandle {
   const es = new EventSource(
-    `/api/studio/files/${fileId}/resize-exports/stream`,
+    `/api/v1/studio/files/${fileId}/resize-exports/stream`,
     { withCredentials: true },
   );
 
@@ -1617,7 +1617,7 @@ git commit -m "feat(web): wire resize panel and canvas into KvGeneratorLayout"
 
 - [ ] **Step 3: Verify SSE behavior**
 
-In DevTools Network tab, confirm an `EventSource` connection to `/api/studio/files/{file}/resize-exports/stream` opens when generation is in flight, and closes once all rows reach `done`/`failed`.
+In DevTools Network tab, confirm an `EventSource` connection to `/api/v1/studio/files/{file}/resize-exports/stream` opens when generation is in flight, and closes once all rows reach `done`/`failed`.
 
 ---
 

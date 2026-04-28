@@ -449,7 +449,7 @@ def post_completed(
     error_message: str | None = None,
 ) -> None:
     """Post final status back to the API."""
-    url = f"{settings.API_SERVICE_URL.rstrip('/')}/api/internal/kv-resize-exports/completed"
+    url = f"{settings.API_SERVICE_URL.rstrip('/')}/api/v1/internal/kv-resize-exports/completed"
     payload = {"export_id": export_id, "status": status}
     if image_url is not None:
         payload["image_url"] = image_url
@@ -859,7 +859,7 @@ Expect a callback POST attempt to the API. (If Laravel isn't running locally, th
 - Outpaint fallback path is wired (try/except on Replicate errors → OpenAI).
 - The service skips outpaint when the cropped source covers the target.
 - The router is registered in `main.py`.
-- The callback URL is correct (`/api/internal/kv-resize-exports/completed`).
+- The callback URL is correct (`/api/v1/internal/kv-resize-exports/completed`).
 
 ---
 
