@@ -123,7 +123,7 @@ services: [api, web, ai-service, data-service]
 3. **Requirements** — Functional requirements, numbered (FR-1, FR-2, ...)
 4. **Non-Functional Requirements** — Performance, security, scalability
 5. **Service Breakdown** — What each service needs to do (this drives PRD splitting)
-6. **UI/UX** — Key screens, interactions, wireframe references
+6. **UI/UX** — Key screens, interactions, mock-data notes (when `implementation_strategy === "wireframe_then_implementation"`)
 7. **Data Model** — New tables, columns, relationships
 8. **API Endpoints** — New or modified endpoints
 9. **Acceptance Criteria** — How to verify the feature works
@@ -134,7 +134,8 @@ services: [api, web, ai-service, data-service]
 After writing the PRD:
 - Update `.workflow-state.json`: set `prd_path`
 - Return a summary to the caller: `prd_path`, `services`, `status: "created"`
-- Inform user: "PRD created at `docs/prd/<slug>.md`. Ready to move to wireframe phase. Say 'workflow next' to proceed."
+- Flip `features[active_feature].phase_status` to `"completed"` (do NOT auto-advance).
+- Inform user: "PRD created at `docs/prd/<slug>.md`. Say 'workflow next' to advance to PRD splitting (which also creates the feature branch)."
 
 ## ALWAYS ASK BEFORE EXECUTING
 

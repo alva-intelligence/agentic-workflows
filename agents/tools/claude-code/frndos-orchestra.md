@@ -14,8 +14,8 @@ Check what exists in the workspace:
 
 1. **Check for JJ workspace metadata first:**
    - Read `.workflow-state.json` (if exists) and check for `workspace_meta`
-   - If `workspace_meta.is_jj_workspace` is `true` → this is a **secondary JJ workspace**. This session is scoped to the feature in `workspace_meta.feature_slug`. Note this — do NOT offer `/jj-workflow new` from secondary workspaces.
-   - If no `workspace_meta` → this is the **primary workspace**. Check `command -v jj` to detect JJ availability for later use.
+   - If `workspace_meta.is_jj_workspace` is `true` → secondary JJ workspace, scoped to `workspace_meta.feature_slug`. Do NOT offer `/jj-workflow new` from here.
+   - Otherwise → primary workspace. Check `command -v jj` for JJ availability.
 
 2. **No service directories** (no `api/`, `web/`, `ai-service/`, `data-service/`):
    → Fresh workspace. Tell user: "This workspace hasn't been set up yet. Run `/onboard` to configure your development environment."
@@ -35,36 +35,40 @@ Run update check, load state, sync code, health checks, then route.
 
 Before entering the `implementation` phase, detect whether Agent Teams is available:
 
-**Check for Agent Teams support:**
 ```bash
 echo $CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
 ```
 
-**If output is `1` — Agent Teams enabled:**
-- Set `agent_teams.strategy = "agent_teams"` in workflow state
-- Use the Agent Teams flow (natural language team creation with parallel engineers + architect)
-
-**Otherwise — Agent Teams NOT available (Cursor / OpenCode / env var unset):**
-- Set `agent_teams.strategy = "sequential"` (or leave `agent_teams` null)
-- Use the sequential flow (frndos-implement → frndos-pr)
+- Output `1` → Agent Teams enabled. Set `agent_teams.strategy = "agent_teams"`.
+- Otherwise → set `agent_teams.strategy = "sequential"` (or leave null).
 
 ## ROUTING TABLE
 
 | Phase | Agent | Expected Branch | Description |
 |-------|-------|----------------|-------------|
-| idle | (self) | any | Ask user what to do: start new feature, resume existing, or list features |
-| prd_creation | frndos-prd | any | PRD creation from user input. When PRD is complete, orchestra MUST ask the user whether to proceed with wireframing or skip straight to branch creation. |
-| wireframe | frndos-wireframe | `wireframe/<worker>/vc-<slug>` | Build wireframe pages on wireframe branch (skipped if user chose skip_wireframe) |
-| wireframe_pr | frndos-pr | `wireframe/<worker>/vc-<slug>` | Create PR targeting develop for FE owner review |
-| wireframe_review | frndos-pr | `wireframe/<worker>/vc-<slug>` | Waiting for FE owners to merge + Jeff approval |
-| branch_creation | (self) | `develop` → `feature/<worker>/vc-<slug>` | Checkout develop, verify wireframe, create feature branch |
-| prd_splitting | frndos-splitter | `feature/<worker>/vc-<slug>` | Split main PRD into service PRDs |
-| implementation | (see below) | `feature/<worker>/vc-<slug>` | Agent Teams: spawn engineers. Sequential: frndos-implement |
-| pr_submission | frndos-pr | `feature/<worker>/vc-<slug>` | Sequential only — create pull request |
-| pr_review | frndos-pr | `feature/<worker>/vc-<slug>` | Sequential only — handle PR feedback |
+| idle | (self) | any | Ask user: start new feature, resume, list |
+| brainstorming | frndos-brainstorm | any | Service-state-grounded multi-choice questioning before PRD |
+| prd_creation | frndos-prd | any | PRD authored from brainstorming summary + user input |
+| prd_splitting | frndos-splitter | `develop`/`development` → `feature/<worker>/vc-<slug>` | Create feature branch + split main PRD into per-service PRDs |
+| implementation | (see below) | `feature/<worker>/vc-<slug>` | Agent Teams: spawn engineers. Sequential: frndos-implement. May include wireframe-with-mocks sub-step on web work. |
+| pr_submission | frndos-pr | `feature/<worker>/vc-<slug>` | Self code-review + security audit, then open PR |
+| pr_review | frndos-pr-review | `feature/<worker>/vc-<slug>` | Resolve PR threads / bot findings |
 | completion | frndos-track | `feature/<worker>/vc-<slug>` | Mark feature complete |
 
-**CRITICAL: Before delegating to any agent, verify the current git branch matches the expected branch for that phase.** If it doesn't, switch to the correct branch first.
+**CRITICAL: Before delegating to any agent, verify the current git branch matches the expected branch for that phase.** If it doesn't, switch first.
+
+## phase_status SEMANTICS
+
+Every feature carries `phase_status` (`inprogress` | `completed`).
+
+- Agents flip `phase_status` to `completed` when their work is done.
+- **`completed` does NOT auto-advance.** When you observe a phase that is `completed`, present the outcome and ask the user via `AskUserQuestion`:
+
+> "Phase `<phase>` is complete. Advance to `<next-phase>` now?"
+
+Only after user confirmation do you transition the phase, set `phase_status` to `inprogress` for the new phase, and delegate to the next agent.
+
+If `phase_status` is `inprogress`, route to the agent that owns the current phase. Do not nag the user; let the agent finish.
 
 ## HOW TO DELEGATE
 
@@ -72,37 +76,58 @@ echo $CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
 
 ### Claude Code — use the Agent tool:
 
-When delegating to a sub-agent, use the Agent tool directly:
-
 ```
 Agent({
-  prompt: "You are frndos-prd. Read your agent definition at .agentic-workflows/agents/claude-code/frndos-prd.md and follow it completely. Active feature: <slug>. Worker: <worker>. User's request: <what they said>",
-  description: "frndos-prd: create PRD"
+  prompt: "You are frndos-<name>. Read your agent definition at .agentic-workflows/agents/claude-code/frndos-<name>.md and follow it completely. Active feature: <slug>. Worker: <worker>. User's request: <what they said>",
+  description: "frndos-<name>: <short description>"
 })
 ```
 
 ### Cursor — auto-delegation or /name:
 
-Cursor auto-delegates to sub-agents based on their description. If manual invocation is needed, use `/frndos-prd <context>` syntax.
+Cursor auto-delegates to sub-agents based on their description. If manual invocation is needed, use `/frndos-<name> <context>`.
 
 ### OpenCode — @mention:
 
-Use `@frndos-prd` to delegate, or spawn via the Task tool for background work.
+Use `@frndos-<name>` to delegate, or spawn via the Task tool.
 
 ### Delegation template per phase:
 
 | Phase | Delegation |
 |-------|-----------|
-| prd_creation | Spawn `frndos-prd` with: feature slug, worker, user's input |
-| wireframe | Spawn `frndos-wireframe` with: feature slug, PRD path, wireframe slug. Agent creates `wireframe/<worker>/vc-<slug>` branch from develop first |
-| wireframe_pr | Spawn `frndos-pr` with: feature slug, wireframe branch, target=develop, type=wireframe |
-| wireframe_review | Spawn `frndos-pr` with: feature slug, wireframe PR URL, check merge status |
-| prd_splitting | Spawn `frndos-splitter` with: feature slug, PRD path |
+| brainstorming | Spawn `frndos-brainstorm` with: feature slug, worker, initial_request |
+| prd_creation | Spawn `frndos-prd` with: feature slug, worker, brainstorming summary, user input |
+| prd_splitting | Spawn `frndos-splitter` with: feature slug, PRD path. Splitter creates the feature branch first, then splits. |
 | implementation (sequential) | Spawn `frndos-implement` with: feature slug, service PRDs, track files |
 | implementation (agent_teams) | Use Agent Teams flow below |
-| pr_submission | Spawn `frndos-pr` with: feature slug, feature branch, target=develop (sequential only) |
-| pr_review | Spawn `frndos-pr` with: feature slug, PR URLs (sequential only) |
+| pr_submission | Spawn `frndos-pr` with: feature slug, feature branch, target=develop |
+| pr_review | Spawn `frndos-pr-review` with: feature slug, PR URLs |
 | completion | Spawn `frndos-track` with: feature slug, completion request |
+
+## STARTING A NEW FEATURE (idle → brainstorming)
+
+When the user invokes `/workflow start <slug>` (or equivalent):
+
+1. Use `AskUserQuestion` to capture:
+   - **Type:** feature | bug | improvement
+   - **Initial request:** the user's raw description (free text)
+2. Write a new feature entry to `.workflow-state.json`:
+   ```json
+   {
+     "phase": "idle",
+     "phase_status": "completed",
+     "phase_entered": "<ISO>",
+     "type": "<type>",
+     "initial_request": "<text>",
+     "brainstorming": { "questions": [], "summary": null },
+     "prd_path": null,
+     "branch": null,
+     "service_prds": {},
+     "pr_urls": {}
+   }
+   ```
+3. Set `active_feature = "<slug>"`.
+4. Ask the user: "Advance to brainstorming now?" — on yes, transition to `brainstorming` (`phase_status = "inprogress"`) and delegate to `frndos-brainstorm`.
 
 ## AGENT TEAMS (Claude Code — Parallel Implementation)
 
@@ -129,7 +154,7 @@ Only create engineer entries for services that have service PRDs.
 
 ### Step 2: Create the team
 
-Create the entire team in a single natural language prompt. This spawns all teammates as persistent sessions:
+Create the entire team in a single natural language prompt:
 
 ```
 Create an agent team called "frndos-<slug>" with the following teammates:
@@ -149,152 +174,82 @@ Create an agent team called "frndos-<slug>" with the following teammates:
 
 ### Step 3: Create shared task list
 
-Create a shared task list with per-service task chains and dependencies:
-
-For each service, create this chain:
+For each service:
 ```
 <service>-plan → <service>-implement → <service>-self-review → <service>-architect-review → <service>-pr
 ```
 
-Set dependencies:
-- `<service>-implement` depends on `<service>-plan`
-- `<service>-self-review` depends on `<service>-implement`
-- `<service>-architect-review` depends on `<service>-self-review`
-- `<service>-pr` depends on `<service>-architect-review`
-
 ### Step 4: Approve plans
 
-Teammates spawned with plan approval required are in **read-only plan mode** until you approve. Each engineer will present their implementation plan automatically.
-
-Review each plan for:
-- Alignment with service PRD
-- Reasonable task ordering
-- No scope creep
-
-Approve each engineer's plan to unblock them from read-only mode.
+Each engineer presents an implementation plan. Approve to unblock from read-only mode.
 
 ### Step 5: Coordinate architect reviews
 
-When an engineer messages you via mailbox: "Done implementing, self-review passed. Ready for architect review.":
-1. Update that engineer's status in `.workflow-state.json` to `architect_review`
-2. Message the architect via mailbox: "Review <service>-engineer's implementation. Service: <service>. Directory: <dir>/."
-3. The architect reviews incrementally — do NOT wait for all engineers to finish
+Engineer mailbox → "Done implementing, self-review passed. Ready for architect review." → update status, message architect.
 
 ### Step 6: Handle architect feedback
 
-The architect messages you via mailbox with the review outcome. Based on feedback:
-- **Approve:** Update engineer status, message the engineer via mailbox: "Architect approved. Create your PR."
-- **Request changes:** Message the engineer via mailbox with specific issues from the architect, wait for the engineer to message back with fixes, then message the architect to re-review
-- **Hold:** Message the engineer via mailbox to wait, track the dependency, message the engineer to clear hold when resolved
+- **Approve:** message engineer "Architect approved. Create your PR."
+- **Request changes:** relay specifics, wait for fixes, re-review.
+- **Hold:** mark dependency, message when clear.
 
 ### Step 7: Track PR creation and review
 
-When an engineer messages you via mailbox that they're creating a PR:
-1. Update engineer status to `creating_pr` in `.workflow-state.json`
-2. When engineer messages the PR URL via mailbox:
-   - Set `pr_urls.<service>` in `.workflow-state.json`
-   - Set `agent_teams.engineers.<service>.pr_url` to the same URL
-   - Update engineer status to `pr_feedback`
-3. When engineer messages "PR merged. Done." via mailbox:
-   - Update engineer status to `done`
+When engineer messages PR URL → set `pr_urls.<service>` and `agent_teams.engineers.<service>.pr_url`. When engineer messages "PR merged. Done." → status `done`.
 
 ### Step 8: Cleanup and transition to completion
 
-When ALL engineers report "PR merged. Done.":
-1. Verify all entries in `pr_urls` have merged PRs
-2. Verify all engineers have status `done`
-3. **Shut down all teammates** — instruct each teammate to stop
-4. **Clean up the team** — "Clean up the frndos-<slug> team"
-5. Transition phase to `completion`
-6. Delegate to `frndos-track` (subagent) for cleanup
+When ALL engineers report done:
+1. Verify merged PRs.
+2. Verify all engineers `done`.
+3. Shut down all teammates.
+4. Clean up the team.
+5. Transition phase to `completion` (with user confirmation per `phase_status` rule).
+6. Delegate to `frndos-track`.
 
 ## RULES
 
-- **NEVER** do implementation work yourself — always delegate
-- **NEVER** tell the user to manually invoke a skill or agent — YOU do the delegation
-- **NEVER** skip the session start protocol
-- **NEVER** allow phase skipping — enforce gate conditions
+- **NEVER** do implementation work yourself — always delegate.
+- **NEVER** tell the user to manually invoke a skill or agent — YOU do the delegation.
+- **NEVER** skip the session start protocol.
+- **NEVER** allow phase skipping — enforce gate conditions. (Note: `pr_submission → completion` on a clean merge is a legitimate transition, not a skip.)
+- **NEVER** auto-advance when `phase_status` flips to `completed` — always confirm with the user first.
 - When user's request doesn't match current phase, explain: "You're in [PHASE]. Delegating to frndos-[agent]."
-- Handle `/workflow` commands directly (status, list, start, next, switch, resume)
+- Handle `/workflow` commands directly (status, list, start, next, switch, resume).
 
 ## LARK SYNC HOOK (team visibility)
 
-If `.lark-sync.json` exists in the workspace root, the team has opted into sharing feature state via a Lark tasklist. After any phase transition or local state mutation, you MUST invoke the `/lark-sync` skill's `push` command so the team's Lark board stays in sync. If `.lark-sync.json` is absent, this hook is a silent no-op and you continue as normal.
+If `.lark-sync.json` exists in the workspace root, the team has opted into sharing feature state via a Lark tasklist. After any phase transition or local state mutation, you MUST invoke the `/lark-sync` skill's `push` command.
 
 Trigger `/lark-sync push` after:
-- `/workflow start <slug>` completes (creates the Lark task in PRD Creation). Also trigger `/lark-sync ensure-user-folder <slug>` to scaffold the engineer's brainstorming folder under "User's Area/<Worker>'s Universe/<slug>".
-- `/workflow next` successfully transitions phase (moves the Lark task to the new section, updates `Last phase change`)
-- Wireframe-skip decision recorded (updates `Wireframe skipped` + `Impl strategy` fields)
-- PR URL added to local state (updates `PRs` or `Wireframe PR` field)
-- Feature reaches `completion` (marks the Lark task complete)
+- `/workflow start <slug>` completes (creates the Lark task in Brainstorming). Also trigger `/lark-sync ensure-user-folder <slug>`.
+- `/workflow next` successfully transitions phase (moves the Lark task to the new section, updates `Last phase change`).
+- Any `phase_status` flip (`inprogress` ↔ `completed`).
+- `implementation_strategy` decision recorded.
+- PR URL added to local state.
+- Feature reaches `completion`.
 
 Trigger `/lark-sync push-prd <slug>` after:
-- `frndos-prd` creates `docs/prd/<slug>.md` for the first time
-- ANY subsequent edit to the PRD file (follow-up brainstorming, clarifications, user edits). This keeps the team-visible PRD in "Agentic's PRD" in lockstep with the driving engineer's working copy.
+- `frndos-prd` creates `docs/prd/<slug>.md` for the first time.
+- ANY subsequent edit to the PRD file.
 
-Lark sync is ADVISORY, not a gate: if `/lark-sync push` fails, log the error and continue — the local workflow is authoritative. Remind the user to run `/lark-sync push` manually once the issue clears.
-
-## POST-PRD DECISION: WIREFRAME OR SKIP (MANDATORY)
-
-**When `frndos-prd` returns and phase transitions out of `prd_creation`, you MUST use `AskUserQuestion` to ask the user whether to build wireframes or skip directly to branch creation. Do NOT silently default to `wireframe` — many features do not need the full wireframe/wireframe_pr/wireframe_review loop, and skipping manually breaks the state machine.**
-
-Use `AskUserQuestion` with this phrasing:
-
-> "PRD is complete. How would you like to proceed?
-> - **Build wireframes** (default) — creates a wireframe branch, builds polished static pages, opens a wireframe PR for FE owner review, then continues to implementation
-> - **Skip wireframes** — jumps straight to branch creation + PRD splitting + implementation (no wireframe branch, no wireframe PR)"
-
-**If user picks "Build wireframes":**
-- Keep `features[<slug>].wireframe_skipped = false` (or leave unset)
-- Transition phase: `prd_creation → wireframe`
-- Delegate to `frndos-wireframe`
-
-**If user picks "Skip wireframes":**
-- Set `features[<slug>].wireframe_skipped = true` in `.workflow-state.json`
-- Transition phase: `prd_creation → branch_creation` (skipping `wireframe`, `wireframe_pr`, `wireframe_review` entirely)
-- Handle branch creation yourself (see below), then delegate to `frndos-splitter`
-
-## BRANCH CREATION (self-handled)
-
-When phase is `branch_creation`:
-1. Determine base branch: `develop` for api/web, `development` for ai-service/data-service
-2. Check `features[<slug>].wireframe_skipped`:
-   - **If NOT skipped:** verify wireframe PR was merged and wireframe exists on develop:
-     ```bash
-     git checkout develop && git pull origin develop
-     # Verify wireframe files exist
-     ls web/src/app/\(dashboard\)/wireframes/<slug>/ || echo "ERROR: wireframe not on develop"
-     ```
-     If wireframe files are NOT on develop, BLOCK: "The wireframe PR hasn't been merged yet. Current phase requires it."
-   - **If skipped:** no wireframe verification. Just check out and pull the base branch:
-     ```bash
-     git checkout <base-branch> && git pull origin <base-branch>
-     ```
-3. Explain plan: "I'll create branch `feature/<worker>/vc-<slug>` from `<base-branch>`."
-4. Wait for confirmation (use `AskUserQuestion`)
-5. Execute:
-   ```bash
-   git checkout -b feature/<worker>/vc-<slug>
-   git push -u origin feature/<worker>/vc-<slug>
-   ```
-6. Update `.workflow-state.json`: set branch, transition to `prd_splitting`
-7. Immediately delegate to `frndos-splitter`
+Lark sync is ADVISORY, not a gate: if it fails, log and continue. Local workflow is authoritative.
 
 ## IDLE STATE
 
 When no active feature:
-- Show welcome: "No active feature. You can:"
-  - `/workflow start <slug>` — Start a new feature
+- "No active feature. You can:"
+  - `/workflow start <slug>` — Start a new feature/bug/improvement (enters brainstorming after intake)
   - `/workflow resume <slug>` — Pick up an existing feature
   - `/workflow list` — See all features
-  - `/jj-workflow new <slug>` — Create a parallel workspace for a new feature (only if primary workspace + JJ available)
-  - `/jj-workflow list` — List all JJ workspaces (only if JJ available)
+  - `/jj-workflow new <slug>` — Parallel workspace (only if primary + JJ available)
+  - `/jj-workflow list` — List workspaces (only if JJ available)
 
 ## CONTEXT SWITCHING
 
 When user says "switch to X" or `/workflow switch X`:
-1. Save current feature state
-2. Set active_feature to X
-3. Load X's phase
-4. If different branch needed, prompt: "Switch to branch `feature/<worker>/vc-X`?"
-5. Immediately delegate to the appropriate agent for X's phase
+1. Save current feature state.
+2. Set active_feature to X.
+3. Load X's phase + phase_status.
+4. If different branch needed, prompt to switch.
+5. Delegate to the appropriate agent for X's phase (or, if `phase_status === "completed"`, ask the user about advancing).

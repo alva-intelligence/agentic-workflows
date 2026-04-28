@@ -19,12 +19,12 @@ Welcome to frndOS Agentic Workflows!
 
 frndOS is a multi-service platform built by Alva Intelligence. This system sets up
 your development workspace and guides you through a structured feature development
-workflow — from PRD creation to wireframing, implementation, and PR submission.
+workflow — from brainstorming to PRD creation, implementation, and PR submission.
 
 What gets installed:
-  - 10 phase-scoped AI agents (orchestra, prd, wireframe, splitter, implement, engineer, architect, pr, track)
-  - 8 skills (/onboard, /workflow, /workflow-update, /prd, /prd-split, /wireframe, /jj-workflow, /setup-workspace)
-  - An 11-phase workflow state machine with gate enforcement
+  - 10 phase-scoped AI agents (orchestra, brainstorm, prd, splitter, implement, engineer, architect, pr, pr-review, track)
+  - 9 skills (/onboard, /workflow, /workflow-update, /brainstorm, /prd, /prd-split, /jj-workflow, /lark-sync, /setup-workspace)
+  - An 8-phase workflow state machine with gate enforcement (with `phase_status` per phase — `inprogress` / `completed`, no auto-advance)
   - Agent Teams support — parallel per-service engineers + architect (Claude Code)
   - JJ workspace support — parallel features in isolated directories (Claude Code, Amp)
   - Auto-updating instruction system (stays in sync with team changes)
@@ -86,47 +86,34 @@ A complete feature lifecycle — from idea to merged PRs. The agent handles ever
 
 ```
 You:    /workflow start brand-health-dashboard
-Agent:  Feature "brand-health-dashboard" started. Phase: prd_creation.
-        [delegates to frndos-prd]
+Agent:  [asks for type (feature) and initial request]
+        Feature "brand-health-dashboard" started. Phase: brainstorming.
+        [delegates to frndos-brainstorm]
 
-You:    Here's the Lark doc: https://lark.com/doc/...
-        The dashboard should show brand sentiment over time,
-        top mentions, and alert thresholds.
-Agent:  [reads Lark doc via MCP, asks clarifying questions]
-        [drafts PRD with objectives, user stories, acceptance criteria]
-        [asks you to review before saving]
-You:    Looks good, but add a comparison view for multiple brands.
-Agent:  [updates PRD, saves to docs/prd/brand-health-dashboard.md]
-        PRD created. → Phase: wireframe.
+Agent:  [loads service-state snapshots via code-graph MCP]
+        [asks 4 multi-choice questions, each with one (Recommended) option]
+        [records summary]
+        Brainstorming complete. → phase_status: completed.
 
 You:    /workflow next
-Agent:  [delegates to frndos-wireframe]
-        [reads PRD, scans existing frndos components, studies previous wireframes]
-        [presents plan: main dashboard page + detail sub-page + comparison view]
-You:    Go ahead.
-Agent:  [builds production-quality static frontend — real components, real interactions]
-        [creates wireframes/brand-health-dashboard/dashboard/ with page.tsx,
-         components/, [brandId]/page.tsx, compare/page.tsx, metadata.json]
-        [commits on wireframe/claude/vc-brand-health-dashboard branch]
-        Done. → Phase: wireframe_pr.
+Agent:  → Phase: prd_creation. [delegates to frndos-prd]
+        [drafts PRD using brainstorming summary + your context, includes a
+         Brainstorming Outcome section]
+        PRD created. → phase_status: completed.
 
-Agent:  [delegates to frndos-pr]
-        [creates PR targeting develop, fills template, tags FE owners]
-        PR: github.com/alva-intelligence/frnd-web/pull/87
-        → Phase: wireframe_review. Waiting for FE owners + Jeff approval.
+You:    /workflow next
+Agent:  → Phase: prd_splitting. [delegates to frndos-splitter]
+        [creates feature/claude/vc-brand-health-dashboard branch from develop]
+        [splits main PRD into api + web service PRDs, generates track files]
+        Service PRDs created. → phase_status: completed.
 
-You:    Jeff approved. FE owners merged.
-Agent:  [verifies PR merged on GitHub]
-        → Phase: branch_creation.
-        [checkouts develop, verifies wireframe on develop, creates feature branch]
-        Branch: feature/claude/vc-brand-health-dashboard
-        → Phase: prd_splitting.
-
-Agent:  [delegates to frndos-splitter]
-        [reads main PRD, determines affected services: api + web]
-        [generates api/docs/prd/brand-health-dashboard.md — endpoints, migrations, models]
-        [generates web/docs/prd/brand-health-dashboard.md — pages, state, API integration]
-        Service PRDs created. → Phase: implementation.
+You:    /workflow next
+Agent:  → Phase: implementation.
+        [asks: "Wireframe-first with mock data, or implementation-only?"]
+You:    Wireframe-first.
+Agent:  [builds web UI on the feature branch with mocks/stubs in
+         web/src/mocks/brand-health-dashboard/]
+        [then implements API, then swaps stubs for real calls]
 ```
 
 **From here, the path splits based on your session mode:**
@@ -138,20 +125,28 @@ Agent:  [delegates to frndos-implement]
         [reads both service PRDs, presents implementation plan]
 You:    Approved.
 Agent:  [implements API: migrations, models, controllers, tests]
-        [implements Web: wires wireframe to real API, state management, error handling]
+        [implements Web: wires UI to real API, state management, error handling]
         [self-reviews, commits per task]
         Implementation complete. → Phase: pr_submission.
 
 Agent:  [delegates to frndos-pr]
-        [creates PR per service targeting develop/development]
+        [runs self code-review on its diff — lint, typecheck, conventions]
+        [runs the security-reviewer skill audit on its diff]
+        [opens PR with both summaries appended to the body]
         API PR: github.com/.../pull/201
         Web PR: github.com/.../pull/88
-        → Phase: pr_review.
 
 You:    API reviewer requested changes on the pagination endpoint.
-Agent:  [reads feedback, fixes, pushes, comments on PR]
-        Changes addressed. Waiting for re-review.
-        [PR merged] → Phase: completion.
+Agent:  → Phase: pr_review. [delegates to frndos-pr-review]
+        [reads threads + bot findings, classifies must-fix / nit / question]
+        [applies fixes, pushes, replies on each thread, marks resolved]
+        Threads resolved. → phase_status: completed.
+
+You:    /workflow next
+Agent:  → Phase: completion.
+
+Note: if the PR had merged with zero feedback, the workflow would have
+advanced from pr_submission directly to completion (skipping pr_review).
 
 ━━━ Team Session (parallel, experimental) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -197,7 +192,12 @@ and shipped merged PRs. You approved plans and steered — the agents did the re
 
 ### Workflow State Machine
 
-11 phases with gate enforcement — each phase has a dedicated agent and model assignment.
+8 phases with gate enforcement — each phase has a dedicated agent. `pr_review` is conditional (skipped on a clean merge). Every phase carries a `phase_status` (`inprogress` / `completed`); `completed` does NOT auto-advance.
+
+```
+idle → brainstorming → prd_creation → prd_splitting →
+  implementation → pr_submission → [pr_review?] → completion → idle
+```
 
 ![Workflow State Machine](./docs/workflow-state-machine.svg)
 
@@ -253,13 +253,19 @@ Terminal 1 (primary):                    Terminal 2 (workspace):
 
 **Requirements:** JJ installed (`brew install jj` or via `nix develop`). Best with terminal-based harnesses (Claude Code, Amp) — Cursor is IDE-integrated so benefits less.
 
+**Korlap coexistence:** if you chose Claude Code + GUI (korlap) during `/onboard`, `/jj-workflow` becomes inert in that workspace — korlap writes `.korlap/marker.json` on install, and the skill detects it and exits with a redirect message. Parallel features in korlap-managed workspaces happen via kanban cards (each card gets its own `git worktree`) rather than JJ workspaces. If you also installed Amp alongside Claude Code + korlap, Amp continues to use `/jj-workflow` normally from its own terminal — the two models coexist because Amp doesn't share korlap's worktree surface.
+
+### korlap (Claude Code GUI) — optional surface
+
+[korlap](https://github.com/arhen/korlap) is a native macOS app that provides a kanban + chat + diff + terminal shell over the agentic workflow when Claude Code is the chosen tool. During `/onboard`, after picking Claude Code, the agent asks "GUI (korlap) or terminal?" and if GUI is chosen, guides the user through installing korlap and launching it against the workspace. korlap never reimplements skills — it shells out to the same `/lark-sync push-prd`, `/workflow start`, `/workflow next` etc. the terminal agent calls. `.workflow-state.json` is the shared source of truth, so terminal and GUI stay in lockstep. **Scope:** Claude Code only, macOS only. Cursor/OpenCode/Amp are unaffected.
+
 ### Creating a New Workspace for a Different Project
 
 Use `/setup-workspace` to create a brand new agentic workspace for a completely different project using this framework as the base. The skill walks you through an interactive wizard:
 
 1. Project identity (name, description, structure)
 2. Services (repos, stack, ports, health checks)
-3. Workflow phases (keep/remove/add from the default 11)
+3. Workflow phases (keep/remove/add from the default 8)
 4. Agents (which phase agents, models, editor support)
 5. Skills and MCP servers
 6. Dev environment (flake.nix packages, branch conventions)
@@ -276,7 +282,7 @@ Skills are slash commands you invoke directly. They're the entry points for each
 |-------|-------------|
 | `/onboard` | Full workspace setup — GitHub access, service cloning, dependencies, .env files, database, editor config, MCP servers. Run once after bootstrap. |
 | `/workflow start <slug>` | Start a new feature. Creates workflow state, enters PRD phase, delegates to the right agent. |
-| `/workflow status` | Show current feature phase, branch, PRDs, wireframes, PRs — everything at a glance. |
+| `/workflow status` | Show current feature phase, phase_status, branch, PRDs, PRs — everything at a glance. |
 | `/workflow next` | Advance to the next phase (checks gate conditions first). |
 | `/workflow switch <slug>` | Context-switch between active features. Each keeps its own phase. |
 | `/workflow resume <slug>` | Pick up someone else's feature. Reconstructs phase from committed artifacts. |
@@ -287,9 +293,9 @@ Skills are slash commands you invoke directly. They're the entry points for each
 | `/workflow-update` | Update agentic-workflows instructions. Runs update script, summarizes changes, applies non-trivial updates (settings, schema migrations). |
 | `/workflow-update check` | Dry-run — check for available updates without applying. |
 | `/workflow-update verify` | Health check — verify symlinks, settings, AGENTS.md, version are correct. |
-| `/prd` | Create a formal PRD from a Lark doc URL or your description. |
-| `/prd-split` | Split a main PRD into per-service PRDs (API, Web, AI, Data). |
-| `/wireframe` | Build production-quality static frontend pages for a feature. |
+| `/brainstorm` | Run the brainstorming phase — multi-choice questions grounded in latest service state. |
+| `/prd` | Create a formal PRD from the brainstorming summary + your description. |
+| `/prd-split` | Create the feature branch + split a main PRD into per-service PRDs (API, Web, AI, Data). |
 | `/jj-workflow init` | Initialize JJ colocated mode in service repos. |
 | `/jj-workflow new <slug>` | Create a parallel workspace — isolated directory for a separate terminal-based agent session (Claude Code or Amp) to work on another feature simultaneously. |
 | `/jj-workflow list` | List all JJ workspaces with their feature, phase, and worker. |
@@ -303,14 +309,15 @@ Agents are phase-scoped specialists. You never invoke them directly — the orch
 
 | Agent | Model | Phase | What it does |
 |-------|-------|-------|-------------|
-| `frndos-orchestra` | Opus 4.5 | All | **The router.** Reads workflow state, delegates to the right agent, never does work itself. Handles branch creation and context switching. In Team Session mode, acts as the lead — creates the team, approves plans, coordinates reviews. |
-| `frndos-prd` | Opus 4.6 | PRD Creation | Reads Lark docs (via MCP) or user input. Asks clarifying questions, challenges assumptions. Outputs a structured PRD with objectives, user stories, acceptance criteria, and technical scope. |
-| `frndos-wireframe` | Opus 4.6 | Wireframe | Builds production-quality static frontend — not sketches. Uses frndos components, creates sub-pages for navigable views, includes all interactive states. Output is the actual UI that engineers wire up later. |
-| `frndos-splitter` | Opus 4.6 | PRD Splitting | Reads the main PRD and generates per-service PRDs. Each service PRD has specific endpoints, migrations, models, components, or data pipelines scoped to that service. |
-| `frndos-implement` | Opus 4.6 | Implementation | **Sequential mode only.** Implements across all services following service PRDs. Reads track files, presents plan, waits for approval, implements task-by-task, runs tests, commits per task. |
+| `frndos-orchestra` | Opus 4.5 | All | **The router.** Reads workflow state, delegates to the right agent, never does work itself. Captures intake on `idle → brainstorming` and never auto-advances when `phase_status` flips to `completed`. In Team Session mode, acts as the lead — creates the team, approves plans, coordinates reviews. |
+| `frndos-brainstorm` | Opus 4.6 | Brainstorming | Loads latest service state via code-graph MCP, asks 3–6 multi-choice questions (each with one `(Recommended)` option), records answers + summary that feeds the PRD. |
+| `frndos-prd` | Opus 4.6 | PRD Creation | Authors a structured PRD from the brainstorming summary + user input. Includes a `Brainstorming Outcome` section pulling answers verbatim. |
+| `frndos-splitter` | Opus 4.6 | PRD Splitting | Creates `feature/<worker>/vc-<slug>` from base, then splits the main PRD into per-service PRDs. (Replaces the old separate `branch_creation` phase.) |
+| `frndos-implement` | Opus 4.6 | Implementation | **Sequential mode only.** Implements across all services following service PRDs. On entry, offers a wireframe-first sub-step (web UI with mocks on the feature branch) when web work is in scope. |
 | `frndos-engineer` | Opus 4.6 | Implementation | **Team Session only.** One per service. Implements, self-reviews, creates PR for their assigned service. Communicates via mailbox. Cannot write code outside their service directory. |
-| `frndos-architect` | Opus 4.6 | Implementation | **Team Session only.** Reviews cross-service integration — API contracts, shared types, data flow, auth consistency. Does NOT review code quality (engineer's self-review handles that). Does NOT write code. |
-| `frndos-pr` | Sonnet 4.6 | PR phases | Creates PRs from templates, tags reviewers, handles feedback. Works for both wireframe PRs (targeting develop, FE owner review) and feature PRs (per-service, targeting develop/development). |
+| `frndos-architect` | Opus 4.6 | Implementation | **Team Session only.** Reviews cross-service integration — API contracts, shared types, data flow, auth consistency. Does NOT review code quality. Does NOT write code. |
+| `frndos-pr` | Sonnet 4.6 | PR Submission | Runs full self code-review on the diff (correctness, lint, conventions) plus a `security-reviewer` skill audit BEFORE opening the PR. Body includes both summaries. |
+| `frndos-pr-review` | Sonnet 4.6 | PR Review | Resolves PR threads / bot findings (CodeRabbit, CI, reviewer comments). Classifies must-fix / nit / question, applies fixes, pushes, marks threads resolved. |
 | `frndos-track` | Sonnet 4.6 | Completion | Updates track files with task completion, session logs, PR URLs. Marks features complete in workflow state. |
 
 ### How auto-update works
@@ -331,13 +338,14 @@ agentic-workflows/
     tools/
       claude-code/        # Agent definitions (.md) for Claude Code
         frndos-orchestra  #   Router + lead (delegates, never implements)
+        frndos-brainstorm #   Brainstorming (multi-choice questioning)
         frndos-prd        #   PRD creation
-        frndos-wireframe  #   Wireframe builder
-        frndos-splitter   #   Splits PRD into service PRDs
+        frndos-splitter   #   Branch creation + splits PRD into service PRDs
         frndos-implement  #   Sequential implementation (fallback)
         frndos-engineer   #   Per-service engineer (Agent Teams)
         frndos-architect  #   Integration reviewer (Agent Teams)
-        frndos-pr         #   PR creation and review
+        frndos-pr         #   PR submission + self review + security audit
+        frndos-pr-review  #   PR review thread resolver
         frndos-track      #   Track file management
       cursor/             # Agent definitions (.mdc) for Cursor
       opencode/           # Agent definitions (.md) for OpenCode
@@ -350,9 +358,9 @@ agentic-workflows/
     onboard/              # /onboard — full workspace setup
     workflow/             # /workflow — state machine management
     workflow-update/      # /workflow-update — update + apply non-trivial changes
+    brainstorm/           # /brainstorm — multi-choice questioning before PRD
     prd/                  # /prd — PRD creation
-    prd-split/            # /prd-split — split PRD into service PRDs
-    wireframe/            # /wireframe — wireframe builder
+    prd-split/            # /prd-split — branch creation + split PRD into service PRDs
     jj-workflow/          # /jj-workflow — JJ workspace management for parallel features
     setup-workspace/      # /setup-workspace — wizard to create new agentic workspaces
   templates/
@@ -360,12 +368,9 @@ agentic-workflows/
     pr/                   # PR body templates
     tracks/               # Track file templates
   workflow/
-    phases.json           # 11-phase state machine definitions
+    phases.json           # 8-phase state machine definitions
     gates.json            # Gate conditions per phase transition
     state-schema.json     # JSON schema for .workflow-state.json
-  wireframe-scaffold/
-    layout.tsx            # Scaffold for /wireframes route
-    page.tsx              # Scaffold for /wireframes index
   manifest.json           # File registry with SHA-256 hashes
   VERSION                 # Semver (patch auto-bumped by CI)
   flake.nix               # Nix flake for dev environment

@@ -49,7 +49,7 @@ If the Lark app in use doesn't yet list these scopes under "Permissions", the te
 **Shared across the team** (in Lark):
 
 1. **Tasklist** — "FrnDOS Agentic Workflow Management"
-   - Sections = phase Kanban lanes (PRD Creation → Wireframe → … → Completion)
+   - Sections = phase Kanban lanes (Brainstorming → PRD Creation → … → Completed)
    - Tasks = one per feature
    - Task custom fields = workflow metadata (slug, services, PRs, strategy, etc.)
 2. **Wiki tree** — under a team-owned Lark wiki space:
@@ -69,7 +69,7 @@ If the Lark app in use doesn't yet list these scopes under "Permissions", the te
 Stable GUIDs that never change once created by `/lark-sync bootstrap`. Committing them means no runtime discovery is needed — new teammates just pull the repo and already know the tasklist GUID, section GUIDs, field GUIDs, and wiki root tokens. If another org adopts this framework via `/setup-workspace`, they overwrite this file with their own tenant's GUIDs.
 
 - `tasklist.guid`, `tasklist.name`, `tasklist.url`
-- `sections.<name>.guid` — phase lane GUIDs (PRD Creation, Wireframe, etc.)
+- `sections.<name>.guid` — phase lane GUIDs (Brainstorming, PRD Creation, etc.)
 - `fields.<name>.{guid, type, options.<value> = option_guid}` — custom field + option GUIDs
 - `wiki.space_id`
 - `wiki.agentic_universe.node_token` — root folder
@@ -198,7 +198,7 @@ Push the active feature's local state to Lark. Called automatically by orchestra
 2. Build the task payload from the active feature's local state:
    - Title: `<slug> — <summary>` (summary from PRD front matter if available, else slug)
    - Section: map current phase_key → section GUID via `.lark-sync.json.sections`
-   - Custom fields: Feature slug, Services, Source PRD, Branch, PRs, Wireframe PR, Wireframe skipped, Impl strategy, Session mode, Parent feature, Last phase change=now, Wiki PRD (if the feature has a synced doc)
+   - Custom fields: Feature slug, Services, Source PRD, Branch, PRs, Phase status, Impl strategy, Session mode, Parent feature, Last phase change=now, Wiki PRD (if the feature has a synced doc)
    - Members: current worker as assignee (role=assignee)
    - **Description must start with a managed "Links" block** so humans see the important URLs without scrolling through custom fields. Format:
 
@@ -271,9 +271,27 @@ Fetch team-wide state from Lark and show it. Does NOT write to local `.workflow-
      ───────────────────────────── ────────────────── ──────────────── ────────────── ──────────
      brand-health-dashboard        Implementation     arhen, daffa     api, web       api:#201 web:#88
      user-analytics                PRD Creation       daffa            (none set)     —
-     ★ image-editor                Wireframe Review   arhen            web            web:#87
+     ★ image-editor                PR Review          arhen            web            web:#87
    ★ = your active feature
    ```
+
+## External callers (korlap GUI)
+
+When korlap is installed (`.korlap/marker.json` exists), its Docs pane includes a "Sync to Lark wiki" button per document. korlap does NOT reimplement any sync logic in Rust — it invokes the same commands documented above, with one fixed contract:
+
+- **Supported entry point:** `/lark-sync push-prd <slug>` — mirrors `docs/prd/<slug>.md` to the wiki node under `Agentic's PRD`. This is the single external command korlap is allowed to call for doc-to-wiki sync in v1.
+- **Which files qualify:** only files whose path matches `docs/prd/<slug>.md`. The button must be **disabled or hidden** for:
+  - `docs/tracks/<slug>.md` — engineering internal logs; no team wiki destination by design in v1
+  - `docs/service-prds/<slug>.md` — per-service PRDs stay local in v1
+  - Anything else under `docs/`
+- **Slug derivation:** extract `<slug>` from the filename (the stem of `docs/prd/<slug>.md`). Do not infer from frontmatter or content.
+- **Invocation:** korlap shells out to the same slash-command path the agent uses (e.g., via the session protocol) or, if invoking from outside an agent session, reads `workflow/lark-tenant.json` and `.lark-sync.json`, confirms `lark-cli auth status` is valid, and runs the steps in the `/lark-sync push-prd` block. Do NOT bypass these preflight checks — broken auth silently degrades the sync.
+- **Failure handling:** if `push-prd` fails (auth expired, network, hook-blocked), korlap surfaces the stderr as a toast and leaves the local markdown unchanged. Lark sync is advisory — the local file is authoritative.
+
+**Explicitly NOT in v1:**
+- `push-doc` as a generic "sync any path" command. Adding one would need a routing table mapping paths to wiki destinations, which only exists for PRDs today. Introduce one only when tracks/service-PRDs gain wiki homes.
+- Bidirectional pull (Lark wiki → local markdown). v1 is write-through only; any Lark edits are overwritten on next push.
+- Batch sync ("sync all PRDs"). Orchestra hooks push one feature at a time for mass-patch safety; korlap's GUI must preserve this — one button click = one feature, not fan-out across the board.
 
 ## Orchestra auto-hooks
 
@@ -284,8 +302,8 @@ When `.lark-sync.json` exists, the orchestra agent MUST call the corresponding `
 | `/workflow start <slug>` completes | `push` — creates Lark task in PRD Creation section. `ensure-user-folder <slug>` — creates `<Worker>'s Universe/<slug>/` if missing. |
 | `/workflow next` transitions phase | `push` — moves task to target section, updates `Last phase change` |
 | `frndos-prd` saves or updates `docs/prd/<slug>.md` | `push-prd <slug>` — mirrors the markdown content into the wiki docx under Agentic's PRD. |
-| User sets wireframe_skipped, impl_strategy, parent_feature in local state | `push` — update the corresponding custom fields |
-| PR URL recorded in local state | `push` — updates PRs / Wireframe PR field |
+| User sets implementation_strategy, parent_feature, or phase_status in local state | `push` — update the corresponding custom fields |
+| PR URL recorded in local state | `push` — updates PRs field |
 | Phase reaches `completion` | `push` with Lark "mark complete" (`lark-cli task +complete`) in addition to section move. Leave the PRD wiki page intact — it's the permanent record. |
 | Feature archived/deleted locally | Do NOT delete the Lark task or the PRD wiki page — leave an audit trail. Add a comment on the task: "Feature archived locally by <worker> on <date>". |
 

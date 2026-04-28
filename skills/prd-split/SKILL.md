@@ -5,7 +5,7 @@ description: Split a main PRD into per-service PRDs
 
 # PRD Splitter
 
-Splits a main PRD into per-service PRDs based on the Service Breakdown section.
+Owns the `prd_splitting` phase: creates the feature git branch from base, then splits the main PRD into per-service PRDs. (This phase replaces the old `branch_creation` phase — branch creation and splitting are now combined.)
 
 **Read `references/conventions.md` first** for the service-PRD frontmatter, required sections (including Verification rules), and the naming convention shared with main PRDs.
 
@@ -24,16 +24,23 @@ Split the active feature's main PRD into service PRDs.
 
 2. Verify workflow state is in `prd_splitting` phase.
 
-3. Read the main PRD from `.workflow-state.json` `prd_path`. Parse the "Service Breakdown" section.
+3. **Create the feature branch (before splitting).** This phase replaces the old `branch_creation` phase.
+   - Determine base: `develop` for api/web, `development` for ai-service/data-service.
+   - `git checkout <base> && git pull origin <base>`.
+   - Ask the user: "Create branch `feature/<worker>/vc-<slug>` from `<base>`?"
+   - On confirm: `git checkout -b feature/<worker>/vc-<slug> && git push -u origin feature/<worker>/vc-<slug>`.
+   - Update `.workflow-state.json`: set `features[<slug>].branch`.
 
-4. **Research per-service codebases (MANDATORY).** For each service, read enough code to understand:
+4. Read the main PRD from `.workflow-state.json` `prd_path`. Parse the "Service Breakdown" section.
+
+5. **Research per-service codebases (MANDATORY).** For each service, read enough code to understand:
    - Existing patterns for similar endpoints/components/models
    - Integration points across services
    - Active work in `<service>/docs/tracks/` that might conflict
 
-5. **Relentless clarifying questions (MANDATORY).** Before drafting any service PRD, surface EVERY ambiguity that would change how the split works, via your ask tool (Claude Code: `AskUserQuestion`; Cursor: ask tool; OpenCode: question tool; Amp: plain text, wait). Prefer multiple small questions over one mega-question. Do NOT proceed until answered.
+6. **Relentless clarifying questions (MANDATORY).** Before drafting any service PRD, surface EVERY ambiguity that would change how the split works. Prefer multiple small questions. Do NOT proceed until answered.
 
-6. Exit plan mode. For each service listed in the PRD frontmatter `services` field:
+7. Exit plan mode. For each service listed in the PRD frontmatter `services` field:
    a. Read the service PRD template
    b. Extract relevant requirements, API endpoints, data model changes for this service
    c. Generate implementation tasks (TASK-1, TASK-2, ...) from the requirements
@@ -42,9 +49,9 @@ Split the active feature's main PRD into service PRDs.
    f. On approval, write to `<service>/docs/prd/<slug>.md`
    g. Create track file at `<service>/docs/tracks/<slug>.track.md`
 
-7. Update `.workflow-state.json` `service_prds` with paths.
+8. Update `.workflow-state.json` `service_prds` with paths. Flip `phase_status` to `"completed"`. Do NOT auto-advance.
 
-8. Report summary: "Created service PRDs for: api, web, ai-service"
+9. Report summary: "Feature branch created. Service PRDs created for: api, web, ai-service. Run `/workflow next` to advance to implementation."
 
 ### `/prd split status`
 Show which service PRDs have been created and their status.

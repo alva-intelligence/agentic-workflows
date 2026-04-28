@@ -1,138 +1,91 @@
 {
+  "phase_status_rule": {
+    "description": "Every gate carries an implicit phase_status condition: features[active_feature].phase_status === 'completed'. Phases enter as 'inprogress', flip to 'completed' once their gate's other conditions pass, but the workflow does NOT auto-transition. The user (via orchestra) must trigger advancement explicitly. The condition is repeated in every gate's `conditions` array under type `phase_status_completed` for clarity."
+  },
   "gates": {
-    "prd_creation_to_wireframe": {
+    "idle_to_brainstorming": {
+      "from": "idle",
+      "to": "brainstorming",
+      "description": "User has filed a new feature/bug/improvement request. Orchestra captures the intent and starts brainstorming.",
+      "conditions": [
+        {
+          "type": "user_intent_recorded",
+          "description": "Feature slug + initial intent recorded on the feature entry.",
+          "check": "features[active_feature] exists with at least a slug, type (feature|bug|improvement), and initial_request text"
+        },
+        {
+          "type": "phase_status_completed",
+          "description": "Idle has no real work; orchestra immediately marks idle phase_status as completed when starting a new feature.",
+          "check": "features[active_feature].phase_status === 'completed'"
+        }
+      ]
+    },
+    "brainstorming_to_prd_creation": {
+      "from": "brainstorming",
+      "to": "prd_creation",
+      "description": "All brainstorming questions answered, summary written, user has signed off on direction.",
+      "conditions": [
+        {
+          "type": "questions_answered",
+          "description": "Every question in brainstorming.questions has an `answer` field set.",
+          "check": "All entries in features[active_feature].brainstorming.questions[*] have answer !== null"
+        },
+        {
+          "type": "summary_present",
+          "description": "Brainstorming summary captures direction and feeds the PRD.",
+          "check": "features[active_feature].brainstorming.summary is a non-empty string"
+        },
+        {
+          "type": "phase_status_completed",
+          "description": "Phase marked completed by agent after summary + user sign-off.",
+          "check": "features[active_feature].phase_status === 'completed'"
+        }
+      ]
+    },
+    "prd_creation_to_prd_splitting": {
       "from": "prd_creation",
-      "to": "wireframe",
-      "strategy": "wireframe",
-      "description": "Default path — user chose to build wireframes before implementation.",
-      "conditions": [
-        {
-          "type": "file_exists",
-          "description": "PRD file must exist",
-          "check": "features[active_feature].prd_path exists as a file"
-        },
-        {
-          "type": "frontmatter_valid",
-          "description": "PRD must have required frontmatter fields",
-          "required_fields": ["title", "slug", "author", "created", "status", "services"]
-        },
-        {
-          "type": "sections_present",
-          "description": "PRD must have required sections",
-          "required_sections": ["Overview", "User Stories", "Requirements", "Service Breakdown", "Acceptance Criteria"]
-        },
-        {
-          "type": "user_choice",
-          "description": "User chose to proceed with wireframing (default path).",
-          "check": "features[active_feature].wireframe_skipped is not true"
-        }
-      ]
-    },
-    "prd_creation_to_branch_creation": {
-      "from": "prd_creation",
-      "to": "branch_creation",
-      "strategy": "skip_wireframe",
-      "description": "Skip path — user chose to skip wireframing and go directly to branch creation + PRD splitting + implementation. Orchestra MUST ask the user via the ask tool after PRD creation before taking this path. When taken, no wireframe branch is created, no wireframe PR is opened, and feature branch is created directly from the base branch (develop/development).",
-      "conditions": [
-        {
-          "type": "file_exists",
-          "description": "PRD file must exist",
-          "check": "features[active_feature].prd_path exists as a file"
-        },
-        {
-          "type": "frontmatter_valid",
-          "description": "PRD must have required frontmatter fields",
-          "required_fields": ["title", "slug", "author", "created", "status", "services"]
-        },
-        {
-          "type": "sections_present",
-          "description": "PRD must have required sections",
-          "required_sections": ["Overview", "User Stories", "Requirements", "Service Breakdown", "Acceptance Criteria"]
-        },
-        {
-          "type": "user_choice",
-          "description": "User explicitly chose to skip wireframing — captured via orchestra's ask tool and recorded in workflow state.",
-          "check": "features[active_feature].wireframe_skipped === true"
-        }
-      ]
-    },
-    "wireframe_to_wireframe_pr": {
-      "from": "wireframe",
-      "to": "wireframe_pr",
-      "conditions": [
-        {
-          "type": "file_exists",
-          "description": "At least one wireframe directory must exist with a .tsx file",
-          "check": "Each wireframe in features[active_feature].wireframes has a directory with ≥1 .tsx file"
-        },
-        {
-          "type": "metadata_exists",
-          "description": "Each wireframe must have a metadata.json",
-          "check": "metadata.json exists in each wireframe directory"
-        },
-        {
-          "type": "git_branch",
-          "description": "Must be on wireframe branch",
-          "check": "Current branch is wireframe/<worker>/vc-<slug> and all wireframe changes are committed"
-        }
-      ]
-    },
-    "wireframe_pr_to_wireframe_review": {
-      "from": "wireframe_pr",
-      "to": "wireframe_review",
-      "conditions": [
-        {
-          "type": "pr_exists",
-          "description": "Wireframe PR must exist targeting develop",
-          "check": "features[active_feature].wireframe_pr_url is set and `gh pr view` succeeds"
-        }
-      ]
-    },
-    "wireframe_review_to_branch_creation": {
-      "from": "wireframe_review",
-      "to": "branch_creation",
-      "conditions": [
-        {
-          "type": "pr_merged",
-          "description": "Wireframe PR must be merged by FE owners",
-          "check": "`gh pr view <wireframe_pr_url> --json state` returns 'MERGED'"
-        },
-        {
-          "type": "approval",
-          "description": "Jeff must have approved the wireframe (verbal or PR comment)",
-          "check": "All wireframes in features[active_feature].wireframes have approval.status === 'approved'"
-        }
-      ]
-    },
-    "branch_creation_to_prd_splitting": {
-      "from": "branch_creation",
       "to": "prd_splitting",
+      "description": "Main PRD exists with required frontmatter and sections. Phase advances directly to PRD splitting (which now also handles branch creation).",
       "conditions": [
         {
-          "type": "git_branch",
-          "description": "Must be on base branch first, then feature branch created from it. Base branch is develop for api/web, development for ai-service/data-service.",
-          "check": "Agent has: (1) checked out base branch, (2) pulled latest, (3) (only if wireframe was NOT skipped) verified wireframe files exist on develop, (4) created feature/<worker>/vc-<slug> from base branch"
+          "type": "file_exists",
+          "description": "PRD file must exist.",
+          "check": "features[active_feature].prd_path exists as a file"
         },
         {
-          "type": "wireframe_on_develop_if_not_skipped",
-          "description": "Wireframe files must exist on develop when wireframe phase was used. If features[active_feature].wireframe_skipped === true, skip this check.",
-          "check": "features[active_feature].wireframe_skipped === true OR web/src/app/(dashboard)/wireframes/<slug>/ exists on current branch"
+          "type": "frontmatter_valid",
+          "description": "PRD must have required frontmatter fields.",
+          "required_fields": ["title", "slug", "author", "created", "status", "services"]
+        },
+        {
+          "type": "sections_present",
+          "description": "PRD must have required sections.",
+          "required_sections": ["Overview", "Brainstorming Outcome", "User Stories", "Requirements", "Service Breakdown", "Acceptance Criteria"]
+        },
+        {
+          "type": "phase_status_completed",
+          "check": "features[active_feature].phase_status === 'completed'"
         }
       ]
     },
     "prd_splitting_to_implementation": {
       "from": "prd_splitting",
       "to": "implementation",
+      "description": "Feature branch created from base AND main PRD split into per-service PRDs.",
       "conditions": [
         {
+          "type": "git_branch",
+          "description": "Agent has: (1) checked out base (develop for api/web, development for ai-service/data-service), (2) pulled latest, (3) created feature/<worker>/vc-<slug> from base, (4) is currently on the feature branch.",
+          "check": "Current branch is feature/<worker>/vc-<slug> AND features[active_feature].branch matches"
+        },
+        {
           "type": "file_exists",
-          "description": "Service PRDs must exist for each touched service",
+          "description": "Service PRDs must exist for each touched service.",
           "check": "features[active_feature].service_prds has entries for all services listed in main PRD frontmatter"
         },
         {
-          "type": "git_branch",
-          "description": "Must be on feature branch",
-          "check": "Current branch is feature/<worker>/vc-<slug>"
+          "type": "phase_status_completed",
+          "check": "features[active_feature].phase_status === 'completed'"
         }
       ]
     },
@@ -140,22 +93,26 @@
       "from": "implementation",
       "to": "pr_submission",
       "strategy": "sequential",
-      "description": "Sequential flow only (Cursor/OpenCode). Agent Teams skips pr_submission/pr_review.",
+      "description": "Sequential flow only (Cursor/OpenCode and the default Claude Code flow). Agent Teams skips pr_submission/pr_review.",
       "conditions": [
         {
           "type": "track_progress",
-          "description": "Track file must show progress",
+          "description": "Track file must show progress.",
           "check": "At least one task checked off in each service's track file"
         },
         {
           "type": "git_branch",
-          "description": "Must be on feature branch",
+          "description": "Must be on feature branch.",
           "check": "Current branch is feature/<worker>/vc-<slug>"
         },
         {
           "type": "strategy_check",
-          "description": "Must be using sequential strategy",
+          "description": "Must be using sequential strategy.",
           "check": "agent_teams is null OR agent_teams.strategy === 'sequential'"
+        },
+        {
+          "type": "phase_status_completed",
+          "check": "features[active_feature].phase_status === 'completed'"
         }
       ]
     },
@@ -167,40 +124,105 @@
       "conditions": [
         {
           "type": "strategy_check",
-          "description": "Must be using agent_teams strategy",
+          "description": "Must be using agent_teams strategy.",
           "check": "agent_teams.strategy === 'agent_teams'"
         },
         {
           "type": "all_engineers_done",
-          "description": "All engineers must report done",
+          "description": "All engineers must report done.",
           "check": "Every entry in agent_teams.engineers has status === 'done'"
         },
         {
           "type": "all_prs_exist",
-          "description": "All service PRs must exist and be merged",
+          "description": "All service PRs must exist and be merged.",
           "check": "Every service in pr_urls has a URL and `gh pr view` returns 'MERGED'"
+        },
+        {
+          "type": "phase_status_completed",
+          "check": "features[active_feature].phase_status === 'completed'"
         }
       ]
     },
     "pr_submission_to_pr_review": {
       "from": "pr_submission",
       "to": "pr_review",
+      "strategy": "has_feedback",
+      "description": "PR is open and has reviewer or bot feedback (comments, change requests, or failing automated checks). Self code-review and security audit must have already passed during pr_submission.",
       "conditions": [
         {
+          "type": "self_review_passed",
+          "description": "frndos-pr's self code-review must be recorded as passed in the PR body.",
+          "check": "PR body contains a self-review section with no must-fix items"
+        },
+        {
+          "type": "security_audit_passed",
+          "description": "security-reviewer skill audit must be recorded as passed in the PR body.",
+          "check": "PR body contains a security audit section with no high/critical findings"
+        },
+        {
           "type": "pr_exists",
-          "description": "PR URLs must be recorded and exist on GitHub",
+          "description": "PR URLs must be recorded and exist on GitHub.",
           "check": "features[active_feature].pr_urls has at least one entry and `gh pr view` succeeds for each"
+        },
+        {
+          "type": "has_feedback",
+          "description": "PR has at least one open review thread, change request, or failing check.",
+          "check": "`gh pr view --json reviewDecision,comments,reviews` shows reviewDecision === 'CHANGES_REQUESTED' OR any unresolved review thread OR any open review comment"
+        },
+        {
+          "type": "phase_status_completed",
+          "check": "features[active_feature].phase_status === 'completed'"
+        }
+      ]
+    },
+    "pr_submission_to_completion": {
+      "from": "pr_submission",
+      "to": "completion",
+      "strategy": "merged_clean",
+      "description": "PR merged with zero reviewer or bot feedback. Bypasses pr_review.",
+      "conditions": [
+        {
+          "type": "self_review_passed",
+          "check": "PR body contains a self-review section with no must-fix items"
+        },
+        {
+          "type": "security_audit_passed",
+          "check": "PR body contains a security audit section with no high/critical findings"
+        },
+        {
+          "type": "pr_merged",
+          "description": "All PRs must be MERGED.",
+          "check": "`gh pr view --json state` returns 'MERGED' for all entries in pr_urls"
+        },
+        {
+          "type": "no_feedback",
+          "description": "PR has zero review comments and zero change requests across its lifetime.",
+          "check": "`gh pr view --json comments,reviews` shows no comments and no reviews with state CHANGES_REQUESTED or COMMENTED"
+        },
+        {
+          "type": "phase_status_completed",
+          "check": "features[active_feature].phase_status === 'completed'"
         }
       ]
     },
     "pr_review_to_completion": {
       "from": "pr_review",
       "to": "completion",
+      "description": "All review threads resolved and PR merged.",
       "conditions": [
         {
+          "type": "threads_resolved",
+          "description": "Every review thread has resolution.",
+          "check": "`gh api repos/{owner}/{repo}/pulls/{n}/reviews` shows zero unresolved threads"
+        },
+        {
           "type": "pr_merged",
-          "description": "All PRs must be merged",
+          "description": "All PRs must be merged.",
           "check": "`gh pr view --json state` returns 'MERGED' for all entries in pr_urls"
+        },
+        {
+          "type": "phase_status_completed",
+          "check": "features[active_feature].phase_status === 'completed'"
         }
       ]
     },
@@ -210,8 +232,12 @@
       "conditions": [
         {
           "type": "track_complete",
-          "description": "Track file must be marked complete",
+          "description": "Track file must be marked complete.",
           "check": "Track file frontmatter has status: completed"
+        },
+        {
+          "type": "phase_status_completed",
+          "check": "features[active_feature].phase_status === 'completed'"
         }
       ]
     }

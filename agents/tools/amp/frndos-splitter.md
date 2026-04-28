@@ -24,6 +24,16 @@ From `.workflow-state.json`:
 
 ## PROCESS
 
+### Step 0: Create the feature branch (MANDATORY — before splitting)
+
+This phase replaces the old `branch_creation` phase. Before any PRD work:
+
+1. Determine base branch: `develop` for api/web, `development` for ai-service/data-service.
+2. `git checkout <base-branch> && git pull origin <base-branch>`.
+3. Ask the user (plain text, wait): "Create branch `feature/<worker>/vc-<slug>` from `<base-branch>`?"
+4. On confirm: `git checkout -b feature/<worker>/vc-<slug> && git push -u origin feature/<worker>/vc-<slug>`.
+5. Update `.workflow-state.json`: set `features[<slug>].branch`.
+
 ### Step 1: Research phase (MANDATORY — read-only)
 
 Amp has no plan mode. Announce to the user: "Entering research phase — read-only." Do NOT write any files during Steps 1-4.

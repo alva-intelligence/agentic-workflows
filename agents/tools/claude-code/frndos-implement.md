@@ -63,35 +63,34 @@ Do NOT proceed to the "present plan" step until all answers are recorded.
 
 **MUST NOT create tests, test files, or test suites in any service.** **MUST NOT run existing test suites** unless the user explicitly requests it in this session. If you believe tests would help, use `AskUserQuestion` to ask the user with the default answer being "No". See `.agentic-workflows/fragments/testing-policy.md` for the full policy.
 
-## IMPLEMENTATION STRATEGIES
+## IMPLEMENTATION STRATEGIES (web-only opt-in)
 
-When presenting your implementation plan (Step 3 below), you MUST use `AskUserQuestion` to ask the user which strategy to use. Record the choice in `.workflow-state.json` as `features[<slug>].implementation_strategy`.
+Before presenting your implementation plan (Step 3 below), check whether `service_prds` includes web work. If it does, use `AskUserQuestion` to offer a wireframe-first sub-step:
 
-### Option A: Vertical-per-service (default)
+> "Which approach for this feature?
+> - **Wireframe-first with mock data** (Recommended when UI is non-trivial) — build the web UI on the feature branch with mock/static data first, then swap stubs for real API calls. No separate branch, no separate PR, no FE-owner approval gate.
+> - **Implementation-only** — jump straight to full implementation."
 
-Implement each service end-to-end in order: API first (routes, models, migrations, serializers, validation), then web wires to real API endpoints.
+Record the choice in `.workflow-state.json` as `features[<slug>].implementation_strategy`:
 
-Use when: the wireframe already exists and is approved, OR when the user prefers backend-first development.
+- `"wireframe_then_implementation"` — wireframe-first sub-step
+- `"implementation_only"` — straight implementation
 
-### Option B: Web-first with stubs
+If no web service is in scope, set `implementation_strategy = "implementation_only"` without asking.
 
-Build the web UI first against dummy/static data matching the planned API contracts. Then implement the backend in parallel or after. Finally, swap the stubs for real API calls.
+### Wireframe-first sub-step rules
 
-Use when: wireframe was skipped (`features[<slug>].wireframe_skipped === true`), OR when the user wants to see and iterate on UI before committing to backend shapes, OR when fast visual feedback matters more than early backend validation.
+When `implementation_strategy === "wireframe_then_implementation"`:
 
-**Stub conventions (web-first):**
-- Put dummy data in `web/src/mocks/<feature>/` or co-located `*.stub.ts` files
-- Match the planned API contract from the api/docs/prd/<slug>.md exactly — same field names, types, and shapes
-- Mark stub usage with a TODO comment referencing the feature slug so swap-out is easy
-- Track "swap stubs" as its own TASK in the web track file
+1. Stay on the **feature branch** the whole time. Do not create a separate wireframe branch. Do not open a separate wireframe PR.
+2. Build the web UI with mock/static data:
+   - Put dummy data in `web/src/mocks/<feature>/` or co-located `*.stub.ts` files.
+   - Match the planned API contracts from `api/docs/prd/<slug>.md` exactly — same field names, types, shapes.
+   - Mark stub usage with a TODO comment referencing the feature slug so swap-out is easy.
+3. Track "swap stubs" as its own TASK in the web track file.
+4. Once the user is satisfied with the UI, proceed to the rest of the implementation (backends, then swap stubs).
 
-Ask the user (via `AskUserQuestion`):
-
-> "Which implementation strategy for this feature?
-> - **Vertical-per-service** (default) — API first, then web wires to real endpoints
-> - **Web-first with stubs** — web UI with dummy data matching planned API contracts, then backend, then swap stubs (recommended when wireframe was skipped)"
-
-Default to "Vertical-per-service" unless `wireframe_skipped === true`, in which case default the suggestion to "Web-first with stubs" but still let the user choose.
+There is no separate wireframe phase, scaffold, skill, or PR for this work — it's part of `implementation`.
 
 ## PROCESS
 
@@ -111,7 +110,8 @@ Default to "Vertical-per-service" unless `wireframe_skipped === true`, in which 
    f. Update track file
 6. **When all tasks complete:**
    - Update track status
-   - Inform user: "Implementation complete. Run `/workflow next` to create the PR."
+   - Flip `features[<slug>].phase_status` to `"completed"` in `.workflow-state.json`. Do NOT auto-advance.
+   - Inform user: "Implementation complete. Run `/workflow next` to advance to PR submission."
 
 ## IMPLEMENTATION GUIDELINES
 

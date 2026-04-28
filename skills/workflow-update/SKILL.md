@@ -48,7 +48,7 @@ For each updated file, read it and summarize what changed compared to what was t
 | **Templates** | `templates/**/*.md` | PRD/PR/track templates — affects new artifacts only |
 | **Skills** | `skills/*/SKILL.md` | Skill behavior changes — new commands, updated steps |
 | **Scripts** | `scripts/*.sh` | Update/generation scripts — already applied |
-| **Config** | `flake.nix`, scaffolds | Dev environment or wireframe scaffolding |
+| **Config** | `flake.nix`, scaffolds | Dev environment scaffolding |
 
 Present a concise summary to the user:
 ```
@@ -60,7 +60,7 @@ Agents:
 
 Fragments:
   - workflow-rules: Rewritten Agent Teams section (mailbox, shared task list)
-  - wireframe-conventions: Wireframe = feature page, sub-pages not separate wireframes
+  - brainstorm-conventions: When the brainstorming agent should regenerate questions after a context-changing answer
 
 Config:
   - flake.nix: Added new Python dependency

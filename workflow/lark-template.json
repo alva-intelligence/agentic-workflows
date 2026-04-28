@@ -2,19 +2,16 @@
   "$description": "Portable schema for the Lark 'FrnDOS Agentic Workflow Management' tasklist. The bootstrap script creates these sections + custom fields in the user's Lark tenant and stores the resulting GUIDs in the local workspace (.lark-sync.json). Agents reference sections/fields by NAME and resolve to GUIDs at call time. Phase is encoded as section membership (Kanban lane), not a custom field.",
   "tasklist_name": "FrnDOS Agentic Workflow Management",
   "sections": {
-    "$description": "Phase Kanban lanes. Order matters — Lark shows them left-to-right. 'PRD Creation' must be the default section so new features land there on /workflow start.",
-    "default": "PRD Creation",
+    "$description": "Phase Kanban lanes. Order matters — Lark shows them left-to-right. 'Brainstorming' must be the default section so new features land there on /workflow start.",
+    "default": "Brainstorming",
     "ordered": [
+      { "name": "Brainstorming", "phase_key": "brainstorming" },
       { "name": "PRD Creation", "phase_key": "prd_creation" },
-      { "name": "Wireframe", "phase_key": "wireframe" },
-      { "name": "Wireframe PR", "phase_key": "wireframe_pr" },
-      { "name": "Wireframe Review", "phase_key": "wireframe_review" },
-      { "name": "Branch Creation", "phase_key": "branch_creation" },
       { "name": "PRD Splitting", "phase_key": "prd_splitting" },
       { "name": "Implementation", "phase_key": "implementation" },
       { "name": "PR Submission", "phase_key": "pr_submission" },
       { "name": "PR Review", "phase_key": "pr_review" },
-      { "name": "Completion", "phase_key": "completion" }
+      { "name": "Completed", "phase_key": "completion" }
     ]
   },
   "custom_fields": [
@@ -46,20 +43,17 @@
       "description": "One line per service, e.g. 'api: <url>\\nweb: <url>'."
     },
     {
-      "name": "Wireframe PR",
-      "type": "text"
-    },
-    {
-      "name": "Wireframe skipped",
+      "name": "Phase status",
       "type": "single_select",
-      "options": ["yes", "no"],
-      "default": "no"
+      "options": ["inprogress", "completed"],
+      "default": "inprogress",
+      "description": "Status of the current phase. completed != advance — workflow stays on the phase until the user explicitly triggers transition."
     },
     {
       "name": "Impl strategy",
       "type": "single_select",
-      "options": ["vertical", "web-first-stubs"],
-      "description": "Implementation strategy. 'vertical' = API-first then web wires real endpoints; 'web-first-stubs' = build web UI with dummy data, then API, then swap stubs."
+      "options": ["implementation_only", "wireframe_then_implementation"],
+      "description": "Implementation strategy. 'implementation_only' = jump straight to full implementation; 'wireframe_then_implementation' = build web UI with mock/static data on the feature branch first, then swap stubs for real API calls."
     },
     {
       "name": "Session mode",

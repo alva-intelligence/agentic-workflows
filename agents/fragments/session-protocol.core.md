@@ -6,6 +6,8 @@
 
 Check `.workflow-state.json` → `workspace_meta.is_jj_workspace`. If `true`, this is a secondary JJ workspace scoped to `workspace_meta.feature_slug`. Full JJ rules: `skills/jj-workflow/references/rules.md`.
 
+Also check for `.korlap/marker.json`. If present, korlap (the Claude Code GUI) is managing isolation for this workspace — all `/jj-workflow` subcommands are inert here. Treat korlap's kanban as the parallel-features surface; do not propose `/jj-workflow new`.
+
 ### Step 0.5: Detect workspace state
 
 1. **No service directories** (none of `api/`, `web/`, `ai-service/`, `data-service/` exist) → Fresh workspace. Use your ask tool: "This workspace hasn't been set up yet. Would you like to start onboarding now?" On yes, execute `skills/onboard/SKILL.md` directly. On no, tell the user they can run `/onboard` later.
@@ -32,7 +34,7 @@ If `.lark-sync.json` is missing or `lark-cli auth status` is incomplete, follow 
 
 ### Step 4: Feature branch recency + service health
 
-After pulling, if any service is on a `feature/*` or `wireframe/*` branch, run the recency check against its base branch. Then verify that required services are healthy. Full procedures (recency, re-run triggers, health commands): `skills/workflow/references/session-checks.md`.
+After pulling, if any service is on a `feature/*` branch, run the recency check against its base branch. Then verify that required services are healthy. Full procedures (recency, re-run triggers, health commands): `skills/workflow/references/session-checks.md`.
 
 ### Step 5: Route to correct agent
 

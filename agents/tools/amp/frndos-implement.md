@@ -35,14 +35,32 @@ Before presenting the implementation plan, surface EVERY ambiguity from the serv
 
 **MUST NOT create tests, test files, or test suites.** **MUST NOT run existing test suites** unless the user explicitly requests it. If you believe tests would help, ask the user (plain text) with a "no" default. See `.agentic-workflows/fragments/testing-policy.md`.
 
-## IMPLEMENTATION STRATEGIES
+## IMPLEMENTATION STRATEGIES (web-only opt-in)
 
-Before starting Step 5 in the process below, ask the user (plain text, wait) which strategy to use and record the choice in `.workflow-state.json` as `features[<slug>].implementation_strategy`:
+Before Step 5 below, check whether `service_prds` includes web work. If it does, ask the user (plain text, wait):
 
-- **`vertical_per_service`** (default): implement each service end-to-end. API first, then web wires to real endpoints.
-- **`web_first_with_stubs`**: build web UI first with dummy/static data matching planned API contracts from `api/docs/prd/<slug>.md`, then implement the backend, then swap stubs for real calls. Stubs go in `web/src/mocks/<feature>/` or co-located `*.stub.ts`. Add a "swap stubs" TASK. Useful when `features[<slug>].wireframe_skipped === true`.
+> "Which approach for this feature?
+> - **Wireframe-first with mock data** (Recommended when UI is non-trivial) — build the web UI on the feature branch with mock/static data first, then swap stubs for real API calls. No separate branch, no separate PR.
+> - **Implementation-only** — jump straight to full implementation.
+>
+> Reply with 'wireframe-first' or 'implementation-only'."
 
-If `wireframe_skipped === true`, recommend `web_first_with_stubs` by default but still let the user choose.
+Record in `.workflow-state.json` as `features[<slug>].implementation_strategy`:
+- `"wireframe_then_implementation"` — wireframe-first sub-step
+- `"implementation_only"` — straight implementation
+
+If no web service is in scope, set `"implementation_only"` without asking.
+
+### Wireframe-first sub-step rules
+
+When `implementation_strategy === "wireframe_then_implementation"`:
+
+1. Stay on the **feature branch** the whole time. No separate wireframe branch, no separate PR.
+2. Mock data lives in `web/src/mocks/<feature>/` or co-located `*.stub.ts`. Match the planned API contracts from `api/docs/prd/<slug>.md` exactly.
+3. Mark stubs with a TODO referencing the slug. Track "swap stubs" as its own TASK in the web track file.
+4. When the UI is approved, proceed to backends, then swap stubs.
+
+There is no separate wireframe phase, scaffold, skill, or PR.
 
 ## PROCESS
 

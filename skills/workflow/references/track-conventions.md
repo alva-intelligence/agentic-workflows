@@ -23,7 +23,6 @@ status: in_progress | completed
 
 | Item | Status |
 |------|--------|
-| Wireframe | draft / approved |
 | PRD | draft / approved |
 | Service PRD | draft / in_progress / completed |
 | Implementation | not_started / in_progress / completed |

@@ -1,89 +1,83 @@
 {
+  "kanban_lanes": ["Backlog", "Plan", "Build", "Review", "Done"],
+  "status_semantics": {
+    "phase_status": {
+      "values": ["inprogress", "completed"],
+      "rule": "Phase is set to inprogress when entered. Set to completed once the phase's work is done and the gate to the next phase is satisfied. completed does NOT auto-advance — the workflow stays on the phase until the user (or orchestra at user direction) explicitly triggers transition to the next phase."
+    }
+  },
   "phases": {
     "idle": {
       "name": "Idle",
-      "description": "No active work. Ready for a new feature.",
+      "description": "No active work. Ready to capture a new feature, bug, or improvement request.",
       "agent": null,
+      "next": ["brainstorming"],
+      "allowed_actions": ["start_feature", "resume_feature"],
+      "kanban_lane": "Backlog"
+    },
+    "brainstorming": {
+      "name": "Brainstorming",
+      "description": "Agent loads the latest state of every relevant service, then interrogates the user with multi-choice questions to sharpen scope before a PRD is written. Each question must offer 2–4 distinct options with one option marked as the recommendation. Outcome (questions, answers, summary) is recorded on the feature's brainstorming object and feeds the next phase.",
+      "agent": "frndos-brainstorm",
       "next": ["prd_creation"],
-      "allowed_actions": ["start_feature", "resume_feature"]
+      "allowed_actions": ["load_service_state", "ask_user", "record_answer", "summarize"],
+      "kanban_lane": "Plan"
     },
     "prd_creation": {
       "name": "PRD Creation",
-      "description": "Creating the main PRD from Lark notes or user input. On completion, orchestra MUST ask the user whether to proceed to wireframing or skip directly to branch_creation.",
+      "description": "Creating the main PRD from the brainstorming summary plus any user-supplied context (Lark notes, prior PRDs). The PRD pulls the brainstorming outcome into a dedicated section.",
       "agent": "frndos-prd",
-      "next": ["wireframe", "branch_creation"],
-      "next_strategy": {
-        "wireframe": "wireframe",
-        "skip_wireframe": "branch_creation"
-      },
-      "allowed_actions": ["create_prd", "edit_prd", "skip_wireframe"]
-    },
-    "wireframe": {
-      "name": "Wireframe",
-      "description": "Building wireframe pages on a wireframe/<worker>/vc-<slug> branch. Optional — can be skipped via the skip_wireframe transition out of prd_creation.",
-      "agent": "frndos-wireframe",
-      "next": ["wireframe_pr"],
-      "allowed_actions": ["create_wireframe", "edit_wireframe", "add_wireframe"]
-    },
-    "wireframe_pr": {
-      "name": "Wireframe PR",
-      "description": "Creating PR for wireframe to notify FE owners for review.",
-      "agent": "frndos-pr",
-      "next": ["wireframe_review"],
-      "allowed_actions": ["create_wireframe_pr", "update_wireframe_pr"]
-    },
-    "wireframe_review": {
-      "name": "Wireframe Review",
-      "description": "Wireframe PR under review by FE owners + Jeff approval.",
-      "agent": "frndos-pr",
-      "next": ["branch_creation"],
-      "allowed_actions": ["record_approval", "address_feedback", "request_changes"]
-    },
-    "branch_creation": {
-      "name": "Branch Creation",
-      "description": "Wireframe PR merged. Checkout updated develop, verify wireframe exists, create feature branch.",
-      "agent": "frndos-orchestra",
       "next": ["prd_splitting"],
-      "allowed_actions": ["create_branch"]
+      "allowed_actions": ["create_prd", "edit_prd"],
+      "kanban_lane": "Plan"
     },
     "prd_splitting": {
       "name": "PRD Splitting",
-      "description": "Splitting main PRD into per-service PRDs.",
+      "description": "Single combined phase: agent (a) checks out the base branch, pulls latest, creates feature/<worker>/vc-<slug>, then (b) splits the main PRD into per-service PRDs on that branch.",
       "agent": "frndos-splitter",
       "next": ["implementation"],
-      "allowed_actions": ["split_prd", "edit_service_prd"]
+      "allowed_actions": ["create_branch", "split_prd", "edit_service_prd"],
+      "kanban_lane": "Build"
     },
     "implementation": {
       "name": "Implementation",
-      "description": "Implementing the feature across services. Sequential: frndos-implement handles all services. Agent Teams (Claude Code): per-service engineers work in parallel, each creates their own PR.",
+      "description": "Implementing the feature across services. On entry, if any web-service work is in scope, the agent asks the user whether to wireframe-first (build web UI on the feature branch with mock/static data, then swap stubs for real API calls) or jump straight to implementation. Sequential strategy: frndos-implement handles all services. Agent Teams (Claude Code, experimental): per-service engineers run in parallel and each opens their own PR.",
       "agent": "frndos-implement",
       "next": ["pr_submission", "completion"],
       "next_strategy": {
         "sequential": "pr_submission",
         "agent_teams": "completion"
       },
-      "allowed_actions": ["implement", "update_track"]
+      "allowed_actions": ["choose_implementation_strategy", "implement", "wireframe_with_mocks", "update_track"],
+      "kanban_lane": "Build"
     },
     "pr_submission": {
       "name": "PR Submission",
-      "description": "Creating pull requests for the feature.",
+      "description": "Agent runs full self code-review on its own diff (correctness, lint, tests, conventions), then runs the security-reviewer skill audit. Only after both pass does it open the PR. PR body includes the review notes and security audit summary.",
       "agent": "frndos-pr",
-      "next": ["pr_review"],
-      "allowed_actions": ["create_pr", "update_pr"]
+      "next": ["pr_review", "completion"],
+      "next_strategy": {
+        "has_feedback": "pr_review",
+        "merged_clean": "completion"
+      },
+      "allowed_actions": ["self_review", "security_audit", "create_pr", "update_pr"],
+      "kanban_lane": "Review"
     },
     "pr_review": {
       "name": "PR Review",
-      "description": "PR is under review by the repo owner.",
-      "agent": "frndos-pr",
+      "description": "PR has reviewer / bot feedback. Agent classifies each thread (must-fix / nit / question), drafts a fix or reply, applies, pushes, and resolves the thread. Loops until zero open threads remain.",
+      "agent": "frndos-pr-review",
       "next": ["completion"],
-      "allowed_actions": ["address_feedback", "update_pr"]
+      "allowed_actions": ["read_review_threads", "address_feedback", "push_fix", "resolve_thread"],
+      "kanban_lane": "Review"
     },
     "completion": {
-      "name": "Completion",
-      "description": "Feature is merged. Cleaning up and marking complete.",
+      "name": "Completed",
+      "description": "Feature merged. Cleaning up and marking complete.",
       "agent": "frndos-track",
       "next": ["idle"],
-      "allowed_actions": ["mark_complete"]
+      "allowed_actions": ["mark_complete"],
+      "kanban_lane": "Done"
     }
   }
 }

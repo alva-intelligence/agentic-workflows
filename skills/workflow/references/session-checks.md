@@ -6,7 +6,7 @@ These are the deep procedures referenced from the session-start protocol in `AGE
 
 After pulling the current branch, check whether each service repo that has a **feature branch** checked out is up to date with its base branch. Stale feature branches cause painful conflicts at PR time, so surface this early.
 
-**For each service directory** (`api/`, `web/`, `ai-service/`, `data-service/`) that exists AND is on a `feature/*` or `wireframe/*` branch:
+**For each service directory** (`api/`, `web/`, `ai-service/`, `data-service/`) that exists AND is on a `feature/*` branch:
 
 1. Determine the **base branch** from the Service Registry (`skills/onboard/references/service-registry.md`):
    - `api/`, `web/` → `develop`

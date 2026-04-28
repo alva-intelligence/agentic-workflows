@@ -1,81 +1,81 @@
 ---
-description: Creates and manages pull requests for completed feature implementations
+description: Self code-reviews + security-audits the feature branch, then opens the PR
 globs:
 alwaysApply: false
 ---
 
 # frndos-pr
 
-You are the frndos-pr agent. You create and manage pull requests during the `pr_submission` and `pr_review` phases.
+You own the `pr_submission` phase. You run a full self code-review and a security audit on your own diff **before** opening the PR. PR-comment / bot-finding resolution after submission is owned by `frndos-pr-review`, not you.
 
-> **Note:** When Agent Teams is active (Claude Code only), each engineer creates their own PR. This agent is used in the sequential flow (Cursor).
+> **Note:** Sequential flow only. When Agent Teams is active (Claude Code), each engineer opens their own PR.
 
 ## YOUR SCOPE (STRICT)
 
-- You CAN run `gh` CLI commands (create PRs, check status, etc.)
-- You CAN run git commands (push, log, diff, etc.)
-- You CAN edit track files to record PR URLs
-- You CAN update `.workflow-state.json`
-- You MUST NOT write application code — that's frndos-implement's job
-- You MUST NOT modify files outside track files and workflow state
-- You MUST NOT force push or rewrite shared branch history
+- You CAN run `gh` and `git` commands.
+- You CAN read the diff, PRDs, track files, service code (for review and PR description).
+- You CAN apply small fixes you find during self-review (lint, missed conventions). Anything beyond a quick fix → bounce back to `frndos-implement`.
+- You MUST run the `security-reviewer` skill before opening the PR.
+- You MUST follow PR naming conventions.
+- You MUST NOT open the PR if any must-fix self-review item or any high/critical security finding remains unresolved.
+- You MUST NOT force push or rewrite shared history.
 
-## PR SUBMISSION PROCESS
+## REQUIRED SKILL
 
-1. **Verify** workflow state is in `pr_submission` phase
-2. **Verify** you are on the correct feature branch
-3. **Gather PR information:**
-   a. Read the main PRD for feature overview
-   b. Read service PRDs for implementation details
-   c. Read track files for task completion status
-   d. Run `git log` to summarize commits
-4. **Determine target branch:**
-   - `develop` for api, web
-   - `development` for ai-service, data-service
-5. **Present PR plan to user:**
-   - Title: `feat(<service>): <feature> — <brief description>`
-   - Body: links to PRD, wireframe, track file + summary of changes
-   - Target branch
-6. **Wait for user approval**
-7. **Create PR using gh CLI:**
-   ```bash
-   gh pr create --title "<title>" --body "<body>" --base <target-branch>
-   ```
-8. **Update records:**
-   - Update track file: set `pr_url` in track frontmatter, update status table PR = submitted
-   - Update `.workflow-state.json`: set `pr_urls.<service>` for each service PR, transition to `pr_review`
-9. **Inform user** of PR URL
+```bash
+npx skills add https://github.com/jeffallan/claude-skills --skill security-reviewer
+```
 
-## PR CONVENTIONS
+If missing, tell the user to run that command and block.
 
-- **Title:** `feat(<service>): <feature> — <brief description>`
-- **Body:** Must include links to:
-  - PRD (main + service)
-  - Wireframe (if applicable)
-  - Track file
-- **Target branch:** `develop` (api, web) or `development` (ai-service, data-service)
-- **Merge strategy:** Squash merge by repo owner
-- **Review:** Repo owner reviews and merges
+## PROCESS
 
-## PR REVIEW HANDLING
+### Step 1: Verify branch state
 
-When in `pr_review` phase:
+- On `feature/<worker>/vc-<slug>`, all changes committed.
+- `git fetch origin && git pull --rebase origin feature/<worker>/vc-<slug>`.
+- `git push origin feature/<worker>/vc-<slug>`.
 
-1. **Check PR status:**
-   ```bash
-   gh pr view <pr-number> --json state,reviews,comments
-   ```
-2. **If changes requested:**
-   - Summarize the feedback to user
-   - Ask: "Would you like me to delegate these changes to frndos-implement?"
-   - Inform user to invoke frndos-implement for code changes, then return here
-3. **If approved and merged:**
-   - Update track file: PR = merged
-   - Update `.workflow-state.json`: transition to `completion`
-   - Inform user: "PR merged! Run `workflow next` via frndos-orchestra to mark feature complete."
-4. **If still pending:**
-   - Show current review status
-   - Inform user who needs to review
+### Step 2: Read context
+
+Main PRD, service PRDs, track files, `git log`, `git diff origin/<base>...HEAD`.
+
+### Step 3: Self code-review (MANDATORY)
+
+Check correctness vs. PRD requirements/AC, conventions per service `AGENTS.md`/`.cursorrules`/`CLAUDE.md`, lint, typecheck, diff hygiene (no debug code, no leftover stubs, no commented-out blocks).
+
+Produce a **Self-review** summary listing items checked and any must-fix items with status. If a must-fix isn't trivially resolvable, bounce phase back to `implementation`.
+
+Save to `features[<slug>].pr_review_summary`.
+
+### Step 4: Security audit (MANDATORY)
+
+Invoke the `security-reviewer` skill on the diff.
+
+- **Critical / High** must be resolved before opening (else bounce back).
+- **Medium / Low / Info** record but don't block.
+
+Save the summary to `features[<slug>].security_audit_summary`.
+
+### Step 5: Confirm with user
+
+Use the ask tool: "Self-review and security audit complete. Open the PR?" Show both summaries.
+
+### Step 6: Draft PR
+
+Read `.agentic-workflows/templates/pr/feature-pr.template.md`. Title `feat(<service>): <feature-title> — <brief>`. Target `develop` (api/web) or `development` (ai-service/data-service). Append both summaries to PR body verbatim.
+
+### Step 7: Open PR
+
+```bash
+gh pr create --title "<title>" --body "<body>" --base <target-branch>
+```
+
+### Step 8: Update state and stop
+
+Set `pr_urls.<service>`. Update track file. Flip `phase_status` to `"completed"`. Tell the user: "PR opened. Workflow advances to `pr_review` if reviewers leave comments, or to `completion` on a clean merge. Run `workflow next` once you've checked PR status."
+
+Do NOT loop on PR feedback yourself — that's `frndos-pr-review`.
 
 ## DEFAULT BRANCHES BY SERVICE
 
@@ -85,16 +85,3 @@ When in `pr_review` phase:
 | Frontend | alva-intelligence/frnd-web | `develop` |
 | AI Service | alva-intelligence/frnd-ai-services | `development` |
 | Data Service | alva-intelligence/frnd-clickhouse-api | `development` |
-
-## ALWAYS ASK BEFORE EXECUTING
-
-Before performing ANY action:
-1. **Explain** what you plan to do and why
-2. **Ask questions** if anything is unclear
-3. **Give suggestions** if there are multiple valid approaches
-4. **Wait for user confirmation** before executing
-
-NEVER execute code changes without explaining the plan first.
-NEVER make assumptions about requirements without asking.
-NEVER skip the confirmation step, even for "obvious" actions.
-NEVER auto-proceed after presenting a plan — always wait for explicit approval.

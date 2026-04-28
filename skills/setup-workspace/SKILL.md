@@ -105,24 +105,23 @@ Record the full service registry.
 
 ## Step 2: Workflow Phases — **STOP, ask**
 
-Present the default 11-phase state machine:
+Present the default 8-phase state machine:
 
-> "The default workflow has 11 phases:"
+> "The default workflow has 8 phases:"
 > ```
-> idle → prd_creation → wireframe → wireframe_pr → wireframe_review →
-> branch_creation → prd_splitting → implementation → pr_submission →
-> pr_review → completion → idle
+> idle → brainstorming → prd_creation → prd_splitting →
+> implementation → pr_submission → [pr_review?] → completion → idle
 > ```
+> `pr_review` is conditional — skipped when the PR merges cleanly with no reviewer feedback.
 >
 > "Which phases do you need?"
-> - **All 11** — Full workflow with PRD, wireframes, implementation, PR
-> - **No wireframes** — Skip wireframe/wireframe_pr/wireframe_review (no frontend or wireframes not needed)
+> - **All 8** — Full workflow with brainstorming, PRD, implementation, PR submission + optional review
 > - **No PRD splitting** — Single service, no need to split PRDs
-> - **Minimal** — Just: idle → implementation → pr_submission → pr_review → completion
+> - **Minimal** — Just: idle → implementation → pr_submission → completion
 > - **Custom** — I'll tell you which to keep/add
 
 If user picks **Custom**, ask them to list:
-- Phases to **remove** from the default 11
+- Phases to **remove** from the default 8
 - Phases to **add** (describe what they do and where they fit)
 
 ## Step 3: Agents — **STOP, ask**
@@ -134,11 +133,12 @@ Present a table based on their phase selection:
 | Agent | Purpose | Recommended | Why |
 |-------|---------|-------------|-----|
 | `<project>-orchestra` | Router — delegates to phase agents | Always | Core routing |
-| `<project>-prd` | Creates PRDs from user input | If `prd_creation` phase | PRD authoring |
-| `<project>-wireframe` | Builds wireframe pages | If `wireframe` phase | UI wireframing |
-| `<project>-splitter` | Splits PRD into service PRDs | If `prd_splitting` phase | Multi-service |
+| `<project>-brainstorm` | Multi-choice questioning before PRD | If `brainstorming` phase | Sharpens scope |
+| `<project>-prd` | Creates PRDs from brainstorming summary + user input | If `prd_creation` phase | PRD authoring |
+| `<project>-splitter` | Creates feature branch + splits PRD into service PRDs | If `prd_splitting` phase | Multi-service |
 | `<project>-implement` | Implements features (sequential) | If `implementation` phase | Code generation |
-| `<project>-pr` | Creates/manages PRs | If `pr_submission` phase | PR lifecycle |
+| `<project>-pr` | Self code-reviews + security audits, then opens PR | If `pr_submission` phase | PR lifecycle |
+| `<project>-pr-review` | Resolves PR review threads / bot findings | If `pr_review` phase | Review handling |
 | `<project>-track` | Manages track files | If `completion` phase | Audit trail |
 | `<project>-engineer` | Per-service engineer (Agent Teams) | Optional | Parallel impl |
 | `<project>-architect` | Cross-service reviewer (Agent Teams) | Optional | Integration review |
@@ -167,8 +167,9 @@ Present a table based on their phase selection:
 > "Which skills do you need?"
 > - `/onboard` — Interactive workspace setup wizard
 > - `/workflow` — Feature state machine management
+> - `/brainstorm` — Multi-choice question generator for the brainstorming phase
 > - `/prd` — PRD creation helper
-> - `/wireframe` — Wireframe builder helper
+> - `/prd-split` — PRD splitter (also creates the feature branch)
 > - `/jj-workflow` — JJ parallel workspaces
 > - Custom: describe any additional skills
 
@@ -214,7 +215,6 @@ If yes:
 
 > "What branch naming conventions do you use?"
 > - Feature branches: (e.g., `feature/<worker>/vc-<slug>`, `feat/<name>`)
-> - Wireframe branches: (e.g., `wireframe/<worker>/vc-<slug>`, or N/A)
 > - PR target branch: (e.g., `develop`, `main`)
 > - Commit format: (e.g., `<type>(<scope>): <description>`)
 
@@ -249,7 +249,6 @@ Based on user's answers, create/update files in `agents/fragments/`:
 4. **`git-conventions.md`** — Update branch naming, commit format, PR conventions, default branches per service
 5. **`prd-conventions.md`** — Keep or adapt based on whether PRD phases are included
 6. **`track-conventions.md`** — Keep or adapt based on whether track files are needed
-7. **`wireframe-conventions.md`** — Keep if wireframe phases exist, remove entirely if not
 
 ## Step 8: Generate Workflow Schema
 
@@ -257,7 +256,7 @@ Update files in `workflow/`:
 
 1. **`phases.json`** — Only include phases the user selected. Add custom phases.
 2. **`gates.json`** — Define gate conditions for each phase transition. Remove gates for dropped phases. Add gates for custom phases.
-3. **`state-schema.json`** — Adapt feature schema to match the phases and service structure. Remove unused fields (e.g., `wireframes` if no wireframe phase).
+3. **`state-schema.json`** — Adapt feature schema to match the phases and service structure. Remove unused fields. Always include `phase_status` (`inprogress` | `completed`).
 
 ## Step 9: Generate Agent Definitions
 
@@ -290,7 +289,6 @@ Update files in `templates/`:
 2. **`prd/service-prd.template.md`** — Same
 3. **`tracks/feature.track.template.md`** — Adapt to user's services and phases
 4. **`pr/feature-pr.template.md`** — Adapt to user's PR conventions
-5. **`pr/wireframe-pr.template.md`** — Keep if wireframes exist, remove if not
 
 ## Step 13: Update Manifest
 

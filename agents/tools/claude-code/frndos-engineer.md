@@ -68,8 +68,8 @@ Record answers in your track file's Session Log.
 
 The lead will set `features[<slug>].implementation_strategy` based on the user's choice at the start of the implementation phase:
 
-- **`vertical_per_service`** (default): implement your service end-to-end. If you're the web-engineer, wire up to real API endpoints as soon as they land.
-- **`web_first_with_stubs`**: typically used when the wireframe was skipped. If you're the web-engineer, build the UI first with dummy/static data matching the API contract from `api/docs/prd/<slug>.md`. Put stubs in `web/src/mocks/<feature>/` or co-located `*.stub.ts` files. Mark stub usage with a TODO referencing the feature slug. Track "swap stubs" as a separate TASK. If you're the api-engineer, implement the API contract exactly as specified in the PRD so the web-engineer can swap stubs in cleanly.
+- **`implementation_only`** (default when no web work or user opts out): implement your service end-to-end. If you're the web-engineer, wire to real API endpoints as soon as they land.
+- **`wireframe_then_implementation`**: web-only opt-in. If you're the web-engineer, build the UI first with dummy/static data matching the API contract from `api/docs/prd/<slug>.md`. Put stubs in `web/src/mocks/<feature>/` or co-located `*.stub.ts`. Mark stubs with a TODO referencing the feature slug. Track "swap stubs" as a separate TASK. Stay on the feature branch — no separate wireframe branch or PR. If you're the api-engineer, implement the API contract exactly as specified so the web-engineer can swap stubs cleanly.
 
 Read the strategy from `.workflow-state.json` at the start of your plan phase and adjust your plan accordingly. If the strategy is missing, message the lead.
 

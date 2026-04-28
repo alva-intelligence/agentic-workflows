@@ -24,11 +24,14 @@ Show the current workflow state for the active feature.
 2. Display:
    - Active feature: `{active_feature}`
    - Current phase: `{phase}` ({phase_name})
+   - Phase status: `{phase_status}` (`inprogress` or `completed`)
    - Phase entered: `{phase_entered}`
    - Worker: `{worker}`
-   - Wireframes: list with approval status
+   - Type: `{type}` (feature | bug | improvement)
+   - Brainstorming: questions answered / total, summary present?
    - Branch: `{branch}` or "not created"
    - Service PRDs: list with status
+   - Implementation strategy: `{implementation_strategy}` (or "not chosen")
    - PRs: list `{pr_urls}` entries (service → URL) or "not submitted"
 
 ### `/workflow list`
@@ -59,39 +62,55 @@ Start a new feature workflow.
      Run `/onboard resume` to complete setup.
      ```
    - If `status` is `"completed"` → proceed
-2. Read `.workflow-state.json` (create if doesn't exist)
-3. Check that `<slug>` doesn't already exist in features
+2. Read `.workflow-state.json` (create if doesn't exist).
+3. Check that `<slug>` doesn't already exist in features.
 4. **If an active feature already exists AND JJ is available** (`command -v jj`):
    - Suggest parallel workspace as an option:
      > "You have an active feature (`<active-slug>` in `<phase>`). You can:"
      > - **Continue here** with context-switching (`/workflow switch` between features)
      > - **Create a parallel workspace** with `/jj-workflow new <slug>` to work on `<slug>` in a separate directory
-   - If user chooses parallel workspace → tell them to run `/jj-workflow new <slug>` and stop
-   - If user chooses to continue here → proceed with step 5
-5. Create feature entry with phase: "prd_creation"
-6. Set `active_feature` to `<slug>`
-7. Set `phase_entered` to current timestamp
-8. Ask user for worker name if not set
-9. Save state
-10. Inform user: "Feature `<slug>` started. Phase: prd_creation. Delegating to frndos-prd."
+   - If user chooses parallel workspace → tell them to run `/jj-workflow new <slug>` and stop.
+   - If user chooses to continue here → proceed.
+5. Capture intake via the ask tool:
+   - **Type:** feature | bug | improvement
+   - **Initial request:** the user's raw description (free text)
+6. Create feature entry with:
+   ```json
+   {
+     "phase": "idle",
+     "phase_status": "completed",
+     "phase_entered": "<ISO>",
+     "type": "<type>",
+     "initial_request": "<text>",
+     "brainstorming": { "questions": [], "summary": null },
+     "prd_path": null,
+     "branch": null,
+     "service_prds": {},
+     "pr_urls": {}
+   }
+   ```
+7. Set `active_feature` to `<slug>`. Ask the user for worker name if not set.
+8. Save state.
+9. Ask: "Advance to brainstorming?" — on yes, transition (`phase: "brainstorming"`, `phase_status: "inprogress"`) and delegate to `frndos-brainstorm`.
 
 ### `/workflow next`
 Transition to the next phase (if gate conditions are met).
 
 **Steps:**
-1. Read `.workflow-state.json`
-2. Get current phase for active feature
-3. Look up gate conditions from `.agentic-workflows/workflow/gates.json`
-4. **If the current phase has multiple possible next phases** (e.g., `prd_creation` can go to `wireframe` OR `branch_creation` when the user chose to skip wireframing), check `next_strategy` on the phase in `phases.json`:
-   - `prd_creation → wireframe` when `features[<slug>].wireframe_skipped` is falsy (default)
-   - `prd_creation → branch_creation` when `features[<slug>].wireframe_skipped === true` (orchestra asked the user after PRD creation and user chose skip)
-   - `implementation → pr_submission` for `sequential` strategy
-   - `implementation → completion` for `agent_teams` strategy
-5. Check EACH gate condition for the resolved transition:
-   - If all pass → transition to next phase, update `phase` and `phase_entered`
-   - If any fail → report which conditions failed and what's needed
-6. Save state
-7. Inform user of new phase and which agent will handle it
+1. Read `.workflow-state.json`.
+2. Get current phase + `phase_status` for active feature.
+3. **Require `phase_status === "completed"`.** If still `inprogress`, refuse: "Phase `<phase>` is still in progress. Let the agent finish (or wait for it to flip phase_status to completed) before advancing."
+4. Look up gate conditions from `.agentic-workflows/workflow/gates.json`.
+5. **If the current phase has multiple possible next phases**, check `next_strategy` on the phase in `phases.json`:
+   - `implementation → pr_submission` for `sequential` strategy.
+   - `implementation → completion` for `agent_teams` strategy.
+   - `pr_submission → pr_review` when the PR has reviewer/bot feedback (`has_feedback`).
+   - `pr_submission → completion` when the PR merged with zero feedback (`merged_clean`).
+6. Check EACH gate condition for the resolved transition:
+   - If all pass → transition to next phase, update `phase`, `phase_entered`, set new `phase_status` to `"inprogress"`.
+   - If any fail → report which conditions failed and what's needed.
+7. Save state.
+8. Inform user of new phase and which agent will handle it.
 
 ### `/workflow switch <slug>`
 Switch active feature context.
@@ -114,10 +133,9 @@ Discover ALL features across the team — not just local ones. Scans committed a
    - **PRDs:** `ls docs/prd/*.md` → extract slugs
    - **Feature branches:** `git branch -r | grep 'feature/.*/vc-'` in each service → extract slugs
    - **Track files:** `find . -name '*.track.md'` across all services → extract slugs
-   - **Wireframes:** `ls web/src/app/(dashboard)/wireframes/` → extract slugs
    - **JJ workspaces:** if `workspaces` map exists in `.workflow-state.json`, read each workspace's `.workflow-state.json` to discover features tracked in secondary workspaces
 3. For each unique slug found, reconstruct the phase (same logic as resume):
-   - PRD exists? Wireframe approved? Branch exists? Service PRDs? Track progress? PR?
+   - Brainstorming summary recorded? PRD exists? Branch exists? Service PRDs? Track progress? PR?
 4. Also check local `.workflow-state.json` for any features only tracked locally
 5. Display a table:
 
@@ -141,12 +159,12 @@ Resume a feature started by another team member.
 **Steps:**
 1. Fetch latest: `git fetch --all` in each service dir
 2. Scan committed artifacts to reconstruct phase:
+   - Brainstorming summary recorded in `.workflow-state.json`? → past brainstorming
    - PRD exists at `docs/prd/<slug>.md`? → past prd_creation
-   - Wireframe directory exists with approved metadata.json? → past wireframe_review
-   - Feature branch `feature/<worker>/vc-<slug>` exists? → past branch_creation
-   - Service PRDs exist? → past prd_splitting
+   - Feature branch `feature/<worker>/vc-<slug>` exists AND service PRDs exist? → past prd_splitting
    - Track files show progress? → in implementation
-   - PR URL in track file? → in pr_review
+   - PR URL in track file with no review threads? → in pr_submission (clean) or pr_review (has feedback)
+   - PR merged? → in completion
 3. Read the latest session log from track files to show who last worked on it and what they did
 4. Create/update feature entry in `.workflow-state.json` with reconstructed state
 5. Set `active_feature` to `<slug>`
@@ -157,27 +175,19 @@ Resume a feature started by another team member.
    - What's left to do (remaining tasks from track file)
    - Which branch to checkout: `git checkout feature/<worker>/vc-<slug>`
 
-### `/workflow add-wireframe <wireframe-slug>`
-Add a new wireframe to the current feature.
-
-**Steps:**
-1. Read `.workflow-state.json`
-2. Verify active feature is in `wireframe` or `wireframe_review` phase
-3. Add new wireframe entry with slug, empty path, current worker as owner, null approval
-4. Save state
-5. Inform user and delegate to frndos-wireframe
-
 ### `/workflow progress`
 Show detailed progress for the active feature.
 
 **Steps:**
 1. Read `.workflow-state.json` and all related files
 2. Show:
-   - Phase progression timeline
-   - Wireframe status for each wireframe
+   - Phase progression timeline (with `phase_status` per phase)
+   - Brainstorming summary
    - Service PRD status
+   - Implementation strategy (`implementation_only` or `wireframe_then_implementation`)
    - Track file task completion percentage
    - Session log summary
+   - PR self-review and security audit summaries
 
 ### `/workflow mode`
 Switch Claude Code between Agent Session and Team Session mode.

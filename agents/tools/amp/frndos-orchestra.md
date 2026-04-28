@@ -76,19 +76,25 @@ If any required service is DOWN:
 
 Based on `.workflow-state.json`, delegate to the appropriate `frndos-*` agent for the current phase.
 
+## phase_status SEMANTICS
+
+`phase_status` is `inprogress` while an agent is working, `completed` when its work is done. **`completed` does NOT auto-advance.** When you observe a phase that is `completed`, present the outcome and ask the user (in plain text, then block on a reply):
+
+> "Phase `<phase>` is complete. Advance to `<next-phase>` now? (yes / no)"
+
+Only on yes: transition the phase, set new phase's `phase_status = "inprogress"`, and route.
+
 ## ROUTING TABLE
 
 | Phase | Agent | Description |
 |-------|-------|-------------|
-| idle | (self) | Ask user what to do: start new feature, resume existing, or list features |
-| prd_creation | frndos-prd | PRD creation from user input |
-| wireframe | frndos-wireframe | Build wireframe pages |
-| wireframe_review | frndos-wireframe | Handle approval recording |
-| branch_creation | (self) | Create feature branch, then auto-transition |
-| prd_splitting | frndos-splitter | Split main PRD into service PRDs |
-| implementation | frndos-implement | Implement the feature (sequential — Agent Teams not available in Amp) |
-| pr_submission | frndos-pr | Create pull request |
-| pr_review | frndos-pr | Handle PR feedback |
+| idle | (self) | Capture intake, then advance to brainstorming |
+| brainstorming | frndos-brainstorm | Multi-choice questioning grounded in service state |
+| prd_creation | frndos-prd | PRD authored from brainstorming summary + user input |
+| prd_splitting | frndos-splitter | Create feature branch + split main PRD into per-service PRDs |
+| implementation | frndos-implement | Implement (sequential — Agent Teams not available in Amp). Optional wireframe-with-mocks sub-step on web work. |
+| pr_submission | frndos-pr | Self code-review + security audit, then open PR |
+| pr_review | frndos-pr-review | Resolve PR threads / bot findings |
 | completion | frndos-track | Mark feature complete |
 
 > **Note:** Agent Teams (parallel per-service engineers with mailbox messaging) is only available in Claude Code. Amp subagents are isolated and cannot communicate mid-task, so Amp always uses the sequential flow: frndos-implement → frndos-pr → completion.
@@ -138,56 +144,35 @@ Amp reads `AGENTS.md` from the workspace root (and parent directories) at sessio
 
 If `.lark-sync.json` exists in the workspace root, the team has opted into sharing feature state via a Lark tasklist. After any phase transition or local state mutation, invoke the `lark-sync` skill's `push` command so the team's Lark board stays in sync. If `.lark-sync.json` is absent, this hook is a silent no-op.
 
-Trigger `lark-sync push` after: feature creation (also `ensure-user-folder` to scaffold the user's brainstorming folder), phase transitions, wireframe-skip decision, PR URL recorded, feature reaching completion.
+Trigger `lark-sync push` after: feature creation (also `ensure-user-folder`), phase transitions, `phase_status` flips, `implementation_strategy` decision, PR URL recorded, feature reaching completion.
 
 Trigger `lark-sync push-prd <slug>` whenever `docs/prd/<slug>.md` is created or edited — this mirrors the PRD into the Agentic's PRD wiki section so the team sees the current version, not a stale one.
 
 Lark sync is advisory — if a push fails, log the error and continue the local workflow.
 
-## GATE CONDITIONS
+## GATE CONDITIONS (summary)
 
-| Transition | Gate | Check Method |
-|-----------|------|-------------|
-| prd_creation -> wireframe | PRD file exists with required frontmatter + sections | File check |
-| wireframe -> wireframe_review | Wireframe directory exists with >= 1 .tsx file | File check |
-| wireframe_review -> branch_creation | Approval recorded (verbal confirmation from Jeff) | Manual confirmation |
-| branch_creation -> prd_splitting | Feature branch exists from latest develop | Git check |
-| prd_splitting -> implementation | Service PRDs exist for each touched service | File check |
-| implementation -> pr_submission | Track file shows progress | File check |
-| pr_submission -> pr_review | PR URLs recorded and exist on GitHub | `gh` check |
-| pr_review -> completion | All PRs merged | `gh` check |
-| completion -> idle | Track file marked complete | File check |
+| Transition | Gate | Check |
+|-----------|------|-------|
+| idle → brainstorming | Intake recorded (slug, type, initial_request) | State |
+| brainstorming → prd_creation | Every question answered, summary written | State |
+| prd_creation → prd_splitting | PRD frontmatter + sections valid | File |
+| prd_splitting → implementation | Feature branch created from base + service PRDs exist | Git + File |
+| implementation → pr_submission | Track progress, on feature branch, sequential strategy | File + Git |
+| pr_submission → pr_review | PR open, self-review + security audit recorded, has feedback | `gh` |
+| pr_submission → completion | PR open, self-review + security audit recorded, MERGED with zero feedback | `gh` |
+| pr_review → completion | All review threads resolved, PR merged | `gh` |
+| completion → idle | Track file marked complete | File |
 
-## POST-PRD DECISION: WIREFRAME OR SKIP (MANDATORY)
+Every gate also requires `phase_status === "completed"`.
 
-When `frndos-prd` finishes, ask the user in plain text whether to build wireframes or skip straight to branch creation and **wait for a reply** before proceeding. (Amp has no dedicated ask tool — you still MUST block here.) Do NOT silently default — many features do not need wireframes, and skipping manually breaks the state machine.
+## STARTING A NEW FEATURE (idle → brainstorming)
 
-Ask:
-
-> "PRD is complete. How would you like to proceed?
-> - **Build wireframes** (default) — wireframe branch + wireframe PR + FE owner review
-> - **Skip wireframes** — jump directly to branch creation + PRD splitting + implementation
->
-> Reply with 'build' or 'skip'."
-
-- If user picks **build**: transition `prd_creation → wireframe` and delegate to `frndos-wireframe`.
-- If user picks **skip**: set `features[<slug>].wireframe_skipped = true`, transition `prd_creation → branch_creation`, handle branch creation (below), then delegate to `frndos-splitter`.
-
-## BRANCH CREATION (self-handled)
-
-When phase is `branch_creation`:
-1. Determine base branch: `develop` for api/web, `development` for ai-service/data-service
-2. If `features[<slug>].wireframe_skipped` is NOT true, verify wireframe files exist on develop. If they do not, BLOCK: "The wireframe PR hasn't been merged yet."
-3. If `wireframe_skipped` IS true, skip wireframe verification.
-4. Explain plan: "I'll create branch `feature/<worker>/vc-<slug>` from latest `<base-branch>`"
-5. Wait for confirmation (plain text reply)
-6. Execute:
-   ```bash
-   git checkout <base-branch> && git pull origin <base-branch>
-   git checkout -b feature/<worker>/vc-<slug>
-   git push -u origin feature/<worker>/vc-<slug>
-   ```
-7. Update `.workflow-state.json`: set branch, transition to `prd_splitting`
+When the user says "start a feature called <slug>" (or similar):
+1. Capture **type** (feature | bug | improvement) and **initial_request** in plain text, blocking on reply.
+2. Write a new feature entry to `.workflow-state.json` with `phase: "idle"`, `phase_status: "completed"`, `brainstorming: { questions: [], summary: null }`, etc.
+3. Set `active_feature = "<slug>"`.
+4. Ask: "Advance to brainstorming?" — on yes, transition and delegate to `frndos-brainstorm`.
 
 ## IDLE STATE
 

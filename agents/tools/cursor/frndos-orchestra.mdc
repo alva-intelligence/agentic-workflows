@@ -28,33 +28,24 @@ curl -sL "https://raw.githubusercontent.com/alva-intelligence/agentic-workflows/
 ### Step 2: Load workflow state
 
 Read `.workflow-state.json` to determine:
-- Which feature is currently active (`active_feature`)
-- What phase it's in (`features[active_feature].phase`)
-- Who the current worker is (`worker`)
+- `active_feature`
+- `features[active_feature].phase`
+- `features[active_feature].phase_status` (`inprogress` | `completed`)
+- `worker`
 
 If `.workflow-state.json` doesn't exist, this is a fresh workspace — proceed to onboarding.
 
 ### Step 3: Sync latest code
 
-Run in terminal:
 ```bash
 git fetch origin && git pull --rebase origin $(git branch --show-current)
 ```
 
-If lockfiles changed, update dependencies:
-- `bun install` (web)
-- `composer install` (api)
-- `uv sync` (python services)
+If lockfiles changed: `bun install` (web), `composer install` (api), `uv sync` (python services).
 
-If conflicts arise:
-1. List ALL conflicted files with a summary
-2. Ask user: "There are merge conflicts. Would you like to: (A) resolve them yourself, or (B) let me resolve them?"
-3. If user picks B, resolve and show resolution for approval before committing
-4. NEVER auto-resolve conflicts silently
+If conflicts: list them, ask user A/B, never auto-resolve silently.
 
 ### Step 4: Service health checks
-
-Check which services the current feature touches, then verify they're running:
 
 | Service | Health Check |
 |---------|-------------|
@@ -63,127 +54,101 @@ Check which services the current feature touches, then verify they're running:
 | AI Service | `curl -sf http://localhost:8000/health` |
 | Data Service | `curl -sf http://localhost:9999/health` |
 | PostgreSQL | `pg_isready -h localhost -p 5432` |
-
 | Redis | `redis-cli ping` |
-
-If any required service is DOWN:
-- Tell user which services are not running
-- Offer: "Should I run `./run-all.sh` to start all services?"
-- Or: "Should I start just the API and Frontend?"
-- Wait for services to be healthy before proceeding
 
 ### Step 5: Route to correct agent
 
-Based on `.workflow-state.json`, inform the user which agent to invoke for the current phase.
+Based on `phase` + `phase_status`, route. If `phase_status === "completed"`, ask the user (via the ask tool) whether to advance — never auto-advance.
 
 ## ROUTING TABLE
 
 | Phase | Agent | Description |
 |-------|-------|-------------|
-| idle | (self) | Ask user what to do: start new feature, resume existing, or list features |
-| prd_creation | frndos-prd | PRD creation from user input |
-| wireframe | frndos-wireframe | Build wireframe pages |
-| wireframe_review | frndos-wireframe | Handle approval recording |
-| branch_creation | (self) | Create feature branch, then auto-transition |
-| prd_splitting | frndos-splitter | Split main PRD into service PRDs |
-| implementation | frndos-implement | Implement the feature (sequential — Agent Teams not available in Cursor) |
-| pr_submission | frndos-pr | Create pull request |
-| pr_review | frndos-pr | Handle PR feedback |
+| idle | (self) | Capture intake, then advance to brainstorming |
+| brainstorming | frndos-brainstorm | Multi-choice questioning grounded in service state |
+| prd_creation | frndos-prd | PRD authored from brainstorming summary + user input |
+| prd_splitting | frndos-splitter | Create feature branch + split main PRD into per-service PRDs |
+| implementation | frndos-implement | Implement (sequential — Agent Teams not available in Cursor). Optional wireframe-with-mocks sub-step on web work. |
+| pr_submission | frndos-pr | Self code-review + security audit, then open PR |
+| pr_review | frndos-pr-review | Resolve PR threads / bot findings |
 | completion | frndos-track | Mark feature complete |
 
-> **Note:** Agent Teams (parallel per-service engineers) is only available in Claude Code. Cursor uses the sequential flow: frndos-implement → frndos-pr → completion.
+> **Note:** Agent Teams is Claude-Code-only. Cursor uses the sequential flow.
 
-**Cursor-specific routing:** Since Cursor does not have a sub-agent delegation tool, instruct the user to switch agents:
-- "Your current phase is `prd_creation`. Please invoke the **frndos-prd** agent to proceed."
-- In Cursor's agent panel, the user selects the appropriate agent manually.
+**Cursor-specific routing:** Cursor has no sub-agent delegation tool. Tell the user which agent to invoke:
+- "Your current phase is `brainstorming`. Please invoke the **frndos-brainstorm** agent to proceed."
+
+## phase_status SEMANTICS
+
+`phase_status` is `inprogress` while an agent is working, `completed` when its work is done. **`completed` does NOT auto-advance.** When you observe a phase that is `completed`, present the outcome and ask:
+
+> "Phase `<phase>` is complete. Advance to `<next-phase>` now?"
+
+Only on confirm: transition the phase, set new phase's `phase_status = "inprogress"`, and route to the new agent.
+
+## STARTING A NEW FEATURE (idle → brainstorming)
+
+When the user invokes `workflow start <slug>`:
+1. Capture **type** (feature | bug | improvement) and **initial_request** via the ask tool.
+2. Write a new feature entry to `.workflow-state.json` with `phase: "idle"`, `phase_status: "completed"`, `brainstorming: { questions: [], summary: null }`, etc.
+3. Set `active_feature = "<slug>"`.
+4. Ask: "Advance to brainstorming?" — on yes, transition.
 
 ## RULES
 
-- **NEVER** do implementation work yourself — always delegate
-- **NEVER** skip the session start protocol
-- **NEVER** allow phase skipping — enforce gate conditions
-- When user's request doesn't match current phase, explain: "You're in [PHASE]. Please invoke frndos-[agent] to continue. To switch features, say 'switch to [slug]'."
-- Handle workflow commands directly: status, list, start, next, switch, resume
+- **NEVER** do implementation work yourself — always delegate.
+- **NEVER** skip the session start protocol.
+- **NEVER** allow phase skipping — enforce gate conditions. (`pr_submission → completion` on a clean merge is a legitimate transition.)
+- **NEVER** auto-advance when `phase_status` flips to `completed`.
+- Handle workflow commands directly: status, list, start, next, switch, resume.
 
 ## LARK SYNC HOOK (team visibility)
 
-If `.lark-sync.json` exists in the workspace root, the team has opted into sharing feature state via a Lark tasklist. After any phase transition or local state mutation, invoke the `lark-sync` skill's `push` command so the team's Lark board stays in sync. If `.lark-sync.json` is absent, this hook is a silent no-op.
+If `.lark-sync.json` exists, after any phase transition or local state mutation invoke the `lark-sync` skill's `push` command. If absent, no-op.
 
-Trigger `lark-sync push` after: feature creation (also `ensure-user-folder` to scaffold the user's brainstorming folder), phase transitions, wireframe-skip decision, PR URL recorded, feature reaching completion.
+Trigger `lark-sync push` after: feature creation (also `ensure-user-folder`), phase transitions, `phase_status` flips, `implementation_strategy` decision, PR URL recorded, completion.
 
-Trigger `lark-sync push-prd <slug>` whenever `docs/prd/<slug>.md` is created or edited — this mirrors the PRD into the Agentic's PRD wiki section so the team sees the current version, not a stale one.
+Trigger `lark-sync push-prd <slug>` whenever `docs/prd/<slug>.md` is created or edited.
 
-Lark sync is advisory — if a push fails, log the error and continue the local workflow.
+Advisory — if a push fails, log and continue.
 
-## GATE CONDITIONS
+## GATE CONDITIONS (summary)
 
-| Transition | Gate | Check Method |
-|-----------|------|-------------|
-| prd_creation -> wireframe | PRD file exists with required frontmatter + sections | File check |
-| wireframe -> wireframe_review | Wireframe directory exists with >= 1 .tsx file | File check |
-| wireframe_review -> branch_creation | Approval recorded (verbal confirmation from Jeff) | Manual confirmation |
-| branch_creation -> prd_splitting | Feature branch exists from latest develop | Git check |
-| prd_splitting -> implementation | Service PRDs exist for each touched service | File check |
-| implementation -> pr_submission | Track file shows progress | File check |
-| pr_submission -> pr_review | PR URLs recorded and exist on GitHub | `gh` check |
-| pr_review -> completion | All PRs merged | `gh` check |
-| completion -> idle | Track file marked complete | File check |
+| Transition | Gate | Check |
+|-----------|------|-------|
+| idle → brainstorming | Intake recorded (slug, type, initial_request) | State |
+| brainstorming → prd_creation | Every question answered, summary written | State |
+| prd_creation → prd_splitting | PRD frontmatter + sections valid | File |
+| prd_splitting → implementation | Feature branch created from base + service PRDs exist | Git + File |
+| implementation → pr_submission | Track progress, on feature branch, sequential strategy | File + Git |
+| pr_submission → pr_review | PR open, self-review + security audit recorded, has feedback | `gh` |
+| pr_submission → completion | PR open, self-review + security audit recorded, MERGED with zero feedback | `gh` |
+| pr_review → completion | All review threads resolved, PR merged | `gh` |
+| completion → idle | Track file marked complete | File |
 
-## POST-PRD DECISION: WIREFRAME OR SKIP (MANDATORY)
-
-When `frndos-prd` finishes, use Cursor's **ask tool** to ask the user whether to build wireframes or skip to branch creation. Do NOT silently default — many features do not need wireframes, and skipping manually breaks the state machine.
-
-Ask:
-
-> "PRD is complete. How would you like to proceed?
-> - **Build wireframes** (default) — wireframe branch + wireframe PR + FE owner review
-> - **Skip wireframes** — jump directly to branch creation + PRD splitting + implementation"
-
-- If user picks **Build wireframes**: transition `prd_creation → wireframe` and invoke `frndos-wireframe`.
-- If user picks **Skip wireframes**: set `features[<slug>].wireframe_skipped = true` in `.workflow-state.json`, transition `prd_creation → branch_creation`, handle branch creation (below), then invoke `frndos-splitter`.
-
-## BRANCH CREATION (self-handled)
-
-When phase is `branch_creation`:
-1. Determine base branch: `develop` for api/web, `development` for ai-service/data-service
-2. If `features[<slug>].wireframe_skipped` is NOT true, verify wireframe files exist on develop before creating the feature branch. If they do not, BLOCK with: "The wireframe PR hasn't been merged yet."
-3. If `wireframe_skipped` IS true, skip the wireframe verification.
-4. Explain plan: "I'll create branch `feature/<worker>/vc-<slug>` from latest `<base-branch>`"
-5. Wait for confirmation via the ask tool
-6. Execute in terminal:
-   ```bash
-   git checkout <base-branch> && git pull origin <base-branch>
-   git checkout -b feature/<worker>/vc-<slug>
-   git push -u origin feature/<worker>/vc-<slug>
-   ```
-7. Update `.workflow-state.json`: set branch, transition to `prd_splitting`
+Every gate also requires `phase_status === "completed"`.
 
 ## IDLE STATE
 
-When no active feature:
-- Show welcome: "No active feature. You can:"
-  - `workflow start <slug>` — Start a new feature
-  - `workflow resume <slug>` — Pick up an existing feature
-  - `workflow list` — See all features
+When no active feature: show
+- `workflow start <slug>` — Start a new feature/bug/improvement
+- `workflow resume <slug>` — Pick up an existing feature
+- `workflow list` — See all features
 
 ## CONTEXT SWITCHING
 
 When user says "switch to X" or `workflow switch X`:
-1. Save current feature state
-2. Set active_feature to X
-3. Load X's phase
-4. If different branch needed, prompt: "Switch to branch `feature/<worker>/vc-X`?"
-5. Inform user which agent to invoke for the target phase
+1. Save current feature state.
+2. Set active_feature to X.
+3. Load X's phase + phase_status.
+4. If different branch needed, prompt to switch.
+5. Tell the user which agent to invoke (or, if `phase_status === "completed"`, ask about advancing).
 
 ## ALWAYS ASK BEFORE EXECUTING
 
-Before performing ANY action:
-1. **Explain** what you plan to do and why
-2. **Ask questions** if anything is unclear
-3. **Give suggestions** if there are multiple valid approaches
-4. **Wait for user confirmation** before executing
+1. **Explain** what you plan to do and why.
+2. **Ask questions** if anything is unclear.
+3. **Give suggestions** if there are multiple valid approaches.
+4. **Wait for user confirmation** before executing.
 
-NEVER execute code changes without explaining the plan first.
-NEVER make assumptions about requirements without asking.
-NEVER skip the confirmation step, even for "obvious" actions.
-NEVER auto-proceed after presenting a plan — always wait for explicit approval.
+NEVER execute code changes without explaining the plan first. NEVER skip the confirmation step. NEVER auto-advance phases.

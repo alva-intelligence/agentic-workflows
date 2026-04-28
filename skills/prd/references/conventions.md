@@ -25,7 +25,7 @@ services: [api, web, ai-service, data-service]  # which services are touched
 3. **Requirements** — Functional requirements, numbered (FR-1, FR-2, ...)
 4. **Non-Functional Requirements** — Performance, security, scalability
 5. **Service Breakdown** — What each service needs to do (this drives PRD splitting)
-6. **UI/UX** — Key screens, interactions, wireframe references
+6. **UI/UX** — Key screens, interactions, mock-data notes (only when `implementation_strategy === "wireframe_then_implementation"`)
 7. **Data Model** — New tables, columns, relationships
 8. **API Endpoints** — New or modified endpoints
 9. **Acceptance Criteria** — How to verify the feature works

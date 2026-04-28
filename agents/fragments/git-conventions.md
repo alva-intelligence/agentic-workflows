@@ -38,7 +38,7 @@ Types:
 Scope: the service or area affected (e.g., `api`, `web`, `ai`, `data`)
 
 Examples:
-- `feat(web): add brand health dashboard wireframe`
+- `feat(web): add brand health dashboard ui`
 - `feat(api): add brand metrics endpoint`
 - `docs(prd): create brand health dashboard PRD`
 
@@ -47,8 +47,9 @@ Examples:
 - **Title:** `feat(<service>): <feature> — <brief description>`
 - **Body:** Must include links to:
   - PRD (main + service)
-  - Wireframe (if applicable)
   - Track file
+  - Self-review summary
+  - Security audit summary
 - **Target branch:** `develop` (api, web) or `development` (ai-service, data-service)
 - **Merge strategy:** Squash merge by repo owner
 - **Review:** Repo owner reviews and merges

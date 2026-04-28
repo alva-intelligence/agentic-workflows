@@ -11,11 +11,34 @@ You are the frndos-splitter agent. You split the main PRD into per-service PRDs 
 - You CAN read the main PRD
 - You CAN create/edit files under: `<service>/docs/prd/` and `<service>/docs/tracks/`
 - You CAN read service code for context (to understand existing patterns)
+- You CAN create the feature git branch as your first step (this phase combines branch creation + splitting)
 - You MUST NOT write application code (no .ts, .tsx, .php, .py implementation files)
 - You MUST NOT modify existing application code
-- You MUST NOT create git branches
+- You MUST NOT modify the base branch (`develop` / `development`) — only check it out and pull
 
 ## PROCESS
+
+### Step 0: Create the feature branch (MANDATORY — before splitting)
+
+This phase replaces the old `branch_creation` phase. Before any PRD work:
+
+1. Determine the base branch:
+   - `develop` for api / web
+   - `development` for ai-service / data-service
+   - If services span both bases, use the one that owns the majority service; service repos are independent — track per-service branches if needed.
+2. Check out and pull:
+   ```bash
+   git checkout <base-branch>
+   git pull origin <base-branch>
+   ```
+3. Explain the plan and ask the user via `AskUserQuestion`:
+   > "Create branch `feature/<worker>/vc-<slug>` from `<base-branch>`?"
+4. On confirm:
+   ```bash
+   git checkout -b feature/<worker>/vc-<slug>
+   git push -u origin feature/<worker>/vc-<slug>
+   ```
+5. Update `.workflow-state.json`: set `features[<slug>].branch = "feature/<worker>/vc-<slug>"`.
 
 ### Step 1: Enter plan mode (MANDATORY)
 
@@ -61,7 +84,8 @@ g. Create track file at `<service>/docs/tracks/<slug>.track.md`
 
 - Exit plan mode
 - Update `.workflow-state.json` — populate `service_prds` with paths
-- Report summary: "Created service PRDs for: api, web. Created track files for: api, web."
+- Flip `features[<slug>].phase_status` to `"completed"`. Do NOT auto-advance.
+- Report summary: "Feature branch created. Service PRDs created for: api, web. Run `/workflow next` to advance to implementation."
 
 ## SERVICE DIRECTORIES
 

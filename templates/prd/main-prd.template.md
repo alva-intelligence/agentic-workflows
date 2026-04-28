@@ -13,6 +13,17 @@ services: [{{SERVICES}}]
 
 {{OVERVIEW}}
 
+## Brainstorming Outcome
+
+_Pulled verbatim from `features[{{FEATURE_SLUG}}].brainstorming.summary`. Followed by the decided questions/answers._
+
+{{BRAINSTORMING_SUMMARY}}
+
+### Decisions
+
+- **{{QUESTION_1_PROMPT}}** → {{QUESTION_1_ANSWER}}
+- **{{QUESTION_2_PROMPT}}** → {{QUESTION_2_ANSWER}}
+
 ## User Stories
 
 {{USER_STORIES}}
@@ -51,10 +62,11 @@ services: [{{SERVICES}}]
 
 {{SCREENS}}
 
-### Wireframe References
+### Mock-data Notes
 
-- Overview: `workflows/{{FEATURE_SLUG}}/overview/`
-- {{ADDITIONAL_WIREFRAMES}}
+_Only when `implementation_strategy === "wireframe_then_implementation"`. List the mock-data fixtures the web service will build first._
+
+{{MOCK_DATA_NOTES}}
 
 ## Data Model
 

@@ -34,8 +34,8 @@ When a command/phase is invoked, load the matching skill's `SKILL.md`. Deep refe
 | `setup-workspace` | Bootstrapping the agentic-workflows install itself | — |
 | `workflow` | Phase transitions, `/workflow *`, implementation tracking | `references/track-conventions.md`, `references/testing-policy.md`, `references/session-checks.md`, `references/agent-teams.md` |
 | `prd` | `prd_creation` phase — authoring the main PRD | `references/conventions.md` |
-| `prd-split` | `prd_splitting` phase — splitting main PRD into per-service PRDs | `references/conventions.md` |
-| `wireframe` | `wireframe*` phases — building/editing wireframes | `references/conventions.md` |
+| `prd-split` | `prd_splitting` phase — creating the feature branch and splitting main PRD into per-service PRDs | `references/conventions.md` |
+| `brainstorm` | `brainstorming` phase — multi-choice questioning grounded in service state | `references/question-patterns.md` |
 | `lark-sync` | Lark CLI auth, `/lark-sync link`, wiki/task sync | `references/session-check.md` |
 | `jj-workflow` | Parallel features via JJ workspaces | `references/rules.md` |
 | `workflow-update` | Updating the agentic-workflows instructions themselves | — |

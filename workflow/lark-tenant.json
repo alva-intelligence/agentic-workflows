@@ -1,29 +1,18 @@
 {
-  "$description": "Alva tenant-specific static Lark tokens. GUIDs are stable once created — treat this file as source-of-truth, regenerate via /lark-sync bootstrap only if the tasklist or wiki tree is reset. Per-user/per-feature dynamic tokens live in .lark-sync.json (gitignored).",
+  "$description": "Alva tenant-specific static Lark tokens. GUIDs are stable once created — treat this file as source-of-truth, regenerate via /lark-sync bootstrap only if the tasklist or wiki tree is reset. Per-user/per-feature dynamic tokens live in .lark-sync.json (gitignored). Sections marked with 'guid: null' need to be created or relabeled via /lark-sync bootstrap on the next run.",
   "tasklist": {
     "guid": "81e7c3be-4702-43d3-9ced-2ef36661b5f4",
     "name": "FrnDOS Agentic Workflow Management",
     "url": "https://fcn.sg.larksuite.com/client/todo/task_list?guid=81e7c3be-4702-43d3-9ced-2ef36661b5f4"
   },
   "sections": {
+    "Brainstorming": {
+      "guid": null,
+      "is_default": true,
+      "_pending_bootstrap": true
+    },
     "PRD Creation": {
       "guid": "adca3fce-4f04-c4e7-bd22-abf1383d94ce",
-      "is_default": true
-    },
-    "Wireframe": {
-      "guid": "3bf9c331-57f8-401c-907b-bffcad29152e",
-      "is_default": false
-    },
-    "Wireframe PR": {
-      "guid": "10b35c37-e852-4f57-8d11-4c5929e452c2",
-      "is_default": false
-    },
-    "Wireframe Review": {
-      "guid": "f574a100-6802-4746-844e-368df9553179",
-      "is_default": false
-    },
-    "Branch Creation": {
-      "guid": "ad45b886-361a-4ed9-b154-b36d87bd0529",
       "is_default": false
     },
     "PRD Splitting": {
@@ -42,10 +31,18 @@
       "guid": "723a0a26-4c70-4b9c-8a1f-bee8ad4c24b9",
       "is_default": false
     },
-    "Completion": {
+    "Completed": {
       "guid": "b99cfcfd-2480-4762-bc96-6eee9be178d7",
-      "is_default": false
+      "is_default": false,
+      "_legacy_name": "Completion"
     }
+  },
+  "_deprecated_sections": {
+    "$description": "Sections that existed in the old workflow but are removed in v3. Their Lark section GUIDs are still in the tenant — humans can archive them in Lark UI. /lark-sync push will not target them.",
+    "Wireframe": "3bf9c331-57f8-401c-907b-bffcad29152e",
+    "Wireframe PR": "10b35c37-e852-4f57-8d11-4c5929e452c2",
+    "Wireframe Review": "f574a100-6802-4746-844e-368df9553179",
+    "Branch Creation": "ad45b886-361a-4ed9-b154-b36d87bd0529"
   },
   "fields": {
     "Priority": {
@@ -87,31 +84,29 @@
       "type": "text",
       "options": {}
     },
-    "Wireframe PR": {
-      "guid": "4a08c0b2-db33-43ec-b8a6-189a10c5bd2b",
-      "type": "text",
-      "options": {}
-    },
     "PRs": {
       "guid": "c0f94ef7-0cb6-4810-bc8e-2bfc461062aa",
       "type": "text",
       "options": {}
     },
-    "Wireframe skipped": {
-      "guid": "81c9d50b-4241-48ef-8e66-e9566a4f30a7",
+    "Phase status": {
+      "guid": null,
       "type": "single_select",
       "options": {
-        "yes": "a5afefb3-d38a-4e7e-8344-f0551787a135",
-        "no": "543fe268-bd8b-4354-8d84-6a326c645800"
-      }
+        "inprogress": null,
+        "completed": null
+      },
+      "_pending_bootstrap": true
     },
     "Impl strategy": {
       "guid": "f907c9c1-7c1f-4d36-822f-6fa54c285071",
       "type": "single_select",
       "options": {
-        "vertical": "804a7a70-986b-455e-b3c2-afe3c6f87fcd",
-        "web-first-stubs": "c9851819-d726-4696-9195-8f83769872f1"
-      }
+        "implementation_only": null,
+        "wireframe_then_implementation": null
+      },
+      "_pending_bootstrap": true,
+      "_note": "Field GUID is reused from the old Impl strategy field; option values changed (vertical → implementation_only, web-first-stubs → wireframe_then_implementation). Bootstrap must add new options to the existing field."
     },
     "Parent feature": {
       "guid": "5e948fc5-4386-4a25-b64c-b99db0c69c72",
@@ -136,6 +131,11 @@
       "type": "text",
       "options": {}
     }
+  },
+  "_deprecated_fields": {
+    "$description": "Fields removed in v3. Their Lark field GUIDs still exist in the tenant — humans can archive them in Lark UI. /lark-sync push will not target them.",
+    "Wireframe PR": "4a08c0b2-db33-43ec-b8a6-189a10c5bd2b",
+    "Wireframe skipped": "81c9d50b-4241-48ef-8e66-e9566a4f30a7"
   },
   "wiki": {
     "space_id": "7614015311473299165",

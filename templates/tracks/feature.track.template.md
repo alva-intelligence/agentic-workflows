@@ -13,11 +13,23 @@ status: in_progress
 
 | Item | Status |
 |------|--------|
-| Wireframe | {{WIREFRAME_STATUS}} |
+| Brainstorming | {{BRAINSTORMING_STATUS}} |
 | PRD | {{PRD_STATUS}} |
 | Service PRD | draft |
 | Implementation | not_started |
 | PR | not_submitted |
+
+## Phase Progress
+
+| Phase | phase_status |
+|-------|--------------|
+| brainstorming | {{BRAINSTORMING_PHASE_STATUS}} |
+| prd_creation | {{PRD_CREATION_PHASE_STATUS}} |
+| prd_splitting | {{PRD_SPLITTING_PHASE_STATUS}} |
+| implementation | {{IMPLEMENTATION_PHASE_STATUS}} |
+| pr_submission | {{PR_SUBMISSION_PHASE_STATUS}} |
+| pr_review | {{PR_REVIEW_PHASE_STATUS}} |
+| completion | {{COMPLETION_PHASE_STATUS}} |
 
 ## Tasks
 
