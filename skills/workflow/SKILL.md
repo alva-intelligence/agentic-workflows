@@ -24,7 +24,7 @@ Show the current workflow state for the active feature.
 2. Display:
    - Active feature: `{active_feature}`
    - Current phase: `{phase}` ({phase_name})
-   - Phase status: `{phase_status}` (`inprogress` or `completed`)
+   - Phase status: `{phase_status}` (`idle` / `inprogress` / `completed`)
    - Phase entered: `{phase_entered}`
    - Worker: `{worker}`
    - Type: `{type}` (feature | bug | improvement)
@@ -91,7 +91,7 @@ Start a new feature workflow.
    ```
 7. Set `active_feature` to `<slug>`. Ask the user for worker name if not set.
 8. Save state.
-9. Ask: "Advance to brainstorming?" — on yes, transition (`phase: "brainstorming"`, `phase_status: "inprogress"`) and delegate to `frndos-brainstorm`.
+9. Ask: "Advance to brainstorming?" — on yes, transition (`phase: "brainstorming"`, `phase_status: "idle"`) and delegate to `frndos-brainstorm`.
 
 ### `/workflow next`
 Transition to the next phase (if gate conditions are met).
@@ -99,7 +99,7 @@ Transition to the next phase (if gate conditions are met).
 **Steps:**
 1. Read `.workflow-state.json`.
 2. Get current phase + `phase_status` for active feature.
-3. **Require `phase_status === "completed"`.** If still `inprogress`, refuse: "Phase `<phase>` is still in progress. Let the agent finish (or wait for it to flip phase_status to completed) before advancing."
+3. **Require `phase_status === "completed"`.** If `idle` or `inprogress`, refuse: "Phase `<phase>` is still pending (`idle`) or in progress (`inprogress`). Let the agent finish (or wait for it to flip phase_status to completed) before advancing."
 4. Look up gate conditions from `.agentic-workflows/workflow/gates.json`.
 5. **If the current phase has multiple possible next phases**, check `next_strategy` on the phase in `phases.json`:
    - `implementation → pr_submission` for `sequential` strategy.
@@ -107,7 +107,7 @@ Transition to the next phase (if gate conditions are met).
    - `pr_submission → pr_review` when the PR has reviewer/bot feedback (`has_feedback`).
    - `pr_submission → completion` when the PR merged with zero feedback (`merged_clean`).
 6. Check EACH gate condition for the resolved transition:
-   - If all pass → transition to next phase, update `phase`, `phase_entered`, set new `phase_status` to `"inprogress"`.
+   - If all pass → transition to next phase, update `phase`, `phase_entered`, set new `phase_status` to `"idle"`.
    - If any fail → report which conditions failed and what's needed.
 7. Save state.
 8. Inform user of new phase and which agent will handle it.

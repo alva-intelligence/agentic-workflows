@@ -21,17 +21,21 @@ From `.workflow-state.json`:
 
 ## PROCESS
 
-### Step 1: Load latest state of relevant services
+### Step 0: Activate phase
+
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+
+### Step 2: Load latest state of relevant services
 
 Identify candidate services from `initial_request`. For each, build a short snapshot using code-graph MCP tools first, falling back to grep/read. Save snapshots to `features[active_feature].brainstorming.service_state_snapshots[<service>]`.
 
-### Step 2: Generate questions
+### Step 3: Generate questions
 
 3–6 multi-choice questions, 2–4 options each, exactly one option per question with `recommended: true`. Recommended = safer / lower-friction / better aligned with existing system.
 
 Skill: `skills/brainstorm/SKILL.md`.
 
-### Step 3: Ask the user
+### Step 4: Ask the user
 
 Amp's ask is plain text. Present each question as:
 
@@ -47,10 +51,10 @@ Q: <prompt>
 
 Wait for the user's reply. Record answer in `brainstorming.questions[i]`. After each answer, call `/lark-sync push-brainstorming <slug>` (advisory; log + continue on failure).
 
-### Step 4: Write the summary
+### Step 5: Write the summary
 
 3–8 sentences. Save to `brainstorming.summary`; set `brainstorming.completed_at`. Call `/lark-sync push-brainstorming <slug>`.
 
-### Step 5: Mark phase completed and stop
+### Step 6: Mark phase completed and stop
 
 Flip `features[active_feature].phase_status` to `"completed"`. Call `/lark-sync push <slug>` (updates Phase status field) and `/lark-sync push-brainstorming <slug>` (final mirror). Do NOT auto-advance. Tell the user: "Brainstorming complete. Run `/workflow next` to advance to PRD creation."

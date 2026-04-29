@@ -23,16 +23,20 @@ You receive from frndos-orchestra (via Task prompt):
 
 ## PROCESS
 
-### Step 1: Research phase (MANDATORY — read-only)
+### Step 0: Activate phase
 
-Amp has no dedicated plan mode. Instead, you MUST do an explicit **research phase** with read-only tools before proposing or drafting anything. Announce to the user: "Entering research phase — I will read code and existing PRDs before drafting." Do NOT write any files during Steps 1-6.
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
 
-### Step 2: Gather raw input
+### Step 2: Research phase (MANDATORY — read-only)
+
+Amp has no dedicated plan mode. Instead, you MUST do an explicit **research phase** with read-only tools before proposing or drafting anything. Announce to the user: "Entering research phase — I will read code and existing PRDs before drafting." Do NOT write any files during Steps 2-7.
+
+### Step 3: Gather raw input
 
 - Ask user (plain text, then wait) for their feature description, Lark notes, or Lark URL
 - If a Lark URL is provided, ask user to paste the content
 
-### Step 3: Estimate PRD size and propose splitting if large (MANDATORY)
+### Step 4: Estimate PRD size and propose splitting if large (MANDATORY)
 
 Estimate the size of the **source material**. Rough token count ≈ `char_count / 3.5`.
 
@@ -51,7 +55,7 @@ Estimate the size of the **source material**. Rough token count ≈ `char_count 
   - Restart the PRD process for each sub-PRD; each goes through the full workflow independently.
 - If user declines, proceed but warn that context will be tight.
 
-### Step 4: Research current system state (MANDATORY — BEFORE DRAFTING)
+### Step 5: Research current system state (MANDATORY — BEFORE DRAFTING)
 
 You MUST complete this research before drafting a single line of the PRD.
 
@@ -65,11 +69,11 @@ You MUST complete this research before drafting a single line of the PRD.
 
 Do NOT skip even if the user's description seems self-contained.
 
-### Step 5: Challenge assumptions (MANDATORY)
+### Step 6: Challenge assumptions (MANDATORY)
 
 Identify at least **3** aspects of the user's description that are ambiguous, underspecified, or conflict with existing system behavior. Ask the user about each one (plain text, wait for reply). Prefer **multiple small questions** over one mega-question.
 
-### Step 6: Relentless clarifying questions (MANDATORY)
+### Step 7: Relentless clarifying questions (MANDATORY)
 
 Re-read the user's input + your research notes and surface **EVERY** remaining ambiguity or assumption. Ask each as a separate small question (plain text, wait). Do NOT draft until ALL are answered.
 
@@ -80,9 +84,9 @@ Also ask baseline scoping questions:
 - What does "done" look like? (acceptance criteria)
 - Any open questions or unresolved decisions?
 
-### Step 7: Wait for all answers — do NOT assume or proceed
+### Step 8: Wait for all answers — do NOT assume or proceed
 
-### Step 8: Exit research phase and draft the PRD
+### Step 9: Exit research phase and draft the PRD
 
 - Announce: "Research phase complete — drafting PRD."
 - Read template from `.agentic-workflows/templates/prd/main-prd.template.md`
@@ -92,12 +96,12 @@ Also ask baseline scoping questions:
 - Include an "Existing System Reconciliation" subsection in Overview
 - Include an "Assumptions and Clarifications" subsection
 
-### Step 9: Present for review
+### Step 10: Present for review
 
 - Show the complete PRD draft
 - Ask (plain text, wait): "Does this look good? Any changes needed?"
 
-### Step 10: On approval
+### Step 11: On approval
 
 - Ensure `docs/prd/` directory exists
 - Write to `docs/prd/<feature-slug>.md`

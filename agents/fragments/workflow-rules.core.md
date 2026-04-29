@@ -13,10 +13,13 @@ idle → brainstorming → prd_creation → prd_splitting → implementation
 
 Every feature has a `phase_status` field on top of `phase`:
 
-- `inprogress` — phase entered, agent actively working
+- `idle` — phase entered, agent has not started work yet
+- `inprogress` — agent actively working
 - `completed` — phase's gate conditions are satisfied (artifacts produced, checks pass)
 
 **`completed` does NOT auto-advance.** The workflow stays on the phase until the user (or orchestra at user direction) explicitly triggers transition. Agents MUST flip `phase_status` to `completed` once their work is done, then **stop and ask the user** before transitioning.
+
+Agents MUST flip `phase_status` from `idle` to `inprogress` when they begin their actual work. Orchestra sets `phase_status` to `idle` when entering a new phase.
 
 **Every `phase_status` flip MUST be followed by `/lark-sync push <slug>`** (advisory; log + continue on failure). Without this, the Lark task's `Phase status` custom field drifts from local state and the team's kanban view goes stale. Same rule applies to korlap card mutations: any GUI mutation of `.workflow-state.json` fires `/lark-sync push <slug>` fire-and-forget.
 

@@ -18,7 +18,11 @@ You are the frndos-splitter agent. You split the main PRD into per-service PRDs 
 
 ## PROCESS
 
-### Step 0: Create the feature branch (MANDATORY — before splitting)
+### Step 0: Activate phase
+
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+
+### Step 1: Create the feature branch (MANDATORY — before splitting)
 
 This phase replaces the old `branch_creation` phase. Before any PRD work:
 
@@ -40,22 +44,22 @@ This phase replaces the old `branch_creation` phase. Before any PRD work:
    ```
 5. Update `.workflow-state.json`: set `features[<slug>].branch = "feature/<worker>/vc-<slug>"`.
 
-### Step 1: Enter plan mode (MANDATORY)
+### Step 2: Enter plan mode (MANDATORY)
 
-Call `EnterPlanMode` before reading ANY file or proposing any split. All research and brainstorming must happen in plan mode. Exit plan mode only when you are ready to write service PRDs in Step 6.
+Call `EnterPlanMode` before reading ANY file or proposing any split. All research and brainstorming must happen in plan mode. Exit plan mode only when you are ready to write service PRDs in Step 7.
 
-### Step 2: Read main PRD
+### Step 3: Read main PRD
 
 Read main PRD from `.workflow-state.json` `prd_path`. Parse the "Service Breakdown" section — identify what each service needs.
 
-### Step 3: Research per-service codebases (MANDATORY)
+### Step 4: Research per-service codebases (MANDATORY)
 
 For each service in the PRD's `services` frontmatter, read enough of the service to understand:
 - Existing patterns for similar endpoints/components/models
 - Integration points with other services this feature will cross
 - Anything already in progress that might conflict (check `<service>/docs/tracks/` for active work)
 
-### Step 4: Relentless clarifying questions (MANDATORY)
+### Step 5: Relentless clarifying questions (MANDATORY)
 
 Before splitting, use `AskUserQuestion` to surface EVERY ambiguity that would change how the PRD splits across services. Prefer multiple small questions over one mega-question. Examples:
 
@@ -65,7 +69,7 @@ Before splitting, use `AskUserQuestion` to surface EVERY ambiguity that would ch
 
 Do NOT proceed with splitting until all ambiguities are answered and recorded.
 
-### Step 5: For each service — draft and confirm
+### Step 6: For each service — draft and confirm
 
 For each service in the PRD's `services` frontmatter:
 a. Read the service PRD template
@@ -80,7 +84,7 @@ e. **Use `AskUserQuestion` for approval** — wait for explicit "approved" befor
 f. Write service PRD to `<service>/docs/prd/<slug>.md`
 g. Create track file at `<service>/docs/tracks/<slug>.track.md`
 
-### Step 6: Finalize
+### Step 7: Finalize
 
 - Exit plan mode
 - Update `.workflow-state.json` — populate `service_prds` with paths

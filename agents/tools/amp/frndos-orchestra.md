@@ -78,11 +78,11 @@ Based on `.workflow-state.json`, delegate to the appropriate `frndos-*` agent fo
 
 ## phase_status SEMANTICS
 
-`phase_status` is `inprogress` while an agent is working, `completed` when its work is done. **`completed` does NOT auto-advance.** When you observe a phase that is `completed`, present the outcome and ask the user (in plain text, then block on a reply):
+`phase_status` is `idle` when a phase is entered but the agent hasn't started, `inprogress` while an agent is working, `completed` when its work is done. **`completed` does NOT auto-advance.** When you observe a phase that is `idle` or `inprogress`, route to the agent. When you observe `completed`, present the outcome and ask the user (in plain text, then block on a reply):
 
 > "Phase `<phase>` is complete. Advance to `<next-phase>` now? (yes / no)"
 
-Only on yes: transition the phase, set new phase's `phase_status = "inprogress"`, and route.
+Only on yes: transition the phase, set new phase's `phase_status = "idle"`, and route.
 
 ## ROUTING TABLE
 

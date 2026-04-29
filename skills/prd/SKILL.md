@@ -16,11 +16,13 @@ Create a new PRD for a feature.
 
 **Steps:**
 
+0. **Activate phase.** Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.
+
 1. **Enter plan mode (MANDATORY).** Call your harness's plan mode before reading any file or forming conclusions:
    - Claude Code: `EnterPlanMode`
    - Cursor: plan mode
    - OpenCode: plan mode
-   - Amp: no plan mode — announce an explicit "research phase" and stay read-only until Step 8.
+   - Amp: no plan mode — announce an explicit "research phase" and stay read-only until Step 9.
 
 2. Verify workflow state is in `prd_creation` phase. If `idle`, route the user back to `/workflow start <slug>` so the brainstorming phase runs first.
 
@@ -45,25 +47,25 @@ Create a new PRD for a feature.
    - Check recent commits on base branches (`develop` / `development`) in affected areas
    - Summarize findings to the user: "Here's what already exists that this PRD must reconcile with: [list]"
 
-8. **Challenge assumptions (MANDATORY).** Identify at least 3 aspects that are ambiguous, underspecified, or conflict with existing system behavior. Ask about each via your ask tool. Prefer multiple small questions.
+9. **Challenge assumptions (MANDATORY).** Identify at least 3 aspects that are ambiguous, underspecified, or conflict with existing system behavior. Ask about each via your ask tool. Prefer multiple small questions.
 
-9. **Relentless clarifying questions (MANDATORY).** Surface EVERY remaining ambiguity. Do NOT draft until ALL are answered. Also ask the baseline:
+10. **Relentless clarifying questions (MANDATORY).** Surface EVERY remaining ambiguity. Do NOT draft until ALL are answered. Also ask the baseline:
    - Which services does this touch?
    - Who are the primary users?
    - Technical constraints?
    - "Done" criteria?
 
-10. Wait for user answers.
+11. Wait for user answers.
 
-11. Exit plan mode. Read template from `.agentic-workflows/templates/prd/main-prd.template.md`.
+12. Exit plan mode. Read template from `.agentic-workflows/templates/prd/main-prd.template.md`.
 
-12. Generate the PRD. Include a `## Brainstorming Outcome` section pulling in the brainstorming summary verbatim plus a bullet list of decided questions/answers. Also include "Existing System Reconciliation" and "Assumptions and Clarifications" subsections.
+13. Generate the PRD. Include a `## Brainstorming Outcome` section pulling in the brainstorming summary verbatim plus a bullet list of decided questions/answers. Also include "Existing System Reconciliation" and "Assumptions and Clarifications" subsections.
 
-13. Present the draft to user for review.
+14. Present the draft to user for review.
 
-14. On approval, write to `docs/prd/<slug>.md`.
+15. On approval, write to `docs/prd/<slug>.md`.
 
-15. Update `.workflow-state.json` with `prd_path` (and `parent_feature` / `sub_features` if split). Flip `phase_status` to `"completed"`. Do NOT auto-advance — tell the user to run `/workflow next` to advance to PRD splitting.
+16. Update `.workflow-state.json` with `prd_path` (and `parent_feature` / `sub_features` if split). Flip `phase_status` to `"completed"`. Do NOT auto-advance — tell the user to run `/workflow next` to advance to PRD splitting.
 
 ### `/prd edit`
 Edit the current feature's PRD.

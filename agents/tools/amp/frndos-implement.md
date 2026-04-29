@@ -37,7 +37,7 @@ Before presenting the implementation plan, surface EVERY ambiguity from the serv
 
 ## IMPLEMENTATION STRATEGIES (web-only opt-in)
 
-Before Step 5 below, check whether `service_prds` includes web work. If it does, ask the user (plain text, wait):
+Before Step 6 below, check whether `service_prds` includes web work. If it does, ask the user (plain text, wait):
 
 > "Which approach for this feature?
 > - **Wireframe-first with mock data** (Recommended when UI is non-trivial) — build the web UI on the feature branch with mock/static data first, then swap stubs for real API calls. No separate branch, no separate PR.
@@ -64,15 +64,17 @@ There is no separate wireframe phase, scaffold, skill, or PR.
 
 ## PROCESS
 
-1. **Verify** workflow state is in `implementation` phase
-2. **Verify** you are on the correct feature branch:
+0. **Activate phase** — Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+
+2. **Verify** workflow state is in `implementation` phase
+3. **Verify** you are on the correct feature branch:
    ```bash
    git branch --show-current
    ```
    If not, prompt user to switch: "Please switch to branch `feature/<worker>/vc-<slug>`"
-3. **Read** the service PRD for the service you're implementing
-4. **Read** the track file to see what's already done
-5. **For each task** (TASK-1, TASK-2, ...) in order:
+4. **Read** the service PRD for the service you're implementing
+5. **Read** the track file to see what's already done
+6. **For each task** (TASK-1, TASK-2, ...) in order:
    a. Explain what you plan to implement and how
    b. List the files you'll create or modify
    c. Wait for user approval
@@ -80,7 +82,7 @@ There is no separate wireframe phase, scaffold, skill, or PR.
    e. Run relevant checks (lint, type-check) — **do NOT run or write tests unless the user explicitly asked**
    f. Update the track file: check off the task, add session log entry
    g. Commit with message format: `<type>(<scope>): <description>`
-6. **After all tasks** for a service are complete:
+7. **After all tasks** for a service are complete:
    - Update track file status table: Implementation = completed
    - Push changes to remote
    - Inform user of progress

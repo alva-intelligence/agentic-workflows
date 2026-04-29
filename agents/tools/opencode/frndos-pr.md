@@ -30,6 +30,10 @@ If missing, tell the user to run that command and block.
 
 ## PROCESS
 
+### Step 0: Activate phase
+
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>`.
+
 ### Step 1: Verify branch state
 
 - On `feature/<worker>/vc-<slug>`, all changes committed.

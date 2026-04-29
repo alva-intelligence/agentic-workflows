@@ -24,7 +24,7 @@ workflow — from brainstorming to PRD creation, implementation, and PR submissi
 What gets installed:
   - 10 phase-scoped AI agents (orchestra, brainstorm, prd, splitter, implement, engineer, architect, pr, pr-review, track)
   - 9 skills (/onboard, /workflow, /workflow-update, /brainstorm, /prd, /prd-split, /jj-workflow, /lark-sync, /setup-workspace)
-  - An 8-phase workflow state machine with gate enforcement (with `phase_status` per phase — `inprogress` / `completed`, no auto-advance)
+   - An 8-phase workflow state machine with gate enforcement (with `phase_status` per phase — `idle` / `inprogress` / `completed`, no auto-advance)
   - Agent Teams support — parallel per-service engineers + architect (Claude Code)
   - JJ workspace support — parallel features in isolated directories (Claude Code, Amp)
   - Auto-updating instruction system (stays in sync with team changes)
@@ -192,7 +192,7 @@ and shipped merged PRs. You approved plans and steered — the agents did the re
 
 ### Workflow State Machine
 
-8 phases with gate enforcement — each phase has a dedicated agent. `pr_review` is conditional (skipped on a clean merge). Every phase carries a `phase_status` (`inprogress` / `completed`); `completed` does NOT auto-advance.
+8 phases with gate enforcement — each phase has a dedicated agent. `pr_review` is conditional (skipped on a clean merge). Every phase carries a `phase_status` (`idle` / `inprogress` / `completed`); `completed` does NOT auto-advance.
 
 ```
 idle → brainstorming → prd_creation → prd_splitting →

@@ -63,10 +63,10 @@
           ]
         },
         "phase_status": {
-          "description": "Status of the current phase. 'inprogress' when the agent is actively working. 'completed' when the phase's gate conditions (other than phase_status itself) are satisfied. 'completed' does NOT auto-advance — the workflow stays on the phase until the user (or orchestra at user direction) explicitly triggers transition to the next phase.",
+          "description": "Status of the current phase. 'idle' when the phase has been entered but the agent has not started work. 'inprogress' when the agent is actively working. 'completed' when the phase's gate conditions (other than phase_status itself) are satisfied. 'completed' does NOT auto-advance — the workflow stays on the phase until the user (or orchestra at user direction) explicitly triggers transition to the next phase.",
           "type": "string",
-          "enum": ["inprogress", "completed"],
-          "default": "inprogress"
+          "enum": ["idle", "inprogress", "completed"],
+          "default": "idle"
         },
         "phase_entered": {
           "description": "ISO 8601 timestamp of when the current phase was entered.",

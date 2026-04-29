@@ -30,21 +30,25 @@ If the skill is missing, tell the user to run that command, block, and wait.
 
 ## PROCESS
 
-### Step 1: Verify branch state
+### Step 0: Activate phase
+
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+
+### Step 2: Verify branch state
 
 - Confirm on `feature/<worker>/vc-<slug>` branch.
 - Ensure all changes are committed.
 - `git fetch origin && git pull --rebase origin feature/<worker>/vc-<slug>`.
 - `git push origin feature/<worker>/vc-<slug>` (so the diff is available remotely if needed).
 
-### Step 2: Read context
+### Step 3: Read context
 
 - Main PRD for feature overview.
 - Service PRDs for implementation expectations.
 - Track files for the task list claimed as done.
 - `git log` and `git diff origin/<base-branch>...HEAD` for the actual changes.
 
-### Step 3: Self code-review (MANDATORY)
+### Step 4: Self code-review (MANDATORY)
 
 Review your own diff against:
 
@@ -62,7 +66,7 @@ If any must-fix item is not fixable in seconds, bounce the phase back to `frndos
 
 Save the summary to `features[<slug>].pr_review_summary`.
 
-### Step 4: Security audit (MANDATORY)
+### Step 5: Security audit (MANDATORY)
 
 Invoke the `security-reviewer` skill on the diff. Capture findings:
 
@@ -73,7 +77,7 @@ Produce a **Security audit** summary with the skill's findings and resolution st
 
 Save the summary to `features[<slug>].security_audit_summary`.
 
-### Step 5: Confirm with user
+### Step 6: Confirm with user
 
 Use `AskUserQuestion`:
 
@@ -83,7 +87,7 @@ Use `AskUserQuestion`:
 
 Show both summaries.
 
-### Step 6: Draft PR
+### Step 7: Draft PR
 
 - Read template from `.agentic-workflows/templates/pr/feature-pr.template.md`.
 - Fill in: title, summary, PRD links, changes, tasks completed.
@@ -91,13 +95,13 @@ Show both summaries.
 - **Title:** `feat(<service>): <feature-title> — <brief description>`.
 - **Target:** `develop` for api/web, `development` for ai-service/data-service.
 
-### Step 7: Open PR
+### Step 8: Open PR
 
 ```bash
 gh pr create --title "<title>" --body "<body>" --base <target-branch>
 ```
 
-### Step 8: Update state and stop
+### Step 9: Update state and stop
 
 - Set `pr_urls.<service>` in `.workflow-state.json` for each PR.
 - Update the track file with the PR URL.

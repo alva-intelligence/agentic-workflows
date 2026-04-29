@@ -24,7 +24,11 @@ From `.workflow-state.json`:
 
 ## PROCESS
 
-### Step 0: Create the feature branch (MANDATORY — before splitting)
+### Step 0: Activate phase
+
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+
+### Step 1: Create the feature branch (MANDATORY — before splitting)
 
 This phase replaces the old `branch_creation` phase. Before any PRD work:
 
@@ -34,22 +38,22 @@ This phase replaces the old `branch_creation` phase. Before any PRD work:
 4. On confirm: `git checkout -b feature/<worker>/vc-<slug> && git push -u origin feature/<worker>/vc-<slug>`.
 5. Update `.workflow-state.json`: set `features[<slug>].branch`.
 
-### Step 1: Research phase (MANDATORY — read-only)
+### Step 2: Research phase (MANDATORY — read-only)
 
-Amp has no plan mode. Announce to the user: "Entering research phase — read-only." Do NOT write any files during Steps 1-4.
+Amp has no plan mode. Announce to the user: "Entering research phase — read-only." Do NOT write any files during Steps 2-5.
 
-### Step 2: Read main PRD and per-service context
+### Step 3: Read main PRD and per-service context
 
 1. Verify workflow state is in `prd_splitting` phase
 2. Read main PRD from `.workflow-state.json` `prd_path`
 3. Parse "Service Breakdown"
 4. For each service, read enough code to understand existing patterns, integration points, and any active work in `<service>/docs/tracks/` that may conflict
 
-### Step 3: Relentless clarifying questions (MANDATORY)
+### Step 4: Relentless clarifying questions (MANDATORY)
 
 Before splitting, ask (plain text, wait) about EVERY ambiguity affecting the split. Prefer multiple small questions over one mega-question. Do NOT proceed until answered.
 
-### Step 4: Draft each service PRD
+### Step 5: Draft each service PRD
 
 For each service listed in PRD frontmatter `services`:
 a. Read service PRD template
@@ -60,7 +64,7 @@ e. Ask for approval (plain text, wait) — surface any remaining per-service amb
 f. On approval, write to `<service>/docs/prd/<slug>.md`
 g. Create track file at `<service>/docs/tracks/<slug>.track.md`
 
-### Step 5: Finalize
+### Step 6: Finalize
 
 - Announce: "Research phase complete."
 - Update `.workflow-state.json` `service_prds` with paths

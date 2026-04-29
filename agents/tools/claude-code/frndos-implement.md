@@ -51,7 +51,7 @@ Service-level instructions **take precedence** over generic guidelines when they
 
 ## CLARIFYING QUESTIONS BEFORE IMPLEMENTATION (MANDATORY)
 
-Before starting implementation (before Step 3 in PROCESS below), you MUST use `AskUserQuestion` to surface EVERY remaining ambiguity from the service PRDs. Do not start coding with unresolved ambiguities.
+Before starting implementation (before Step 4 in PROCESS below), you MUST use `AskUserQuestion` to surface EVERY remaining ambiguity from the service PRDs. Do not start coding with unresolved ambiguities.
 
 - Prefer multiple small targeted questions over one big question
 - Examples: "The PRD says 'cache for 5 minutes' — is that per-user or global?", "Should validation errors return 400 or 422?", "Empty list vs. null in the response — which?"
@@ -65,7 +65,7 @@ Do NOT proceed to the "present plan" step until all answers are recorded.
 
 ## IMPLEMENTATION STRATEGIES (web-only opt-in)
 
-Before presenting your implementation plan (Step 3 below), check whether `service_prds` includes web work. If it does, use `AskUserQuestion` to offer a wireframe-first sub-step:
+Before presenting your implementation plan (Step 4 below), check whether `service_prds` includes web work. If it does, use `AskUserQuestion` to offer a wireframe-first sub-step:
 
 > "Which approach for this feature?
 > - **Wireframe-first with mock data** (Recommended when UI is non-trivial) — build the web UI on the feature branch with mock/static data first, then swap stubs for real API calls. No separate branch, no separate PR, no FE-owner approval gate.
@@ -94,21 +94,22 @@ There is no separate wireframe phase, scaffold, skill, or PR for this work — i
 
 ## PROCESS
 
-1. **Read service PRDs** from `.workflow-state.json` service_prds
-2. **Read track files** to see what's already done
-3. **Present implementation plan:**
-   - List remaining tasks from service PRDs
-   - Propose an order of implementation
-   - Identify any dependencies between tasks
-4. **Wait for user approval** of the plan
-5. **For each task:**
-   a. Explain what you'll do
-   b. Wait for "go ahead"
-   c. Implement
-   d. Show the changes
-   e. Run lint/type-check — do NOT run or write tests unless the user has explicitly asked (see Testing Policy)
-   f. Update track file
-6. **When all tasks complete:**
+1. **Activate phase:** Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+2. **Read service PRDs** from `.workflow-state.json` service_prds
+3. **Read track files** to see what's already done
+4. **Present implementation plan:**
+    - List remaining tasks from service PRDs
+    - Propose an order of implementation
+    - Identify any dependencies between tasks
+5. **Wait for user approval** of the plan
+6. **For each task:**
+    a. Explain what you'll do
+    b. Wait for "go ahead"
+    c. Implement
+    d. Show the changes
+    e. Run lint/type-check — do NOT run or write tests unless the user has explicitly asked (see Testing Policy)
+    f. Update track file
+7. **When all tasks complete:**
    - Update track status
    - Flip `features[<slug>].phase_status` to `"completed"` in `.workflow-state.json`. Do NOT auto-advance.
    - Inform user: "Implementation complete. Run `/workflow next` to advance to PR submission."

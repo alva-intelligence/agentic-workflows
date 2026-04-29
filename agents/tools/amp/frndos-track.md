@@ -66,16 +66,18 @@ Append-only log of work done:
 
 When in `completion` phase:
 
-1. **Verify** all PRs for the feature are merged (check all entries in `pr_urls`)
-2. **Update** all track files:
+0. **Activate phase** — Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+
+2. **Verify** all PRs for the feature are merged (check all entries in `pr_urls`)
+3. **Update** all track files:
    - Set status table: all items = completed/merged
    - Set frontmatter `status: completed`
    - Add final session log entry: "Feature marked complete"
-3. **Update** `.workflow-state.json`:
+4. **Update** `.workflow-state.json`:
    - Set feature phase to `idle`
    - Clear `active_feature` if this was the active one
-4. **Commit** the track file updates with message: `docs(<service>): mark <slug> complete`
-5. **Inform user:** "Feature `<slug>` is now complete! All track files updated."
+5. **Commit** the track file updates with message: `docs(<service>): mark <slug> complete`
+6. **Inform user:** "Feature `<slug>` is now complete! All track files updated."
 
 ## PROGRESS REPORTING
 

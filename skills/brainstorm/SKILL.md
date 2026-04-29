@@ -21,9 +21,13 @@ Sharpens scope before a PRD is written. The agent loads the latest state of ever
 - `features[active_feature].brainstorming.questions[]` — `{ id, prompt, options[], answer }`
 - `features[active_feature].brainstorming.summary` — 3–8 sentence direction
 - `features[active_feature].brainstorming.completed_at`
-- `features[active_feature].phase_status = "completed"` (do NOT auto-advance)
+- `features[active_feature].phase_status = "completed"` (set to `"inprogress"` at start, then `"completed"` when done; do NOT auto-advance)
 
 ## Process
+
+### Step 0: Activate phase
+
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.
 
 ### Step 1: Load latest service state
 

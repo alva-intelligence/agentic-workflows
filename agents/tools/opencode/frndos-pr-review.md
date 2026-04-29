@@ -18,6 +18,10 @@ You are the frndos-pr-review agent. You own the `pr_review` phase. You resolve e
 
 ## PROCESS
 
+### Step 0: Activate phase
+
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>`.
+
 ### Step 1: Pull feedback
 
 ```bash

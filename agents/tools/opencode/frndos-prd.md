@@ -26,19 +26,23 @@ You receive from frndos-orchestra:
 
 ## PROCESS
 
-### Step 1: Enter plan mode (MANDATORY)
+### Step 1: Activate phase
 
-Switch OpenCode to **plan mode** before reading ANY file or forming conclusions. Research and brainstorming (Steps 2-6) must happen in plan mode. Exit plan mode only when ready to write the PRD file in Step 8.
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>`.
 
-### Step 2: Gather raw input
+### Step 2: Enter plan mode (MANDATORY)
+
+Switch OpenCode to **plan mode** before reading ANY file or forming conclusions. Research and brainstorming (Steps 3-7) must happen in plan mode. Exit plan mode only when ready to write the PRD file in Step 9.
+
+### Step 3: Gather raw input
 
 Use OpenCode's **question tool** to request the user's feature description, Lark notes, or Lark URL. If a Lark URL is provided, ask user to paste the content.
 
-### Step 3: Estimate PRD size and propose splitting if large (MANDATORY)
+### Step 4: Estimate PRD size and propose splitting if large (MANDATORY)
 
 Rough token count ≈ `char_count / 3.5`. If estimated drafted PRD would exceed ~8000 tokens, use the question tool to propose splitting into priority-ordered sub-PRDs (P0/P1/P2). Each sub-PRD becomes its own feature with a shared parent slug (`<slug>-p0`, `<slug>-p1`, ...). Record in `.workflow-state.json`: parent has `sub_features`, each sub-PRD has `parent_feature`. Each goes through the full workflow independently.
 
-### Step 4: Research current system state (MANDATORY — BEFORE DRAFTING)
+### Step 5: Research current system state (MANDATORY — BEFORE DRAFTING)
 
 You MUST complete this before drafting:
 1. **Read relevant service code** (`api/app/`, `web/src/`, `ai-service/app/`, `data-service/app/`) — find existing overlap
@@ -46,11 +50,11 @@ You MUST complete this before drafting:
 3. **Check recent commits on base branches** (`develop` / `development`) in affected areas
 4. **Summarize findings** for the user: "Here's what already exists that this PRD must reconcile with: [list]."
 
-### Step 5: Challenge assumptions (MANDATORY)
+### Step 6: Challenge assumptions (MANDATORY)
 
 Identify at least **3** aspects of the user's description that are ambiguous, underspecified, or conflict with existing system behavior. Ask about each via the question tool. Prefer multiple small questions over one mega-question.
 
-### Step 6: Relentless clarifying questions (MANDATORY)
+### Step 7: Relentless clarifying questions (MANDATORY)
 
 Surface EVERY remaining ambiguity or assumption via the question tool. Do NOT draft until ALL are answered. Include baseline scoping questions:
 - Which services does this feature touch?
@@ -59,17 +63,17 @@ Surface EVERY remaining ambiguity or assumption via the question tool. Do NOT dr
 - "Done" criteria?
 - Open questions?
 
-### Step 7: Wait for all answers — do NOT assume or proceed
+### Step 8: Wait for all answers — do NOT assume or proceed
 
-### Step 8: Exit plan mode and draft the PRD
+### Step 9: Exit plan mode and draft the PRD
 
 Read template from `.agentic-workflows/templates/prd/main-prd.template.md`. Fill in ALL sections based on input + research + clarifications. Include an "Existing System Reconciliation" subsection and an "Assumptions and Clarifications" subsection.
 
-### Step 9: Present for review
+### Step 10: Present for review
 
 Show the draft and use the question tool: "Does this look good? Any changes needed?"
 
-### Step 10: On approval
+### Step 11: On approval
 
 - Ensure `docs/prd/` directory exists
 - Write to `docs/prd/<feature-slug>.md`

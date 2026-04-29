@@ -84,6 +84,7 @@
       "guid": "018d92c5-47dd-4649-bbe3-1169c752270b",
       "type": "single_select",
       "options": {
+        "idle": "<MUST_CREATE_IN_LARK>",
         "inprogress": "dbc4a45d-f8b3-4916-8782-5f780707075d",
         "completed": "fca6119d-39df-4370-ae20-3dbd4773cc41"
       }

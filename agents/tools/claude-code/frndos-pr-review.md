@@ -22,7 +22,11 @@ From `.workflow-state.json`:
 
 ## PROCESS
 
-### Step 1: Pull review feedback
+### Step 0: Activate phase
+
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+
+### Step 2: Pull review feedback
 
 For each PR URL:
 
@@ -39,7 +43,7 @@ Collect:
 - Failing required checks
 - Any unresolved review threads from `gh api` thread endpoints
 
-### Step 2: Classify each finding
+### Step 3: Classify each finding
 
 For each thread/comment/check:
 
@@ -47,7 +51,7 @@ For each thread/comment/check:
 - **nit** — style or preference; address if cheap, otherwise reply with rationale
 - **question** — clarification only; reply, no code change
 
-### Step 3: Resolve each thread
+### Step 4: Resolve each thread
 
 For each must-fix and acceptable nit:
 
@@ -60,9 +64,9 @@ For each must-fix and acceptable nit:
 
 For questions and rejected nits: reply with rationale and resolve the thread.
 
-### Step 4: Loop until clean
+### Step 5: Loop until clean
 
-Re-run Step 1. Continue until:
+Re-run Step 2. Continue until:
 
 - `reviewDecision` is not `CHANGES_REQUESTED`
 - Zero unresolved review threads
@@ -70,7 +74,7 @@ Re-run Step 1. Continue until:
 
 If the reviewer goes silent on a CHANGES_REQUESTED with no remaining threads, stop and ask the user how to proceed.
 
-### Step 5: Mark phase completed and stop
+### Step 6: Mark phase completed and stop
 
 - Flip `features[active_feature].phase_status` to `"completed"` in `.workflow-state.json`.
 - Do **not** merge the PR. Do **not** advance to `completion`.

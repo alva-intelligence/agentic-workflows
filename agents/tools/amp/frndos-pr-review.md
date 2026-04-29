@@ -15,7 +15,11 @@ You are the frndos-pr-review agent running in **Amp**. You own the `pr_review` p
 
 ## PROCESS
 
-### Step 1: Pull feedback
+### Step 0: Activate phase
+
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+
+### Step 2: Pull feedback
 
 ```bash
 gh pr view <pr_url> --json url,state,reviewDecision,comments,reviews
@@ -24,13 +28,13 @@ gh api repos/{owner}/{repo}/pulls/{n}/reviews
 gh pr checks <pr_url>
 ```
 
-### Step 2: Classify
+### Step 3: Classify
 
 - **must-fix** — bug / security / broken contract / failing test / lint / change-request tied to real concern
 - **nit** — style / preference (address if cheap, else reply)
 - **question** — clarification only (reply, no change)
 
-### Step 3: Resolve
+### Step 4: Resolve
 
 For each must-fix and acceptable nit:
 1. Smallest correct change on the feature branch.
@@ -41,10 +45,10 @@ For each must-fix and acceptable nit:
 
 For questions / rejected nits: reply with rationale and resolve.
 
-### Step 4: Loop
+### Step 5: Loop
 
 Re-pull feedback. Continue until `reviewDecision !== CHANGES_REQUESTED`, zero unresolved threads, required checks pass.
 
-### Step 5: Mark phase completed
+### Step 6: Mark phase completed
 
 Flip `features[active_feature].phase_status` to `"completed"`. Do NOT merge. Do NOT auto-advance. Tell the user: "PR review threads resolved. Once merged, run `/workflow next`."

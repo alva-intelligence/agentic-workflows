@@ -2,8 +2,8 @@
   "kanban_lanes": ["Backlog", "Plan", "Build", "Review", "Done"],
   "status_semantics": {
     "phase_status": {
-      "values": ["inprogress", "completed"],
-      "rule": "Phase is set to inprogress when entered. Set to completed once the phase's work is done and the gate to the next phase is satisfied. completed does NOT auto-advance — the workflow stays on the phase until the user (or orchestra at user direction) explicitly triggers transition to the next phase."
+      "values": ["idle", "inprogress", "completed"],
+      "rule": "Phase is set to idle when entered. Set to inprogress when the agent begins work. Set to completed once the phase's work is done and the gate to the next phase is satisfied. completed does NOT auto-advance — the workflow stays on the phase until the user (or orchestra at user direction) explicitly triggers transition to the next phase."
     }
   },
   "phases": {

@@ -45,9 +45,9 @@
     {
       "name": "Phase status",
       "type": "single_select",
-      "options": ["inprogress", "completed"],
-      "default": "inprogress",
-      "description": "Status of the current phase. completed != advance — workflow stays on the phase until the user explicitly triggers transition."
+      "options": ["idle", "inprogress", "completed"],
+      "default": "idle",
+      "description": "Status of the current phase. idle = entered but not started. inprogress = agent actively working. completed != advance — workflow stays on the phase until the user explicitly triggers transition."
     },
     {
       "name": "Impl strategy",

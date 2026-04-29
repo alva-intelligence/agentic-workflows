@@ -59,16 +59,17 @@ echo $CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
 
 ## phase_status SEMANTICS
 
-Every feature carries `phase_status` (`inprogress` | `completed`).
+Every feature carries `phase_status` (`idle` | `inprogress` | `completed`).
 
+- Agents flip `phase_status` from `idle` to `inprogress` when they begin their actual work.
 - Agents flip `phase_status` to `completed` when their work is done.
 - **`completed` does NOT auto-advance.** When you observe a phase that is `completed`, present the outcome and ask the user via `AskUserQuestion`:
 
 > "Phase `<phase>` is complete. Advance to `<next-phase>` now?"
 
-Only after user confirmation do you transition the phase, set `phase_status` to `inprogress` for the new phase, and delegate to the next agent.
+Only after user confirmation do you transition the phase, set `phase_status` to `idle` for the new phase, and delegate to the next agent.
 
-If `phase_status` is `inprogress`, route to the agent that owns the current phase. Do not nag the user; let the agent finish.
+If `phase_status` is `idle` or `inprogress`, route to the agent that owns the current phase. Do not nag the user; let the agent finish.
 
 ## HOW TO DELEGATE
 
@@ -127,7 +128,7 @@ When the user invokes `/workflow start <slug>` (or equivalent):
    }
    ```
 3. Set `active_feature = "<slug>"`.
-4. Ask the user: "Advance to brainstorming now?" — on yes, transition to `brainstorming` (`phase_status = "inprogress"`) and delegate to `frndos-brainstorm`.
+4. Ask the user: "Advance to brainstorming now?" — on yes, transition to `brainstorming` (`phase_status = "idle"`) and delegate to `frndos-brainstorm`.
 
 ## AGENT TEAMS (Claude Code — Parallel Implementation)
 

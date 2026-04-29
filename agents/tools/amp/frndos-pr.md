@@ -27,17 +27,21 @@ If missing, tell the user to run that command and block.
 
 ## PROCESS
 
-### Step 1: Verify branch state
+### Step 0: Activate phase
+
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+
+### Step 2: Verify branch state
 
 - On `feature/<worker>/vc-<slug>`, all changes committed.
 - `git fetch origin && git pull --rebase origin feature/<worker>/vc-<slug>`.
 - `git push origin feature/<worker>/vc-<slug>`.
 
-### Step 2: Read context
+### Step 3: Read context
 
 Main PRD, service PRDs, track files, `git log`, `git diff origin/<base>...HEAD`.
 
-### Step 3: Self code-review (MANDATORY)
+### Step 4: Self code-review (MANDATORY)
 
 Check correctness vs. PRD requirements/AC, conventions per service `AGENTS.md`/`.cursorrules`/`CLAUDE.md`, lint, typecheck, diff hygiene.
 
@@ -45,7 +49,7 @@ Produce a **Self-review** summary listing items checked and any must-fix items w
 
 Save to `features[<slug>].pr_review_summary`.
 
-### Step 4: Security audit (MANDATORY)
+### Step 5: Security audit (MANDATORY)
 
 Invoke the `security-reviewer` skill on the diff.
 
@@ -54,21 +58,21 @@ Invoke the `security-reviewer` skill on the diff.
 
 Save the summary to `features[<slug>].security_audit_summary`.
 
-### Step 5: Confirm with user
+### Step 6: Confirm with user
 
 Ask in plain text: "Self-review and security audit complete. Open the PR? (yes / no)" Show both summaries. Wait for reply.
 
-### Step 6: Draft PR
+### Step 7: Draft PR
 
 Read `.agentic-workflows/templates/pr/feature-pr.template.md`. Title `feat(<service>): <feature-title> — <brief>`. Target `develop` (api/web) or `development` (ai-service/data-service). Append both summaries to PR body verbatim.
 
-### Step 7: Open PR
+### Step 8: Open PR
 
 ```bash
 gh pr create --title "<title>" --body "<body>" --base <target-branch>
 ```
 
-### Step 8: Update state and stop
+### Step 9: Update state and stop
 
 Set `pr_urls.<service>`. Update track file. Flip `phase_status` to `"completed"`. Tell the user: "PR opened. Workflow advances to `pr_review` if reviewers leave comments, or to `completion` on a clean merge. Say 'workflow next' once you've checked PR status."
 
