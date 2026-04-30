@@ -1,6 +1,6 @@
 {
-  "version": "3.0.4",
-  "updated": "2026-04-30",
+  "version": "3.0.5",
+  "updated": "2026-05-01",
   "files": {
     "agents/fragments/git-conventions.md": {
       "sha256": "cd3c543cd190656a03c47eacf4d0bb3ddeb9677cea386a8d614fd84ed61ab5d1",
@@ -13,7 +13,7 @@
       "type": "fragment"
     },
     "agents/fragments/workflow-rules.core.md": {
-      "sha256": "3fef07740f83e02ea76e34ea26fd51720f03fe525166e74ee7cfa3e9e4b7c023",
+      "sha256": "50fac1af07306fa574526033ac81d03be4016b1a279f55d93a9388d209f12532",
       "install_to": ".agentic-workflows/fragments/workflow-rules.core.md",
       "type": "fragment"
     },
@@ -93,7 +93,7 @@
       "type": "skill"
     },
     "skills/jj-workflow/SKILL.md": {
-      "sha256": "525fd2542bee76cd41a895e30170ec1685f32fd6c5f279a48b0eacb4e506f264",
+      "sha256": "6b48d4f1d34491e68bea5cd557a34912db7e42b369fd4796fd8bf71be0680f42",
       "install_to": ".agents/skills/jj-workflow/SKILL.md",
       "type": "skill"
     },
@@ -103,7 +103,7 @@
       "type": "skill"
     },
     "skills/onboard/SKILL.md": {
-      "sha256": "1265a779e2034c14b8a6b6ba02219c731cd601a092400206f499f5a44e75624a",
+      "sha256": "4f2f60de320f9ee7bb38dd70edcefc51ec617603a2564826e301e5c1c097d23d",
       "install_to": ".agents/skills/onboard/SKILL.md",
       "type": "skill"
     },
@@ -153,7 +153,7 @@
       "type": "reference"
     },
     "skills/onboard/references/claude-settings.json": {
-      "sha256": "3dcd50de8b209bea618b7a00da485e8e3fc9d4bc502581de7e76cb3e1fa36362",
+      "sha256": "88e736eaedd859ce0cdfa490e00df242bdf4c9526020cc1d2d06047178bb56cb",
       "install_to": ".agents/skills/onboard/references/claude-settings.json",
       "type": "reference"
     },

@@ -734,6 +734,8 @@ Configure project settings — copy the base template, then modify based on sess
 cp .agents/skills/onboard/references/claude-settings.json .claude/settings.json
 ```
 
+> **Auto-mode coverage:** the base template ships with `permissions.allow` covering every command the workflow needs (git, gh, jj, lark-cli, jq, scoped Edit/Write to `docs/` + state files), a `permissions.deny` blocklist for destructive commands, and `autoMode.environment` hints that mark Lark as trusted infrastructure and JJ secondary-workspace symlinks as in-scope. This means the workflow runs hands-off under Claude Code's auto mode (`https://code.claude.com/docs/en/permission-modes#eliminate-prompts-with-auto-mode`) without sandbox prompts breaking sub-agents. Users who want to TIGHTEN beyond the defaults should edit `.claude/settings.json` after install; users who want personal additions should put them in `.claude/settings.local.json` (gitignored).
+
 **If user chose "Team Session" (`claude_session_mode: "team"`) in Step 1.4:**
 - Read `.claude/settings.json`
 - Set `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` to `"1"`

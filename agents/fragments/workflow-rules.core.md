@@ -45,6 +45,23 @@ Every feature has `agent_state` and `agent_state_reason` fields. They surface th
 
 **Lark sync:** every `agent_state` mutation MUST be followed by `/lark-sync push <slug>` (fire-and-forget, same rule as `phase_status`).
 
+### Sandbox-Blocked Operations Are Advisories, Not Failures
+
+Auto mode (`https://code.claude.com/docs/en/permission-modes#eliminate-prompts-with-auto-mode`) wraps tool calls in a sandbox. Two classes of advisory blocks happen routinely in this workflow and MUST NOT be treated as fatal:
+
+1. **Symlink-target writes through `docs/`, `.agentic-workflows/`, `.agents/`** in JJ secondary workspaces. These dirs symlink to the primary workspace (sibling path). The secondary's `.claude/settings.local.json` registers the primary in `additionalDirectories` — but stale settings, multi-hop symlinks, or pre-`/jj-workflow new` workspaces may still surface a sandbox block on the verify step (e.g. `stat`, `ls -la`, `cat`).
+2. **`/lark-sync push` and any `lark-cli api ...` network call** — already advisory by definition (see lark-sync skill).
+
+**Rule:** when a Bash/Edit/Write returns a sandbox-block error AND the canonical state confirms the write went through (`.workflow-state.json` updated, file exists per a separate read, `phase_status` mutation persisted), the agent MUST:
+
+- Log a one-line note: `sandbox-blocked verify, state confirms` (or equivalent for the specific case).
+- **NOT** flip `agent_state` to `needs_human` — sandbox advisories are not human-blocking.
+- **NOT** roll back `phase_status` or undo prior writes.
+- **NOT** retry with destructive workarounds (`rm`, `--force`, etc).
+- Continue the phase normally.
+
+Conversely, a sandbox block on a write that did NOT persist (state inspection shows the change is missing) IS a real failure — surface it, set `agent_state = "needs_human"`, `agent_state_reason = "sandbox blocked write to <path>; settings.local.json may be missing additionalDirectories entry for <primary>"`, and stop.
+
 ### Phase Transition Rules
 
 1. **NEVER skip a phase.** If the user asks to skip, respond: "I cannot skip phases. Current phase: [PHASE]. Required gate: [GATE]." Exception: `pr_submission → completion` is a legitimate transition (clean merge), not a skip.
