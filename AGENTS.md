@@ -16,7 +16,7 @@
 
 Check `.workflow-state.json` → `workspace_meta.is_jj_workspace`. If `true`, this is a secondary JJ workspace scoped to `workspace_meta.feature_slug`. Full JJ rules: `skills/jj-workflow/references/rules.md`.
 
-Also check for `.korlap/marker.json`. If present, korlap (the Claude Code GUI) is managing isolation for this workspace — all `/jj-workflow` subcommands are inert here. Treat korlap's kanban as the parallel-features surface; do not propose `/jj-workflow new`.
+Also check for `.loki/marker.json`. If present, loki (the Claude Code GUI) is managing isolation for this workspace — all `/jj-workflow` subcommands are inert here. Treat loki's kanban as the parallel-features surface; do not propose `/jj-workflow new`.
 
 ### Step 0.5: Detect workspace state
 
@@ -72,7 +72,7 @@ Every feature has a `phase_status` field on top of `phase`:
 
 **`completed` does NOT auto-advance.** The workflow stays on the phase until the user (or orchestra at user direction) explicitly triggers transition. Agents MUST flip `phase_status` to `completed` once their work is done, then **stop and ask the user** before transitioning.
 
-**Every `phase_status` flip MUST be followed by `/lark-sync push <slug>`** (advisory; log + continue on failure). Without this, the Lark task's `Phase status` custom field drifts from local state and the team's kanban view goes stale. Same rule applies to korlap card mutations: any GUI mutation of `.workflow-state.json` fires `/lark-sync push <slug>` fire-and-forget.
+**Every `phase_status` flip MUST be followed by `/lark-sync push <slug>`** (advisory; log + continue on failure). Without this, the Lark task's `Phase status` custom field drifts from local state and the team's kanban view goes stale. Same rule applies to loki card mutations: any GUI mutation of `.workflow-state.json` fires `/lark-sync push <slug>` fire-and-forget.
 
 ### Phase Transition Rules
 
@@ -170,7 +170,7 @@ NEVER execute code changes without explaining the plan first. NEVER make assumpt
 
 When JJ is available and the user wants to work on multiple features in parallel, they can use `/jj-workflow` to spin up isolated workspaces. Full rules: `skills/jj-workflow/references/rules.md`.
 
-**Korlap coexistence:** if `.korlap/marker.json` exists at the workspace root, korlap (the Claude Code GUI) is managing isolation via its own git worktrees. In that case, every `/jj-workflow` subcommand is a no-op that prints a redirect message. Do not suggest `/jj-workflow new` for parallel features in a korlap-managed workspace — tell the user to add a card in the GUI instead.
+**Loki coexistence:** if `.loki/marker.json` exists at the workspace root, loki (the Claude Code GUI) is managing isolation via its own git worktrees. In that case, every `/jj-workflow` subcommand is a no-op that prints a redirect message. Do not suggest `/jj-workflow new` for parallel features in a loki-managed workspace — tell the user to add a card in the GUI instead.
 
 ### Agent Teams (parallel implementation)
 

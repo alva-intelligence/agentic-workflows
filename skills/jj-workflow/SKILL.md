@@ -15,36 +15,36 @@ Manages JJ (Jujutsu) workspaces for parallel feature development. Each workspace
 
 Full behavioral rules (independence, commit propagation, port conflicts, hierarchy, lifecycle, secondary-workspace detection) live in `references/rules.md`. Read it before creating, switching, or cleaning up workspaces.
 
-## Korlap coexistence (Step 0 of every subcommand)
+## Loki coexistence (Step 0 of every subcommand)
 
-If the file `.korlap/marker.json` exists at the workspace root, **korlap (the GUI app) is managing isolation for this workspace**. In that case, every `/jj-workflow` subcommand (`init`, `new`, `list`, `status`, `cleanup`) MUST exit early without performing any action and print:
+If the file `.loki/marker.json` exists at the workspace root, **loki (the GUI app) is managing isolation for this workspace**. In that case, every `/jj-workflow` subcommand (`init`, `new`, `list`, `status`, `cleanup`) MUST exit early without performing any action and print:
 
 ```
-korlap is managing isolation in this workspace.
-  → Add/list/remove feature workspaces from the korlap GUI instead.
+loki is managing isolation in this workspace.
+  → Add/list/remove feature workspaces from the loki GUI instead.
   → `/jj-workflow` is disabled here to avoid two competing parallel-workspace models.
 
-Marker: .korlap/marker.json (korlap version <read version field>)
+Marker: .loki/marker.json (loki version <read version field>)
 
-If you want to use JJ workspaces instead, uninstall korlap from this workspace
-(remove .korlap/) and re-run onboarding in terminal mode.
+If you want to use JJ workspaces instead, uninstall loki from this workspace
+(remove .loki/) and re-run onboarding in terminal mode.
 ```
 
 **Detection snippet** — run this at the start of every subcommand below, before any other step:
 
 ```bash
-if [ -f .korlap/marker.json ]; then
-  version=$(jq -r '.version // "unknown"' .korlap/marker.json 2>/dev/null || echo "unknown")
-  echo "korlap is managing isolation in this workspace."
-  echo "  → Add/list/remove feature workspaces from the korlap GUI instead."
+if [ -f .loki/marker.json ]; then
+  version=$(jq -r '.version // "unknown"' .loki/marker.json 2>/dev/null || echo "unknown")
+  echo "loki is managing isolation in this workspace."
+  echo "  → Add/list/remove feature workspaces from the loki GUI instead."
   echo "  → /jj-workflow is disabled here to avoid two competing parallel-workspace models."
   echo ""
-  echo "Marker: .korlap/marker.json (korlap version $version)"
+  echo "Marker: .loki/marker.json (loki version $version)"
   exit 0
 fi
 ```
 
-Why: korlap writes this marker on first successful bootstrap when the user picks Claude Code + GUI during `/onboard`. korlap uses bare git worktrees for per-feature isolation, driven from its kanban UI. Running `/jj-workflow new` on top of that would create a parallel, inconsistent isolation model in the same directory. The skill stays installed (so uninstalling korlap later restores JJ behavior) but is inert while korlap claims the workspace.
+Why: loki writes this marker on first successful bootstrap when the user picks Claude Code + GUI during `/onboard`. loki uses bare git worktrees for per-feature isolation, driven from its kanban UI. Running `/jj-workflow new` on top of that would create a parallel, inconsistent isolation model in the same directory. The skill stays installed (so uninstalling loki later restores JJ behavior) but is inert while loki claims the workspace.
 
 ## Commands
 

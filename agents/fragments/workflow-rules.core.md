@@ -21,7 +21,7 @@ Every feature has a `phase_status` field on top of `phase`:
 
 Agents MUST flip `phase_status` from `idle` to `inprogress` when they begin their actual work. Orchestra sets `phase_status` to `idle` when entering a new phase.
 
-**Every `phase_status` flip MUST be followed by `/lark-sync push <slug>`** (advisory; log + continue on failure). Without this, the Lark task's `Phase status` custom field drifts from local state and the team's kanban view goes stale. Same rule applies to korlap card mutations: any GUI mutation of `.workflow-state.json` fires `/lark-sync push <slug>` fire-and-forget.
+**Every `phase_status` flip MUST be followed by `/lark-sync push <slug>`** (advisory; log + continue on failure). Without this, the Lark task's `Phase status` custom field drifts from local state and the team's kanban view goes stale. Same rule applies to loki card mutations: any GUI mutation of `.workflow-state.json` fires `/lark-sync push <slug>` fire-and-forget.
 
 ### Phase Transition Rules
 
@@ -119,7 +119,7 @@ NEVER execute code changes without explaining the plan first. NEVER make assumpt
 
 When JJ is available and the user wants to work on multiple features in parallel, they can use `/jj-workflow` to spin up isolated workspaces. Full rules: `skills/jj-workflow/references/rules.md`.
 
-**Korlap coexistence:** if `.korlap/marker.json` exists at the workspace root, korlap (the Claude Code GUI) is managing isolation via its own git worktrees. In that case, every `/jj-workflow` subcommand is a no-op that prints a redirect message. Do not suggest `/jj-workflow new` for parallel features in a korlap-managed workspace — tell the user to add a card in the GUI instead.
+**Loki coexistence:** if `.loki/marker.json` exists at the workspace root, loki (the Claude Code GUI) is managing isolation via its own git worktrees. In that case, every `/jj-workflow` subcommand is a no-op that prints a redirect message. Do not suggest `/jj-workflow new` for parallel features in a loki-managed workspace — tell the user to add a card in the GUI instead.
 
 ### Agent Teams (parallel implementation)
 

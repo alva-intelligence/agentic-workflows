@@ -58,7 +58,7 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
   "services": ["api", "web", "ai-service", "data-service"],
   "tools": ["claude-code", "cursor"],
   "claude_session_mode": "agent|team",
-  "claude_ui": "korlap|terminal",
+  "claude_ui": "loki|terminal",
   "jj_available": true,
   "steps": {
     "github_access": "completed|skipped|pending",
@@ -72,7 +72,7 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
     "run_all_sh": "completed|pending",
     "docs_structure": "completed|pending",
     "editor_tooling": "completed|pending",
-    "korlap_install": "completed|skipped|pending",
+    "loki_install": "completed|skipped|pending",
     "community_skills": "completed|pending",
     "mcp_servers": "completed|pending",
     "verify": "completed|pending"
@@ -87,7 +87,7 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
 }
 ```
 
-`claude_ui` is only set when `tools` contains `"claude-code"` — see Step 1.4.5. For all other tool-only workspaces it is absent. `steps.korlap_install` is only tracked when `claude_ui == "korlap"`.
+`claude_ui` is only set when `tools` contains `"claude-code"` — see Step 1.4.5. For all other tool-only workspaces it is absent. `steps.loki_install` is only tracked when `claude_ui == "loki"`.
 
 The workflow engine reads this file. **`/workflow start` will block** if any of these are not resolved:
 - `env_files` is not `"completed"` for ALL selected services
@@ -173,17 +173,17 @@ If user did NOT select Claude Code in 1.3, skip this question entirely.
 ### 1.4.5 Claude Code surface — GUI or terminal (only ask if Claude Code was selected in 1.3)
 
 > "How will you drive Claude Code day-to-day?"
-> 1. **GUI (korlap)** — Native macOS kanban app that manages multiple Claude Code agents in parallel, each with its own git worktree, with phase-aware columns, diff viewer, and docs pane. Requires macOS. Install: `brew install arhen/tap/korlap` (or the project's current install channel).
+> 1. **GUI (loki)** — Native macOS kanban app that manages multiple Claude Code agents in parallel, each with its own git worktree, with phase-aware columns, diff viewer, and docs pane. Requires macOS. Install: See github.com/arhen/loki for installation instructions.
 > 2. **Terminal** — Drive Claude Code from your shell. Use `/jj-workflow` for parallel features when you want a second session in another directory. Works on macOS/Linux/Windows.
 
-Record the choice in `.onboard-state.json` as `"claude_ui": "korlap"` or `"claude_ui": "terminal"`.
+Record the choice in `.onboard-state.json` as `"claude_ui": "loki"` or `"claude_ui": "terminal"`.
 
 **Implications to communicate to the user before moving on:**
 
-- **GUI:** `/jj-workflow` becomes a no-op in this workspace (korlap's worktrees replace JJ's parallel-workspace story). The other agent tools (Cursor/OpenCode/Amp) are unaffected if the user also selected them — they keep working in terminal with `/jj-workflow` available, but korlap only sees the Claude Code side.
+- **GUI:** `/jj-workflow` becomes a no-op in this workspace (loki's worktrees replace JJ's parallel-workspace story). The other agent tools (Cursor/OpenCode/Amp) are unaffected if the user also selected them — they keep working in terminal with `/jj-workflow` available, but loki only sees the Claude Code side.
 - **Terminal:** Nothing changes from today's flow. JJ setup continues in Step 2.5 if applicable.
 
-**Platform gate:** If the user picks GUI but is on Linux/Windows, tell them "korlap is macOS-only today. Falling back to terminal mode." and set `claude_ui: "terminal"` + `skipped_reasons.korlap_install: "non-macOS platform"`. Detect OS via `uname -s` — `Darwin` means macOS, anything else falls back.
+**Platform gate:** If the user picks GUI but is on Linux/Windows, tell them "loki is macOS-only today. Falling back to terminal mode." and set `claude_ui: "terminal"` + `skipped_reasons.loki_install: "non-macOS platform"`. Detect OS via `uname -s` — `Darwin` means macOS, anything else falls back.
 
 **Multi-tool caveat:** If the user selected Claude Code **and** one or more terminal tools (Amp, OpenCode, Cursor), GUI mode still applies to Claude Code only. Record this explicitly in state: the GUI choice covers the Claude Code surface, and the terminal tools continue to use `/jj-workflow` if they want parallel features. They share the same `.workflow-state.json` and Lark tasklist, so team visibility is consistent either way.
 
@@ -428,7 +428,7 @@ Save the environment method in `.onboard-state.json` and proceed to Step 2.5. Al
 - Amp was selected in Step 1.3
 - Claude Code was selected in Step 1.3 **AND** `claude_ui` from Step 1.4.5 is `"terminal"`
 
-Rationale: JJ workspaces are the terminal-mode parallel-feature story. When Claude Code runs under korlap (`claude_ui: "korlap"`), korlap's git worktrees replace JJ, and the `/jj-workflow` skill is inert in this workspace (it detects `.korlap/marker.json` and exits). If the user additionally picked Amp (which has no GUI equivalent), JJ is still installed — Amp runs alongside korlap and uses JJ for its own parallel sessions. Cursor and OpenCode alone don't need JJ (IDE-integrated / per-session), so they don't trigger this step.
+Rationale: JJ workspaces are the terminal-mode parallel-feature story. When Claude Code runs under loki (`claude_ui: "loki"`), loki's git worktrees replace JJ, and the `/jj-workflow` skill is inert in this workspace (it detects `.loki/marker.json` and exits). If the user additionally picked Amp (which has no GUI equivalent), JJ is still installed — Amp runs alongside loki and uses JJ for its own parallel sessions. Cursor and OpenCode alone don't need JJ (IDE-integrated / per-session), so they don't trigger this step.
 
 JJ enables parallel feature development via isolated workspaces — useful when you run one agent session per directory. It runs in colocated mode alongside git — all git commands remain unchanged.
 
@@ -797,97 +797,93 @@ The template configures:
 
 All commands are wrapped with `nix develop --command` so they work even outside the nix shell. Infrastructure services (PostgreSQL, Redis) should start before app services.
 
-## Step 9.5: Install korlap (only if `claude_ui == "korlap"`)
+## Step 9.5: Install loki (only if `claude_ui == "loki"`)
 
 **Skip this step unless Claude Code was selected AND the user chose GUI in Step 1.4.5.**
 
-korlap is the native macOS GUI shell for the agentic workflow when Claude Code is the chosen tool. It runs the Claude Code side of the workspace — kanban (features grouped by workflow phase via `workflow/phases.json.kanban_lanes`), per-card git worktree, chat/diff/terminal/LSP views, and a Docs pane that reads `docs/prd/*.md` with backlinks and a "Sync to Lark wiki" button that calls `/lark-sync push-prd`.
+loki is the native macOS GUI shell for the agentic workflow when Claude Code is the chosen tool. It runs the Claude Code side of the workspace — kanban (features grouped by workflow phase via `workflow/phases.json.kanban_lanes`), per-card git worktree, chat/diff/terminal/LSP views, and a Docs pane that reads `docs/prd/*.md` with backlinks and a "Sync to Lark wiki" button that calls `/lark-sync push-prd`.
 
 ### 9.5.1 Re-verify macOS
 
 ```bash
-[[ "$(uname -s)" == "Darwin" ]] && echo "✓ macOS" || echo "✗ Not macOS — korlap is macOS-only"
+[[ "$(uname -s)" == "Darwin" ]] && echo "✓ macOS" || echo "✗ Not macOS — loki is macOS-only"
 ```
 
-If not macOS, something went wrong upstream (Step 1.4.5 should have caught this). Revert `claude_ui` to `"terminal"`, set `skipped_reasons.korlap_install: "non-macOS platform"`, and move on to Step 10.
+If not macOS, something went wrong upstream (Step 1.4.5 should have caught this). Revert `claude_ui` to `"terminal"`, set `skipped_reasons.loki_install: "non-macOS platform"`, and move on to Step 10.
 
-### 9.5.2 Install korlap — **STOP, ask user**
+### 9.5.2 Install loki — **STOP, ask user**
 
-Installation lives outside this workspace (korlap ships through its own channel — brew tap, dmg, or source build from `github.com/arhen/korlap`).
+Installation lives outside this workspace (loki ships through its own channel — brew tap, dmg, or source build from `github.com/arhen/loki`).
 
 Use the ask tool:
 
-> "Install korlap now?"
-> - **Install via Homebrew** — I'll walk you through the tap + install commands
-> - **I'll install it myself** — I already have korlap or will install it from github.com/arhen/korlap later
+> "Install loki now?"
+> - **Install loki** — I'll walk you through installing from github.com/arhen/loki
+> - **I'll install it myself** — I already have loki or will install it from github.com/arhen/loki later
 > - **Skip, fall back to terminal** — Change my mind, use terminal mode instead
 
-**If "Install via Homebrew":**
+**If "Install loki":**
 
-Tell the user: "Run these in a separate terminal, then come back:"
-```
-brew tap arhen/tap   # if not already tapped
-brew install korlap
-```
+Tell the user: "loki is not on Homebrew yet. Please install it from github.com/arhen/loki. Run the installer in a separate terminal, then come back."
 
-Do NOT run these for the user — brew install can prompt for sudo password, open dialogs, or take a long time. Let the user drive it.
+Do NOT run the install for the user — it may require sudo or take a long time. Let the user drive it.
 
 **STOP AND WAIT.** Use the ask tool:
-> "Is korlap installed?"
-> - Yes, `korlap --version` works
+> "Is loki installed?"
+> - Yes, `loki --version` works
 > - Not yet, I need more time
 > - Install failed — I'll fall back to terminal mode
 
 If "Not yet": repeat the wait.
-If "Install failed": set `claude_ui: "terminal"`, `skipped_reasons.korlap_install: "install failed — falling back to terminal"`, and move on to Step 10. Tell the user `/jj-workflow` is now active for their workspace.
+If "Install failed": set `claude_ui: "terminal"`, `skipped_reasons.loki_install: "install failed — falling back to terminal"`, and move on to Step 10. Tell the user `/jj-workflow` is now active for their workspace.
 If "Yes": continue to 9.5.3.
 
-**If "I'll install it myself":** set `steps.korlap_install: "pending"` and continue to 9.5.3 — the marker check will still catch whether korlap actually ran.
+**If "I'll install it myself":** set `steps.loki_install: "pending"` and continue to 9.5.3 — the marker check will still catch whether loki actually ran.
 
-**If "Skip, fall back to terminal":** set `claude_ui: "terminal"`, `skipped_reasons.korlap_install: "user skipped"`, and move on to Step 10. If JJ was NOT already installed in Step 2.5 (because GUI was chosen at the time), tell the user: "Since you're back on terminal, consider running `/jj-workflow init` later if you want parallel-workspace support. `brew install jj` if it's not already installed."
+**If "Skip, fall back to terminal":** set `claude_ui: "terminal"`, `skipped_reasons.loki_install: "user skipped"`, and move on to Step 10. If JJ was NOT already installed in Step 2.5 (because GUI was chosen at the time), tell the user: "Since you're back on terminal, consider running `/jj-workflow init` later if you want parallel-workspace support. `brew install jj` if it's not already installed."
 
-### 9.5.3 Launch korlap and verify marker
+### 9.5.3 Launch loki and verify marker
 
 Tell the user:
 
-> "Open korlap. On first launch:
+> "Open loki. On first launch:
 > 1. Point it at this workspace directory: `$(pwd)`
-> 2. When prompted, accept the bootstrap detection — korlap will see `.agentic-workflows/` and recognize this is an agentic-workflows workspace
-> 3. korlap will write `.korlap/marker.json` to claim the workspace
+> 2. When prompted, accept the bootstrap detection — loki will see `.agentic-workflows/` and recognize this is an agentic-workflows workspace
+> 3. loki will write `.loki/marker.json` to claim the workspace
 >
-> Let me know when korlap has launched and opened this workspace."
+> Let me know when loki has launched and opened this workspace."
 
 **STOP AND WAIT.** Use the ask tool:
-> "Has korlap opened this workspace?"
+> "Has loki opened this workspace?"
 > - Yes, it's running and shows my workspace
 > - Not yet
 > - I'm having trouble — let's skip and fall back to terminal
 
 If "Yes": verify the marker file exists:
 ```bash
-if [ -f .korlap/marker.json ]; then
-  version=$(jq -r '.version // "unknown"' .korlap/marker.json 2>/dev/null || echo "unknown")
-  echo "✓ korlap marker found (version $version)"
+if [ -f .loki/marker.json ]; then
+  version=$(jq -r '.version // "unknown"' .loki/marker.json 2>/dev/null || echo "unknown")
+  echo "✓ loki marker found (version $version)"
 else
-  echo "✗ .korlap/marker.json not found — korlap may not have claimed this workspace yet"
+  echo "✗ .loki/marker.json not found — loki may not have claimed this workspace yet"
 fi
 ```
 
-If marker exists: set `steps.korlap_install: "completed"`. Tell the user: "korlap is now managing this workspace. `/jj-workflow` is inert here — use the kanban GUI to add/remove feature workspaces."
+If marker exists: set `steps.loki_install: "completed"`. Tell the user: "loki is now managing this workspace. `/jj-workflow` is inert here — use the kanban GUI to add/remove feature workspaces."
 
-If marker missing after "Yes": ask user to check korlap's logs or to retry pointing at this directory. If still missing after one retry, fall back:
-- Set `claude_ui: "terminal"`, `steps.korlap_install: "failed"`, `skipped_reasons.korlap_install: "marker not written — korlap may not have detected workspace"`.
-- Tell user: "Falling back to terminal mode. You can retry korlap later by launching it and pointing at this directory."
+If marker missing after "Yes": ask user to check loki's logs or to retry pointing at this directory. If still missing after one retry, fall back:
+- Set `claude_ui: "terminal"`, `steps.loki_install: "failed"`, `skipped_reasons.loki_install: "marker not written — loki may not have detected workspace"`.
+- Tell user: "Falling back to terminal mode. You can retry loki later by launching it and pointing at this directory."
 
 If "I'm having trouble": fall back to terminal as above.
 
 ### 9.5.4 Tell the user what changes in the workspace
 
-When `claude_ui == "korlap"` and the marker is in place:
-- `/jj-workflow new/list/cleanup/init` all print a redirect message and exit (no action). Parallel features come from adding cards in korlap.
+When `claude_ui == "loki"` and the marker is in place:
+- `/jj-workflow new/list/cleanup/init` all print a redirect message and exit (no action). Parallel features come from adding cards in loki.
 - `/workflow start <slug>` still works from the terminal — the agent and the GUI share `.workflow-state.json` as the source of truth. Whichever side creates a feature first, the other sees it on next poll / session.
-- Lark sync behavior is unchanged — the orchestra hooks still run on `/workflow start` and `/workflow next`, and korlap's "Sync to Lark wiki" button in the Docs pane calls `/lark-sync push-prd` for the selected PRD.
-- Uninstalling korlap later: `rm -rf .korlap/` in the workspace, then `/jj-workflow init` becomes usable again (re-run onboard Step 2.5 if JJ was never installed).
+- Lark sync behavior is unchanged — the orchestra hooks still run on `/workflow start` and `/workflow next`, and loki's "Sync to Lark wiki" button in the Docs pane calls `/lark-sync push-prd` for the selected PRD.
+- Uninstalling loki later: `rm -rf .loki/` in the workspace, then `/jj-workflow init` becomes usable again (re-run onboard Step 2.5 if JJ was never installed).
 
 ## Step 10: Install Community Skills
 

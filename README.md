@@ -253,11 +253,11 @@ Terminal 1 (primary):                    Terminal 2 (workspace):
 
 **Requirements:** JJ installed (`brew install jj` or via `nix develop`). Best with terminal-based harnesses (Claude Code, Amp) — Cursor is IDE-integrated so benefits less.
 
-**Korlap coexistence:** if you chose Claude Code + GUI (korlap) during `/onboard`, `/jj-workflow` becomes inert in that workspace — korlap writes `.korlap/marker.json` on install, and the skill detects it and exits with a redirect message. Parallel features in korlap-managed workspaces happen via kanban cards (each card gets its own `git worktree`) rather than JJ workspaces. If you also installed Amp alongside Claude Code + korlap, Amp continues to use `/jj-workflow` normally from its own terminal — the two models coexist because Amp doesn't share korlap's worktree surface.
+**Loki coexistence:** if you chose Claude Code + GUI (loki) during `/onboard`, `/jj-workflow` becomes inert in that workspace — loki writes `.loki/marker.json` on install, and the skill detects it and exits with a redirect message. Parallel features in loki-managed workspaces happen via kanban cards (each card gets its own `git worktree`) rather than JJ workspaces. If you also installed Amp alongside Claude Code + loki, Amp continues to use `/jj-workflow` normally from its own terminal — the two models coexist because Amp doesn't share loki's worktree surface.
 
-### korlap (Claude Code GUI) — optional surface
+### loki (Claude Code GUI) — optional surface
 
-[korlap](https://github.com/arhen/korlap) is a native macOS app that provides a kanban + chat + diff + terminal shell over the agentic workflow when Claude Code is the chosen tool. During `/onboard`, after picking Claude Code, the agent asks "GUI (korlap) or terminal?" and if GUI is chosen, guides the user through installing korlap and launching it against the workspace. korlap never reimplements skills — it shells out to the same `/lark-sync push-prd`, `/workflow start`, `/workflow next` etc. the terminal agent calls. `.workflow-state.json` is the shared source of truth, so terminal and GUI stay in lockstep. **Scope:** Claude Code only, macOS only. Cursor/OpenCode/Amp are unaffected.
+[loki](https://github.com/arhen/loki) is a native macOS app that provides a kanban + chat + diff + terminal shell over the agentic workflow when Claude Code is the chosen tool. During `/onboard`, after picking Claude Code, the agent asks "GUI (loki) or terminal?" and if GUI is chosen, guides the user through installing loki and launching it against the workspace. loki never reimplements skills — it shells out to the same `/lark-sync push-prd`, `/workflow start`, `/workflow next` etc. the terminal agent calls. `.workflow-state.json` is the shared source of truth, so terminal and GUI stay in lockstep. **Scope:** Claude Code only, macOS only. Cursor/OpenCode/Amp are unaffected.
 
 ### Creating a New Workspace for a Different Project
 

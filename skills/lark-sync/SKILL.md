@@ -327,23 +327,23 @@ Fetch team-wide state from Lark and show it. Does NOT write to local `.workflow-
    ★ = your active feature
    ```
 
-## External callers (korlap GUI + every agent harness)
+## External callers (loki GUI + every agent harness)
 
-The kanban-mirror contract is **single source of truth**: every mutation of `features[<slug>]` in `.workflow-state.json` MUST be followed by a `/lark-sync push <slug>` call. Mutations from korlap (kanban GUI) AND from the CLI (agents handling `/workflow *` commands, `phase_status` flips, PR URL writes, etc.) all share this contract.
+The kanban-mirror contract is **single source of truth**: every mutation of `features[<slug>]` in `.workflow-state.json` MUST be followed by a `/lark-sync push <slug>` call. Mutations from loki (kanban GUI) AND from the CLI (agents handling `/workflow *` commands, `phase_status` flips, PR URL writes, etc.) all share this contract.
 
 ### Supported entry points (external)
 
 | Entry point | What it does | Who calls it |
 |---|---|---|
-| `/lark-sync push <slug>` | Sync the feature's local state to the Lark task — section, all custom fields (incl. `Phase status`), description Links block. One-way (local → Lark). | korlap on every kanban card mutation; CLI agents on every `.workflow-state.json` mutation |
-| `/lark-sync push-prd <slug>` | Mirror `docs/prd/<slug>.md` to the wiki docx under `Agentic's PRD`. | korlap "Sync to Lark wiki" button on `docs/prd/<slug>.md`; `frndos-prd` on every PRD save |
-| `/lark-sync push-brainstorming <slug>` | Mirror `features[<slug>].brainstorming` to the wiki docx under `User's Area/<Worker>'s Universe/<slug>/Brainstorming`. | `frndos-brainstorm` on every state change (answer recorded, summary written, phase_status flip); korlap if it exposes a brainstorming editor |
+| `/lark-sync push <slug>` | Sync the feature's local state to the Lark task — section, all custom fields (incl. `Phase status`), description Links block. One-way (local → Lark). | loki on every kanban card mutation; CLI agents on every `.workflow-state.json` mutation |
+| `/lark-sync push-prd <slug>` | Mirror `docs/prd/<slug>.md` to the wiki docx under `Agentic's PRD`. | loki "Sync to Lark wiki" button on `docs/prd/<slug>.md`; `frndos-prd` on every PRD save |
+| `/lark-sync push-brainstorming <slug>` | Mirror `features[<slug>].brainstorming` to the wiki docx under `User's Area/<Worker>'s Universe/<slug>/Brainstorming`. | `frndos-brainstorm` on every state change (answer recorded, summary written, phase_status flip); loki if it exposes a brainstorming editor |
 
-### korlap-specific contract
+### loki-specific contract
 
-korlap does NOT reimplement any sync logic in Rust — it invokes the slash commands above. After every write to `.workflow-state.json` (drag-drop, card field edit, phase_status toggle), korlap fires `/lark-sync push <slug>` fire-and-forget. Toast the stderr on failure.
+loki does NOT reimplement any sync logic in Rust — it invokes the slash commands above. After every write to `.workflow-state.json` (drag-drop, card field edit, phase_status toggle), loki fires `/lark-sync push <slug>` fire-and-forget. Toast the stderr on failure.
 
-For doc-to-wiki sync, korlap's "Sync to Lark wiki" button qualifies on:
+For doc-to-wiki sync, loki's "Sync to Lark wiki" button qualifies on:
 - `docs/prd/<slug>.md` → `/lark-sync push-prd <slug>`
 
 The button must be **disabled or hidden** for:
@@ -359,12 +359,12 @@ Read `workflow/lark-tenant.json` and `.lark-sync.json`. Confirm `lark-cli auth s
 
 ### Failure handling
 
-Lark sync is advisory. If a call fails (auth expired, network, hook-blocked), surface the stderr (toast in korlap; log line in CLI) and leave local state unchanged. Local `.workflow-state.json` is authoritative.
+Lark sync is advisory. If a call fails (auth expired, network, hook-blocked), surface the stderr (toast in loki; log line in CLI) and leave local state unchanged. Local `.workflow-state.json` is authoritative.
 
 **Explicitly NOT in v1:**
 - `push-doc` as a generic "sync any path" command. Adding one would need a routing table mapping paths to wiki destinations, which only exists for PRDs and brainstorming today. Introduce one only when tracks/service-PRDs gain wiki homes.
 - Bidirectional pull (Lark wiki → local markdown). v1 is write-through only; any Lark edits are overwritten on next push.
-- Batch sync ("sync all PRDs"). Orchestra hooks push one feature at a time for mass-patch safety; korlap's GUI must preserve this — one card mutation = one push, not fan-out across the board.
+- Batch sync ("sync all PRDs"). Orchestra hooks push one feature at a time for mass-patch safety; loki's GUI must preserve this — one card mutation = one push, not fan-out across the board.
 
 ## Orchestra auto-hooks
 

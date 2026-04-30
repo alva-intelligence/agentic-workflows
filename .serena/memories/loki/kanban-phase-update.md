@@ -1,4 +1,4 @@
-## Korlap frndOS Workflow GUI - Complete (Branch: feature/arhen/vc-frndos-workflow-gui)
+## Loki frndOS Workflow GUI - Complete (Branch: feature/arhen/vc-frndos-workflow-gui)
 
 ### Build Status
 - Rust: 0 errors, 7 warnings
