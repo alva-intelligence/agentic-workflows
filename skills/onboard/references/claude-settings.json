@@ -72,8 +72,14 @@
   "autoMode": {
     "environment": [
       "$defaults",
-      "Trusted internal services: Lark/Feishu (open.larksuite.com, open.feishu.cn) — `lark-cli` calls are workflow infrastructure, not external network egress.",
+      "Trusted internal services: Lark/Feishu (open.larksuite.com, open.feishu.cn) — `lark-cli` calls and the Lark MCP server are workflow infrastructure, not external network egress.",
+      "Trusted internal MCP servers (workflow infrastructure): Lark/Feishu wiki + tasks (mcp__lark__*, mcp__claude_ai_Lark__*), Figma design context (mcp__claude_ai_Figma__*) at api.figma.com, code-review-graph (mcp__code-review-graph__*) for local repo graph queries, context7 (mcp__plugin_context7_context7__*) for library docs, posthog (mcp__posthog__*) for product analytics, Excalidraw / Gmail / Google Calendar / Google Drive (mcp__claude_ai_*).",
       "Symlinked dirs from JJ secondary workspaces (docs/, .agentic-workflows/, .agents/, .claude/) point to the sibling primary workspace by design. Treat writes through them as in-scope."
+    ],
+    "allow": [
+      "$defaults",
+      "All mcp__* tool calls to the trusted MCP servers listed in autoMode.environment are routine internal development operations: read PRDs from Lark wiki, fetch Figma design context, query the code-review-graph, search context7 library docs, write to internal collaboration tools. These do not exfiltrate data to untrusted external services.",
+      "lark-cli api / lark-cli task calls are workflow infrastructure (Lark task sync, PRD push) and do not need per-call approval."
     ]
   }
 }
