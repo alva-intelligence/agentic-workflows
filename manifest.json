@@ -1,5 +1,5 @@
 {
-  "version": "3.0.3",
+  "version": "3.0.4",
   "updated": "2026-04-30",
   "files": {
     "agents/fragments/git-conventions.md": {
@@ -13,7 +13,7 @@
       "type": "fragment"
     },
     "agents/fragments/workflow-rules.core.md": {
-      "sha256": "0a53007c54f4ed5ce933e3b3c574e707cdb513b8d7ec1f16216228ec554f5ae4",
+      "sha256": "3fef07740f83e02ea76e34ea26fd51720f03fe525166e74ee7cfa3e9e4b7c023",
       "install_to": ".agentic-workflows/fragments/workflow-rules.core.md",
       "type": "fragment"
     },
@@ -53,7 +53,7 @@
       "type": "workflow"
     },
     "workflow/state-schema.json": {
-      "sha256": "1be62e8e29c2070ec1e6c2b0a2fc16f32f39f6b0da8055f865943c320b3f29b1",
+      "sha256": "022c1eeec4d5a151c1234843fd96fa72bda97aae723f2c17b29e1e79f9f075c2",
       "install_to": ".agentic-workflows/workflow/state-schema.json",
       "type": "workflow"
     },
@@ -93,7 +93,7 @@
       "type": "skill"
     },
     "skills/jj-workflow/SKILL.md": {
-      "sha256": "56a8bdaa4f56cfb07585c2176d3150449f8b08c1c3bb6b40304b8dc5250b9257",
+      "sha256": "525fd2542bee76cd41a895e30170ec1685f32fd6c5f279a48b0eacb4e506f264",
       "install_to": ".agents/skills/jj-workflow/SKILL.md",
       "type": "skill"
     },
