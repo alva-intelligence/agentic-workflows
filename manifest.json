@@ -153,7 +153,7 @@
       "type": "reference"
     },
     "skills/onboard/references/claude-settings.json": {
-      "sha256": "88e736eaedd859ce0cdfa490e00df242bdf4c9526020cc1d2d06047178bb56cb",
+      "sha256": "a5238a9895f23ecbe9178dfc6ca72035bed7163e283a272de940d9782ea8d1f4",
       "install_to": ".agents/skills/onboard/references/claude-settings.json",
       "type": "reference"
     },
