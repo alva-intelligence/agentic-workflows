@@ -72,14 +72,15 @@
   "autoMode": {
     "environment": [
       "$defaults",
-      "Trusted internal services: Lark/Feishu (open.larksuite.com, open.feishu.cn) — `lark-cli` calls and the Lark MCP server are workflow infrastructure, not external network egress.",
-      "Trusted internal MCP servers (workflow infrastructure): Lark/Feishu wiki + tasks (mcp__lark__*, mcp__claude_ai_Lark__*), Figma design context (mcp__claude_ai_Figma__*) at api.figma.com, code-review-graph (mcp__code-review-graph__*) for local repo graph queries, context7 (mcp__plugin_context7_context7__*) for library docs, posthog (mcp__posthog__*) for product analytics, Excalidraw / Gmail / Google Calendar / Google Drive (mcp__claude_ai_*).",
-      "Symlinked dirs from JJ secondary workspaces (docs/, .agentic-workflows/, .agents/, .claude/) point to the sibling primary workspace by design. Treat writes through them as in-scope."
+      "Authorized destinations for the agentic workflow (read access + scoped writes only): Lark/Feishu wiki + tasks (open.larksuite.com / open.feishu.cn) for PRD / brainstorming / task sync, Figma (api.figma.com) for design-context reads, code-review-graph for local repo graph queries, context7 for library docs, PostHog for analytics queries, Excalidraw / Gmail / Calendar / Drive accessed via mcp__claude_ai_*. These are trusted *destinations*, not blanket-trusted *actions*: reads and user-directed scoped writes are routine; broad-audience messaging, mass mutations, feature-flag changes, public-share toggles, and uploads of repo source / secrets to any of them remain governed by the External System Writes / Content Integrity / Real-World Transactions / Data Exfiltration defaults.",
+      "JJ secondary workspaces symlink docs/, .agentic-workflows/, .agents/, .mcp.json, .cursor/, .opencode/ to a sibling primary workspace by design. Ordinary writes and edits through these symlinks are in-scope; irreversible deletion of pre-existing files through them remains governed by Irreversible Local Destruction."
     ],
     "allow": [
       "$defaults",
-      "All mcp__* tool calls to the trusted MCP servers listed in autoMode.environment are routine internal development operations: read PRDs from Lark wiki, fetch Figma design context, query the code-review-graph, search context7 library docs, write to internal collaboration tools. These do not exfiltrate data to untrusted external services.",
-      "lark-cli api / lark-cli task calls are workflow infrastructure (Lark task sync, PRD push) and do not need per-call approval."
+      "Read-style MCP calls against the listed destinations are allowed: fetching PRDs / wiki nodes / task fields from Lark, fetching Figma design context / metadata / screenshots, querying code-review-graph for nodes / impact / flows, querying context7 docs, querying PostHog events / insights / persons, listing Drive / Calendar / Gmail items the user owns.",
+      "Scoped writes that the user has explicitly directed in this session are allowed: pushing the current PRD or brainstorming doc to the matching Lark wiki path, syncing the active feature's task fields, replying to a specific Lark thread the user named, creating a single Figma diagram the user requested, writing a code-review-graph refactor the user approved.",
+      "Still BLOCK (defaults remain in force): broadcast/mass messaging on Lark or Gmail, sending email to recipients outside the org without explicit user direction, modifying or deleting Lark/Drive/PostHog items the agent did not create this session, toggling PostHog feature flags or cohorts, making Drive files public, uploading repo source or secrets to any of these destinations.",
+      "lark-cli read commands and lark-cli write commands scoped to the active feature's PRD / task / brainstorming artifacts are allowed. Generic lark-cli api invocations that post to channels, @-mention users, or push non-feature content remain governed by External System Writes / Content Integrity defaults."
     ]
   }
 }
