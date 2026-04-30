@@ -119,13 +119,18 @@ Create a new JJ workspace for parallel feature development.
 5. **Symlink orchestration files** from primary to secondary workspace:
    ```bash
    cd "../<workspace-name>"
-   for item in .agentic-workflows .agents AGENTS.md CLAUDE.md .claude flake.nix run-all.sh docs .onboard-state.json; do
+   for item in \
+       .agentic-workflows .agents AGENTS.md CLAUDE.md .claude \
+       flake.nix run-all.sh docs .onboard-state.json \
+       .mcp.json .cursor .opencode opencode.json .vscode AGENTS.local.md; do
      if [ -e "../<primary-name>/$item" ]; then
        ln -sf "../<primary-name>/$item" "$item"
      fi
    done
    ```
    Note: `CLAUDE.md` is already a symlink to `AGENTS.md` — symlink it to the primary's `AGENTS.md` directly.
+
+   **Why MCP configs symlinked:** `.mcp.json` (Claude Code project-scoped MCPs), `.cursor/` (Cursor MCP + rules), `.opencode/` / `opencode.json` (OpenCode MCPs) live at repo root, not inside `.claude/`. Symlinking ensures every agent the user picked at onboard inherits the same MCP servers in the secondary workspace — no re-auth, no drift.
 
 6. **Create fresh `.workflow-state.json`** in the new workspace with `workspace_meta`:
    ```json
