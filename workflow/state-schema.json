@@ -45,7 +45,7 @@
     "feature": {
       "type": "object",
       "description": "State for a single feature being tracked through the workflow.",
-      "required": ["phase", "phase_status", "phase_entered", "type", "initial_request", "brainstorming", "prd_path", "branch", "service_prds", "pr_urls"],
+      "required": ["phase", "phase_status", "phase_entered", "type", "initial_request", "brainstorming", "prd_path", "branch", "service_prds", "pr_urls", "agent_state", "agent_state_reason"],
       "additionalProperties": false,
       "properties": {
         "phase": {
@@ -132,6 +132,16 @@
           "description": "Summary of the security-reviewer skill audit, written into the PR body. Recorded here for gate checks.",
           "type": ["string", "null"]
         },
+        "agent_state": {
+          "description": "Current attention state of the agent driving this feature. null = working/resuming. 'needs_approval' = a plan or destructive action awaits user approval (e.g. ExitPlanMode just fired). 'needs_answer' = a structured question was just asked (e.g. AskUserQuestion fired). 'needs_human' = stuck on something requiring free-form human judgment, no structured options. Consumed by the loki GUI shell and orchestra to decide whether to surface the feature for user attention. Always paired with agent_state_reason when non-null.",
+          "type": ["string", "null"],
+          "enum": ["needs_approval", "needs_answer", "needs_human", null],
+          "default": null
+        },
+        "agent_state_reason": {
+          "description": "Short human-readable string describing why the agent is in its current attention state. Required to be a non-empty string when agent_state is non-null. MUST be null when agent_state is null. Example: 'Plan for splitter ready, awaiting approval', 'Asked which implementation strategy to use', 'Stuck on PR conflict resolution, need guidance'.",
+          "type": ["string", "null"]
+        },
         "agent_teams": {
           "description": "Agent Teams state for parallel implementation (Claude Code only). Null or absent when using sequential strategy.",
           "oneOf": [
@@ -139,7 +149,15 @@
             { "$ref": "#/definitions/agent_teams" }
           ]
         }
-      }
+      },
+      "allOf": [
+        {
+          "description": "agent_state_reason MUST be a non-empty string when agent_state is non-null, and MUST be null when agent_state is null.",
+          "if": { "properties": { "agent_state": { "type": "string" } }, "required": ["agent_state"] },
+          "then": { "properties": { "agent_state_reason": { "type": "string", "minLength": 1 } }, "required": ["agent_state_reason"] },
+          "else": { "properties": { "agent_state_reason": { "type": "null" } } }
+        }
+      ]
     },
     "brainstorming": {
       "type": "object",

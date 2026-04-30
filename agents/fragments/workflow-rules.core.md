@@ -23,6 +23,28 @@ Agents MUST flip `phase_status` from `idle` to `inprogress` when they begin thei
 
 **Every `phase_status` flip MUST be followed by `/lark-sync push <slug>`** (advisory; log + continue on failure). Without this, the Lark task's `Phase status` custom field drifts from local state and the team's kanban view goes stale. Same rule applies to loki card mutations: any GUI mutation of `.workflow-state.json` fires `/lark-sync push <slug>` fire-and-forget.
 
+### `agent_state` Semantics (CRITICAL)
+
+Every feature has `agent_state` and `agent_state_reason` fields. They surface the agent's current attention need to the loki GUI shell and orchestra so the user knows when to step in.
+
+| Situation                       | `agent_state`     |
+|---------------------------------|-------------------|
+| Plan ready, await approve       | `needs_approval`  |
+| Asked structured question       | `needs_answer`    |
+| Stuck, need free-form input     | `needs_human`     |
+| Working / resuming              | `null`            |
+
+**Triggers — when agents MUST update these fields:**
+
+1. **Right BEFORE calling `ExitPlanMode`:** set `agent_state = "needs_approval"`, `agent_state_reason = "<short summary of the plan>"`. The plan-mode prompt itself is the user's chance to approve.
+2. **Right BEFORE calling `AskUserQuestion`:** set `agent_state = "needs_answer"`, `agent_state_reason = "<the question topic in 1 line>"`.
+3. **When stuck on a free-form decision** (no structured options, requires human judgment / context the agent lacks): set `agent_state = "needs_human"`, `agent_state_reason = "<what's blocking>"` BEFORE printing the blocker message.
+4. **When work resumes** (user approved plan, user answered question, user unblocked): set `agent_state = null`, `agent_state_reason = null` as the FIRST action after resuming, before any other tool call.
+
+**Pairing rule (enforced by schema):** `agent_state_reason` MUST be a non-empty string whenever `agent_state` is non-null, and MUST be `null` when `agent_state` is `null`. Never set one without the other.
+
+**Lark sync:** every `agent_state` mutation MUST be followed by `/lark-sync push <slug>` (fire-and-forget, same rule as `phase_status`).
+
 ### Phase Transition Rules
 
 1. **NEVER skip a phase.** If the user asks to skip, respond: "I cannot skip phases. Current phase: [PHASE]. Required gate: [GATE]." Exception: `pr_submission → completion` is a legitimate transition (clean merge), not a skip.
