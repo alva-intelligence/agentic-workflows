@@ -312,6 +312,48 @@ Show current workspace info and JJ state.
    done
    ```
 
+### `/jj-workflow refresh-perms`
+
+Re-sync the current secondary workspace's `.claude/settings.local.json` with the primary's allowlist, denylist, autoMode rules, and env vars. Use after the user adds new permissions in primary that they want available in the secondary session too.
+
+**Steps:**
+
+1. **Detect workspace role:**
+   - Read `.workflow-state.json` — must contain `workspace_meta` (i.e. this is a secondary). If not, STOP: "Run refresh-perms from a secondary workspace."
+
+2. **Resolve primary path:**
+   ```bash
+   PRIMARY="$(jq -r '.workspace_meta.primary_workspace' .workflow-state.json)"
+   PRIMARY_ABS="$(cd "$PRIMARY" && pwd)"
+   PRIMARY_LOCAL="$PRIMARY/.claude/settings.local.json"
+   ```
+
+3. **Bail if primary has no settings.local.json:**
+   ```bash
+   if [ ! -f "$PRIMARY_LOCAL" ]; then
+     echo "Primary has no .claude/settings.local.json — nothing to inherit."
+     exit 0
+   fi
+   ```
+
+4. **Merge with override:**
+   ```bash
+   jq --arg primary "$PRIMARY_ABS" '
+     .permissions.additionalDirectories = [$primary]
+   ' "$PRIMARY_LOCAL" > .claude/settings.local.json
+   ```
+
+5. **Confirm:**
+   ```
+   Refreshed .claude/settings.local.json from primary.
+     allow:  <count> entries
+     deny:   <count> entries
+     autoMode: <present|absent>
+     additionalDirectories: <PRIMARY_ABS>
+
+   Restart the Claude Code session in this workspace for changes to take effect.
+   ```
+
 ### `/jj-workflow cleanup <slug>`
 
 Remove a completed JJ workspace.
