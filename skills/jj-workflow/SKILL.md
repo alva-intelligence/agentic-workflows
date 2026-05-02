@@ -119,18 +119,25 @@ Create a new JJ workspace for parallel feature development.
 5. **Symlink orchestration files** from primary to secondary workspace:
    ```bash
    cd "../<workspace-name>"
+   # Orchestration + agent-tool configs. Loop only links entries that actually
+   # exist in primary, so adding new tools below is safe (no-op if absent).
+   # Rule: if primary has it set up, mirror it. Don't silently drop tool state.
    for item in \
-       .agentic-workflows .agents AGENTS.md CLAUDE.md \
-       flake.nix run-all.sh docs .onboard-state.json \
-       .mcp.json .cursor .opencode opencode.json .vscode AGENTS.local.md; do
-     if [ -e "../<primary-name>/$item" ]; then
+       .agentic-workflows .agents AGENTS.md CLAUDE.md AGENTS.local.md \
+       flake.nix run-all.sh docs .onboard-state.json .vscode \
+       .mcp.json \
+       .cursor .opencode opencode.json \
+       .amp .codex .aider .cline .continue .zed .gemini .windsurf .roo .kilocode; do
+     if [ -e "../<primary-name>/$item" ] || [ -L "../<primary-name>/$item" ]; then
        ln -sf "../<primary-name>/$item" "$item"
      fi
    done
    ```
    Note: `CLAUDE.md` is already a symlink to `AGENTS.md` — symlink it to the primary's `AGENTS.md` directly.
 
-   **Why MCP configs symlinked:** `.mcp.json` (Claude Code project-scoped MCPs), `.cursor/` (Cursor MCP + rules), `.opencode/` / `opencode.json` (OpenCode MCPs) live at repo root, not inside `.claude/`. Symlinking ensures every agent the user picked at onboard inherits the same MCP servers in the secondary workspace — no re-auth, no drift.
+   **General principle:** every agent-tool directory the user has set up in primary (`.cursor/`, `.opencode/`, `.amp/`, `.codex/`, `.zed/`, etc.) gets whole-symlinked into the secondary. Their internal `agents/`, `skills/`, `settings.json`, and MCP configs come along for free — no re-auth, no drift, no missing skills/agents in the new session. Only `.claude/` gets the split treatment below (because of its `additionalDirectories` sandbox requirement).
+
+   **Why MCP configs symlinked:** `.mcp.json` (Claude Code project-scoped MCPs), `.cursor/` (Cursor MCP + rules), `.opencode/` / `opencode.json` (OpenCode MCPs), `.amp/settings.json` (Amp MCPs) live at repo root, not inside `.claude/`. Symlinking ensures every agent the user picked at onboard inherits the same MCP servers in the secondary workspace.
 
    **Important: `.claude/` is NOT symlinked whole.** Instead, create a `.claude/` directory in the secondary and only symlink `.claude/settings.json` (team-shared committed permissions) from the primary. Then generate a fresh `.claude/settings.local.json` in the secondary that registers the primary workspace as an `additionalDirectories` entry — this is what lets auto mode write through `docs/ → ../<primary>/docs/` without sandbox prompts.
 
@@ -139,6 +146,27 @@ Create a new JJ workspace for parallel feature development.
    if [ -e "../<primary-name>/.claude/settings.json" ]; then
      ln -sf "../../<primary-name>/.claude/settings.json" .claude/settings.json
    fi
+
+   # Mirror non-settings .claude entries (skills, agents, commands, hooks,
+   # output-styles, launch.json) by recreating each as a symlink with the
+   # SAME relative target as in primary. They typically point at
+   # `../.agentic-workflows/...` or `../.agents/...`, which resolve correctly
+   # in the secondary because step 5 already symlinked those repo-root dirs.
+   # Without this, /skill, agents, slash commands silently disappear in the
+   # secondary session — leading to "Unknown command" failures.
+   for entry in skills agents commands hooks output-styles launch.json; do
+     src="../<primary-name>/.claude/$entry"
+     [ -e "$src" ] || [ -L "$src" ] || continue
+     if [ -L "$src" ]; then
+       # Preserve the relative link target so it resolves under the secondary.
+       target="$(readlink "$src")"
+       ln -sf "$target" ".claude/$entry"
+     else
+       # Real dir/file in primary — link to primary copy.
+       ln -sf "../../<primary-name>/.claude/$entry" ".claude/$entry"
+     fi
+   done
+   # Do NOT copy settings.local.json from primary — see note below.
 
    # Resolve absolute path of primary (auto mode resolves additionalDirectories
    # against the launcher cwd, so we MUST use absolute paths, not "../<primary>").
