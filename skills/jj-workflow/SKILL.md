@@ -125,6 +125,7 @@ Create a new JJ workspace for parallel feature development.
    for item in \
        .agentic-workflows .agents AGENTS.md CLAUDE.md AGENTS.local.md \
        flake.nix run-all.sh docs .onboard-state.json .vscode \
+       .lark-sync.json skills-lock.json \
        .mcp.json \
        .cursor .opencode opencode.json \
        .amp .codex .aider .cline .continue .zed .gemini .windsurf .roo .kilocode; do
