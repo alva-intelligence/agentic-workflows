@@ -1,6 +1,6 @@
 {
-  "version": "3.0.8",
-  "updated": "2026-04-30",
+  "version": "3.0.9",
+  "updated": "2026-05-02",
   "files": {
     "agents/fragments/git-conventions.md": {
       "sha256": "cd3c543cd190656a03c47eacf4d0bb3ddeb9677cea386a8d614fd84ed61ab5d1",
@@ -93,7 +93,7 @@
       "type": "skill"
     },
     "skills/jj-workflow/SKILL.md": {
-      "sha256": "6b48d4f1d34491e68bea5cd557a34912db7e42b369fd4796fd8bf71be0680f42",
+      "sha256": "05235a8f00cb7b9e5d5fbc218aa3d400fa2ba312ece93f7ef402d312372475fa",
       "install_to": ".agents/skills/jj-workflow/SKILL.md",
       "type": "skill"
     },
