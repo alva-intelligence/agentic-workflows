@@ -267,11 +267,13 @@ Vertical alignment: chips render with `align-items: baseline` relative to surrou
 4. Roll flag to 100% in production. Remove flag + dead code in a follow-up cleanup PR.
 5. Phase 2 (separate PR after this is stable): backend label rendering.
 
-## Open questions
+## Resolved questions
 
-1. **Does the KV stream endpoint live in api/ Laravel or in a separate service?** Confirms which test framework (Pest vs whatever) for backend tests. _Resolve before writing the implementation plan._
-2. **Are bounding boxes currently stable across re-renders by the same `id`, or does drawing a new box generate a new id every time the canvas re-renders?** Affects `useChipSync` correctness. _Resolve during implementation by reading existing canvas state code._
-3. **Is there an existing feature-flag system in the web app?** If yes, use it. If no, fall back to a hardcoded constant we flip in the deploy. _Resolve during implementation._
+1. **KV stream endpoint hosting:** Laravel `api/` service. Frontend [web/src/hooks/useKvStream.ts:861](../../../web/src/hooks/useKvStream.ts:861) hits `/v1/threads/{target}/stream`. Routes at [api/routes/api.php](../../../api/routes/api.php) lines 1223-1225 (POST `/v1/threads/stream`) and 1309-1316 (POST `/v1/threads/{thread}/stream`). Handlers: `ThreadController::store()` ([api/app/Http/Controllers/Api/Chat/ThreadController.php:160](../../../api/app/Http/Controllers/Api/Chat/ThreadController.php#L160)) and `ThreadController::update()` (line 398). Backend tests use Pest.
+
+2. **Bounding-box IDs are stable.** Generated once via `crypto.randomUUID()` at draw time in [web/src/components/studio/kv-generator/KvKonvaCanvas.tsx:504-507](../../../web/src/components/studio/kv-generator/KvKonvaCanvas.tsx#L504) inside `handleStageMouseUp`. IDs persist for the lifetime of the box. `useChipSync` design works as-written.
+
+3. **Feature flags: PostHog.** `posthog-js@^1.231.1` is in [web/package.json](../../../web/package.json). Feature gates use `useFeatureFlagEnabled("flag-name")` from `posthog-js/react` directly (no project wrapper hook). The KV inline-chips rollout will use a PostHog flag named `kv-inline-chips-editor`.
 
 ## References
 
