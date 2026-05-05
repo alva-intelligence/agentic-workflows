@@ -191,18 +191,18 @@ New signature:
 send(prompt: string | ContentBlock[], opts?: { attachments?, boundingBoxes?, ... })
 ```
 
-Implementation: if `prompt` is a string, wrap as `[{ type: "text", text: prompt }]`. Send to backend as a JSON-encoded `prompt_blocks` field (FormData) alongside the existing `message` field for backwards compat. Backend prefers `prompt_blocks` when present.
+Implementation: if `prompt` is a string, wrap as `[{ type: "text", text: prompt }]`. The stream POST body is JSON (not FormData — confirmed at [useKvStream.ts:864](../../../web/src/hooks/useKvStream.ts#L864)). Add a new optional `message_blocks` field alongside the existing `message` string field for backwards compat. Backend prefers `message_blocks` when present.
 
 ## Backend changes (Phase 1)
 
-KV stream endpoint (the equivalent of `POST /v1/threads/stream` for KV — exact path lives in api/):
+KV stream endpoint `POST /v1/threads/{thread}/stream` (handler `ThreadController::update()`):
 
-1. Accept new optional FormData field `prompt_blocks` containing JSON-encoded `ContentBlock[]`.
-2. If `prompt_blocks` is present:
-   - Validate schema (allowed `type` values, `id` references must match a provided attachment / box).
+1. Accept new optional JSON field `message_blocks` containing `ContentBlock[]`.
+2. If `message_blocks` is present:
+   - Validate schema (allowed `type` values, `id` references must match a provided `attachments[]` / `bounding_boxes[]` entry).
    - Flatten: replace each `selection_ref` and `attachment_ref` block with `""` (empty string), concatenate all `text` blocks. Result is the plain prose passed to the model.
-   - Continue to pass `attachments` and `boundingBoxes` as today.
-3. If `prompt_blocks` is absent: read legacy `message` string field. No change for non-KV consumers.
+   - Continue to pass `attachments` and `bounding_boxes` as today.
+3. If `message_blocks` is absent: read legacy `message` string field. No change for non-KV consumers.
 
 Result: model receives `(plain prose, attachments, boundingBoxes)` — identical to today's input. **Zero behavior change in Phase 1.**
 
