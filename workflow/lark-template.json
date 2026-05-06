@@ -35,7 +35,7 @@
     {
       "name": "Branch",
       "type": "text",
-      "description": "Feature branch name, e.g. feature/<worker>/<slug>."
+      "description": "Branch name, e.g. feature/<worker>/<slug>, fix/<worker>/<slug>, or improvement/<worker>/<slug> (prefix matches feature type)."
     },
     {
       "name": "PRs",

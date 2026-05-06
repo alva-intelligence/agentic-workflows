@@ -33,7 +33,7 @@
     },
     "prd_splitting": {
       "name": "PRD Splitting",
-      "description": "Single combined phase: agent (a) checks out the base branch, pulls latest, creates feature/<worker>/vc-<slug>, then (b) splits the main PRD into per-service PRDs on that branch.",
+      "description": "Single combined phase: agent (a) checks out the base branch, pulls latest, creates <prefix><worker>/vc-<slug> (prefix = feature/ | fix/ | improvement/ per features[active_feature].type), then (b) splits the main PRD into per-service PRDs on that branch.",
       "agent": "frndos-splitter",
       "next": ["implementation"],
       "allowed_actions": ["create_branch", "split_prd", "edit_service_prd"],

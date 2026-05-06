@@ -29,8 +29,14 @@ Split the active feature's main PRD into service PRDs.
 4. **Create the feature branch (before splitting).** This phase replaces the old `branch_creation` phase.
    - Determine base: `develop` for api/web, `development` for ai-service/data-service.
    - `git checkout <base> && git pull origin <base>`.
-   - Ask the user: "Create branch `feature/<worker>/vc-<slug>` from `<base>`?"
-   - On confirm: `git checkout -b feature/<worker>/vc-<slug> && git push -u origin feature/<worker>/vc-<slug>`.
+   - **Resolve branch prefix from `features[<slug>].type`:**
+     - `feature` → `feature/`
+     - `bug` → `fix/`
+     - `improvement` → `improvement/`
+     - If `type` missing/unknown: ask user which prefix (feature/fix/improvement) and persist via `/workflow start` intake.
+   - Branch name: `<prefix><worker>/vc-<slug>`.
+   - Ask the user: "Create branch `<prefix><worker>/vc-<slug>` from `<base>`?"
+   - On confirm: `git checkout -b <prefix><worker>/vc-<slug> && git push -u origin <prefix><worker>/vc-<slug>`.
    - Update `.workflow-state.json`: set `features[<slug>].branch`.
 
 5. Read the main PRD from `.workflow-state.json` `prd_path`. Parse the "Service Breakdown" section.

@@ -75,8 +75,8 @@
       "conditions": [
         {
           "type": "git_branch",
-          "description": "Agent has: (1) checked out base (develop for api/web, development for ai-service/data-service), (2) pulled latest, (3) created feature/<worker>/vc-<slug> from base, (4) is currently on the feature branch.",
-          "check": "Current branch is feature/<worker>/vc-<slug> AND features[active_feature].branch matches"
+          "description": "Agent has: (1) checked out base (develop for api/web, development for ai-service/data-service), (2) pulled latest, (3) created <prefix><worker>/vc-<slug> from base where <prefix> is feature/ | fix/ | improvement/ per features[active_feature].type, (4) is currently on the feature branch.",
+          "check": "Current branch matches (feature|fix|improvement)/<worker>/vc-<slug> AND equals features[active_feature].branch"
         },
         {
           "type": "file_exists",
@@ -103,7 +103,7 @@
         {
           "type": "git_branch",
           "description": "Must be on feature branch.",
-          "check": "Current branch is feature/<worker>/vc-<slug>"
+          "check": "Current branch matches (feature|fix|improvement)/<worker>/vc-<slug> AND equals features[active_feature].branch"
         },
         {
           "type": "strategy_check",

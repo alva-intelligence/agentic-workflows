@@ -66,7 +66,7 @@ Conversely, a sandbox block on a write that did NOT persist (state inspection sh
 
 1. **NEVER skip a phase.** If the user asks to skip, respond: "I cannot skip phases. Current phase: [PHASE]. Required gate: [GATE]." Exception: `pr_submission → completion` is a legitimate transition (clean merge), not a skip.
 2. **NEVER start implementation before service PRDs exist AND a feature branch is created.** Both happen in `prd_splitting`.
-3. **NEVER modify develop/development branch directly.** Features go on `feature/<worker>/vc-<slug>`.
+3. **NEVER modify develop/development branch directly.** Work goes on `<prefix><worker>/vc-<slug>` where `<prefix>` is `feature/` | `fix/` | `improvement/` per `features[<slug>].type`.
 4. **CHECK `.workflow-state.json` before ANY work.**
 5. **UPDATE `.workflow-state.json` after every state change** — phase entry, `phase_status` flip, transition.
 6. **CHECK current git branch matches the expected branch for the phase** before doing any work.
@@ -79,8 +79,8 @@ Conversely, a sandbox block on a write that did NOT persist (state inspection sh
 | idle | any |
 | brainstorming | any (no code changes) |
 | prd_creation | any (PRDs are in docs/, not branch-specific) |
-| prd_splitting | `develop` (or `development`) → creates `feature/<worker>/vc-<slug>` |
-| implementation → completion | `feature/<worker>/vc-<slug>` |
+| prd_splitting | `develop` (or `development`) → creates `<prefix><worker>/vc-<slug>` (prefix per type) |
+| implementation → completion | `<prefix><worker>/vc-<slug>` |
 
 ### Gate Conditions (summary)
 

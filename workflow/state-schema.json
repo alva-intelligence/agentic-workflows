@@ -106,7 +106,7 @@
           "default": []
         },
         "branch": {
-          "description": "Git branch name for feature implementation (feature/<worker>/vc-<slug>), or null if not yet created. Created during the prd_splitting phase.",
+          "description": "Git branch name for feature implementation (<prefix><worker>/vc-<slug> where <prefix> = feature/ | fix/ | improvement/ derived from features[<slug>].type), or null if not yet created. Created during the prd_splitting phase.",
           "type": ["string", "null"]
         },
         "service_prds": {

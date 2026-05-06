@@ -131,7 +131,7 @@ Discover ALL features across the team — not just local ones. Scans committed a
 1. Fetch latest from all remotes: `git fetch --all` in each service dir
 2. Scan for features from multiple sources:
    - **PRDs:** `ls docs/prd/*.md` → extract slugs
-   - **Feature branches:** `git branch -r | grep 'feature/.*/vc-'` in each service → extract slugs
+   - **Feature branches:** `git branch -r | grep -E '^(feature|fix|improvement)/.*/vc-'` in each service → extract slugs
    - **Track files:** `find . -name '*.track.md'` across all services → extract slugs
    - **JJ workspaces:** if `workspaces` map exists in `.workflow-state.json`, read each workspace's `.workflow-state.json` to discover features tracked in secondary workspaces
 3. For each unique slug found, reconstruct the phase (same logic as resume):
@@ -161,7 +161,7 @@ Resume a feature started by another team member.
 2. Scan committed artifacts to reconstruct phase:
    - Brainstorming summary recorded in `.workflow-state.json`? → past brainstorming
    - PRD exists at `docs/prd/<slug>.md`? → past prd_creation
-   - Feature branch `feature/<worker>/vc-<slug>` exists AND service PRDs exist? → past prd_splitting
+   - Branch matching `(feature|fix|improvement)/<worker>/vc-<slug>` exists AND service PRDs exist? → past prd_splitting
    - Track files show progress? → in implementation
    - PR URL in track file with no review threads? → in pr_submission (clean) or pr_review (has feedback)
    - PR merged? → in completion
@@ -173,7 +173,7 @@ Resume a feature started by another team member.
    - Reconstructed phase
    - Last session log entry (who did what)
    - What's left to do (remaining tasks from track file)
-   - Which branch to checkout: `git checkout feature/<worker>/vc-<slug>`
+   - Which branch to checkout: `git checkout <branch>` from `features[<slug>].branch` (prefix is `feature/`, `fix/`, or `improvement/` per type)
 
 ### `/workflow progress`
 Show detailed progress for the active feature.

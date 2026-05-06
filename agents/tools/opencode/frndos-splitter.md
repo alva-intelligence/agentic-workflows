@@ -37,8 +37,9 @@ This phase replaces the old `branch_creation` phase. Before any PRD work:
 
 1. Determine base branch: `develop` for api/web, `development` for ai-service/data-service.
 2. `git checkout <base-branch> && git pull origin <base-branch>`.
-3. Use the question tool: "Create branch `feature/<worker>/vc-<slug>` from `<base-branch>`?"
-4. On confirm: `git checkout -b feature/<worker>/vc-<slug> && git push -u origin feature/<worker>/vc-<slug>`.
+3. Resolve `<prefix>` from `features[<slug>].type` — `feature`→`feature/`, `bug`→`fix/`, `improvement`→`improvement/`. If type missing, ask user.
+4. Use the question tool: "Create branch `<prefix><worker>/vc-<slug>` from `<base-branch>`?"
+5. On confirm: `git checkout -b <prefix><worker>/vc-<slug> && git push -u origin <prefix><worker>/vc-<slug>`.
 5. Update `.workflow-state.json`: set `features[<slug>].branch`.
 
 ### Step 2: Enter plan mode (MANDATORY)
