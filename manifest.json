@@ -1,6 +1,6 @@
 {
-  "version": "3.0.12",
-  "updated": "2026-05-13",
+  "version": "3.0.13",
+  "updated": "2026-05-19",
   "files": {
     "agents/fragments/git-conventions.md": {
       "sha256": "1b224bfa8df5cec37ceb96f54b9e206cbbd72f4eecfd675548b7b94ea9c0c874",
