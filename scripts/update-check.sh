@@ -253,8 +253,8 @@ for i in $(seq 0 $(( TOTAL_FILES - 1 ))); do
     UPDATED_FILES+=("$install_to")
     printf "  ${GREEN}+${RESET} %s\n" "$install_to"
 
-    # Check if a fragment was updated
-    if [[ "$install_to" == *"fragments/"* ]] || [[ "$install_to" == *"AGENTS.md.template"* ]]; then
+    # Check if a regen input was updated (fragments, template, or generator itself)
+    if [[ "$install_to" == *"fragments/"* ]] || [[ "$install_to" == *"AGENTS.md.template"* ]] || [[ "$install_to" == *"scripts/generate-agents.sh"* ]]; then
       FRAGMENTS_CHANGED=true
     fi
   else
@@ -263,18 +263,26 @@ for i in $(seq 0 $(( TOTAL_FILES - 1 ))); do
   fi
 done
 
-# ── Re-generate AGENTS.md if fragments changed ──────────────────────────────
-if [[ "$FRAGMENTS_CHANGED" == true ]]; then
+# ── Re-generate AGENTS.md if regen inputs changed (or AGENTS.md missing) ────
+REGEN_REQUIRED=false
+if [[ "$FRAGMENTS_CHANGED" == true ]] || [[ ! -f "$WORKSPACE_ROOT/AGENTS.md" ]]; then
+  REGEN_REQUIRED=true
+fi
+
+REGEN_OK=true
+if [[ "$REGEN_REQUIRED" == true ]]; then
   header "Regenerating AGENTS.md"
   GENERATE_SCRIPT="$WORKSPACE_ROOT/.agentic-workflows/scripts/generate-agents.sh"
   if [[ -f "$GENERATE_SCRIPT" ]]; then
     if bash "$GENERATE_SCRIPT"; then
       ok "AGENTS.md regenerated."
     else
-      warn "AGENTS.md generation failed (generate-agents.sh returned non-zero)."
+      err "AGENTS.md generation failed (generate-agents.sh returned non-zero)."
+      REGEN_OK=false
     fi
   else
-    warn "generate-agents.sh not found at $GENERATE_SCRIPT — skipping AGENTS.md rebuild."
+    err "generate-agents.sh not found at $GENERATE_SCRIPT — cannot rebuild AGENTS.md."
+    REGEN_OK=false
   fi
 fi
 
@@ -347,8 +355,14 @@ if [[ -f "$WORKSPACE_ROOT/AGENTS.md" ]] && [[ ! -e "$WORKSPACE_ROOT/CLAUDE.md" ]
 fi
 
 # ── Update local version and branch ─────────────────────────────────────────
-echo "$REMOTE_VERSION" > "$VERSION_FILE"
+# Gate the .version write on successful regen — otherwise next run would see
+# matching versions and skip updating, leaving AGENTS.md stale against fragments.
 echo "$BRANCH" > "$CACHE_DIR/.branch"
+if [[ "$REGEN_OK" == true ]] && [[ $FAILED_COUNT -eq 0 ]]; then
+  echo "$REMOTE_VERSION" > "$VERSION_FILE"
+else
+  warn "Not bumping .version (regen_ok=$REGEN_OK, failed_downloads=$FAILED_COUNT) — will retry next session."
+fi
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 header "Update summary"
