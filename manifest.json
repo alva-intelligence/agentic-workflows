@@ -1,6 +1,6 @@
 {
-  "version": "3.0.14",
-  "updated": "2026-05-19",
+  "version": "3.0.15",
+  "updated": "2026-05-26",
   "files": {
     "agents/fragments/git-conventions.md": {
       "sha256": "1b224bfa8df5cec37ceb96f54b9e206cbbd72f4eecfd675548b7b94ea9c0c874",
@@ -13,7 +13,7 @@
       "type": "fragment"
     },
     "agents/fragments/workflow-rules.core.md": {
-      "sha256": "358ad5dfca71c49349512773736496bd91e85dec37fd6a991712adcc5eda9c18",
+      "sha256": "7ca51c9d43b3e47c2a22204aba9b91b9e7734f56b83396c7ab7f31d4ed5b12d3",
       "install_to": ".agentic-workflows/fragments/workflow-rules.core.md",
       "type": "fragment"
     },
@@ -218,22 +218,22 @@
       "type": "config"
     },
     "agents/tools/claude-code/frndos-orchestra.md": {
-      "sha256": "6093dd985e1715a4638abff94acec9bc842e37dc0c90f3146faa1196e49b8688",
+      "sha256": "5831e0721c5b7a312445c92590618f95b47e52eb91215dadad2c1f349e264e92",
       "install_to": ".agentic-workflows/agents/claude-code/frndos-orchestra.md",
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-brainstorm.md": {
-      "sha256": "25c08d895f9d4eea625f53724427e3d6f5b1a1627e6fccc11cf02194f2f62d5d",
+      "sha256": "cbd065e94867d0fd4064e9585a9ba6522584fb93cf7073f7c5cb8599c05c6a4a",
       "install_to": ".agentic-workflows/agents/claude-code/frndos-brainstorm.md",
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-prd.md": {
-      "sha256": "d903f7020f3efdfa74f4e443c95ea2b01ace05e8cec8c60186d8bd1825673e42",
+      "sha256": "fc530fe190d35bf9df6f20e2490f310f15e50467df76cd6181b5d437cc05c5f8",
       "install_to": ".agentic-workflows/agents/claude-code/frndos-prd.md",
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-splitter.md": {
-      "sha256": "3333db92c18fcb581b26318cd6c1afa5ee651802c601198c1ffe72aa5837945d",
+      "sha256": "be1869675e58d81ea3734b17a02655df8289b7281b8a50051ad980768616f67f",
       "install_to": ".agentic-workflows/agents/claude-code/frndos-splitter.md",
       "type": "agent"
     },
@@ -243,12 +243,12 @@
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-pr.md": {
-      "sha256": "58cb55f45730c38230c54609b094d768529b15097db82f4999cd66195316b29a",
+      "sha256": "6decab77bdf21686504d2c437d683e1231dd5457018d568d374d83ee62f17dc7",
       "install_to": ".agentic-workflows/agents/claude-code/frndos-pr.md",
       "type": "agent"
     },
     "agents/tools/claude-code/frndos-pr-review.md": {
-      "sha256": "c34738bca6a0077ab65670f48b38b2c5f1b9ad0f6f80f9396f2007557908a579",
+      "sha256": "3e77c654a9375239af19a6b65329f50d49ab174ac4d60f30ad9c717228015dd5",
       "install_to": ".agentic-workflows/agents/claude-code/frndos-pr-review.md",
       "type": "agent"
     },
@@ -258,22 +258,22 @@
       "type": "agent"
     },
     "agents/tools/cursor/frndos-orchestra.mdc": {
-      "sha256": "fe889620d6bf7373760072e1257fa3cf0321558ec2e834952bd8e7307595fbac",
+      "sha256": "6e03f69dec506e90201c81256997cf4c8235b36721bc36d8a876d13efd082076",
       "install_to": ".agentic-workflows/agents/cursor/frndos-orchestra.mdc",
       "type": "agent"
     },
     "agents/tools/cursor/frndos-brainstorm.mdc": {
-      "sha256": "b15e2b5af09d808344dc2d7491a6cc8bce0779e9576a98ab269a1d60f853b22a",
+      "sha256": "a6e96728c0d0470b5c994882b956c92d5bbefdd4db216cc281d4c6d5ec9030e7",
       "install_to": ".agentic-workflows/agents/cursor/frndos-brainstorm.mdc",
       "type": "agent"
     },
     "agents/tools/cursor/frndos-prd.mdc": {
-      "sha256": "1a60064a69d2ce7fa8e1a55e6e451312486d9f5202b0b6d725d9df465069bf7d",
+      "sha256": "35615a61b18bced3c0528adbca1a0b79d619ef112c97456228c220958ccc8f31",
       "install_to": ".agentic-workflows/agents/cursor/frndos-prd.mdc",
       "type": "agent"
     },
     "agents/tools/cursor/frndos-splitter.mdc": {
-      "sha256": "1d0cb3d954ade064b9ba0e25bf9db4040532e05e174615bf7ea888ce081807fe",
+      "sha256": "1358db22a6e37ddc357adb1b810ec5925134c25fcd5923ac07659a8a8e8af79d",
       "install_to": ".agentic-workflows/agents/cursor/frndos-splitter.mdc",
       "type": "agent"
     },
@@ -283,12 +283,12 @@
       "type": "agent"
     },
     "agents/tools/cursor/frndos-pr.mdc": {
-      "sha256": "e6e8f8de23be496ef873a745d0293fab21460414ce18297aa25e8f4c8e2bfb69",
+      "sha256": "9a94f3e589e26e733b4f6b08d97a2102e133cc27ce06b543419e544dc9b9770f",
       "install_to": ".agentic-workflows/agents/cursor/frndos-pr.mdc",
       "type": "agent"
     },
     "agents/tools/cursor/frndos-pr-review.mdc": {
-      "sha256": "045487240cd59902d6d1f688917b02de8957193f3efdbf12fa7ba2b6921d801e",
+      "sha256": "42a6d91321704f88ff63fc7f6d970826f48fbedb29191bc4806415682bd04678",
       "install_to": ".agentic-workflows/agents/cursor/frndos-pr-review.mdc",
       "type": "agent"
     },
@@ -298,22 +298,22 @@
       "type": "agent"
     },
     "agents/tools/amp/frndos-orchestra.md": {
-      "sha256": "e3046cef8c2383d9070b706f6104cb9d0dac1f0ccae04719062864f5f4cf0bc5",
+      "sha256": "9299b6a9ee71ac830a129c59a15799511de9fdae1b8df78efb89882e30f4a99c",
       "install_to": ".agentic-workflows/agents/amp/frndos-orchestra.md",
       "type": "agent"
     },
     "agents/tools/amp/frndos-brainstorm.md": {
-      "sha256": "aa13dd21ddc35bddd6bac4773c0661a0751343097de0a61b54df862ca390dfdd",
+      "sha256": "90b96c4626a0c362859f470b0bd36af564eea2358dc90d28ba81ffec1cb949cd",
       "install_to": ".agentic-workflows/agents/amp/frndos-brainstorm.md",
       "type": "agent"
     },
     "agents/tools/amp/frndos-prd.md": {
-      "sha256": "b99747d27d3fb12cac4fe1260a94cfe6309cf33501292cda12286a076587eaae",
+      "sha256": "d48c13d5f715895c216ceb01979d730bb0a1814f9683a6a7b061990eb8f68412",
       "install_to": ".agentic-workflows/agents/amp/frndos-prd.md",
       "type": "agent"
     },
     "agents/tools/amp/frndos-splitter.md": {
-      "sha256": "fd5a8d0d2c7d5c4b9acb93213f06a54d8dc7baeff79345c1d05ebb941986ec40",
+      "sha256": "c5476edcfde63c0dda0354bde7df7cdd6255f4d840095df7dbafc8f8e3d3ab4b",
       "install_to": ".agentic-workflows/agents/amp/frndos-splitter.md",
       "type": "agent"
     },
@@ -323,12 +323,12 @@
       "type": "agent"
     },
     "agents/tools/amp/frndos-pr.md": {
-      "sha256": "3af03b6e7814531a06ebc3ecf529a40c394afa7941f1608b994ed3f0d07adeea",
+      "sha256": "e8e061387be6cd0be668ae2351191dd993ff04928f30c6e6d813d5fe9af665fc",
       "install_to": ".agentic-workflows/agents/amp/frndos-pr.md",
       "type": "agent"
     },
     "agents/tools/amp/frndos-pr-review.md": {
-      "sha256": "0d51cead3cc2e29ccc1f9ee67423286b002b273714299c53edbbbf6fddce9e54",
+      "sha256": "c8fc99d4eea47d66e16f34cd185cba2e4447deb4e9e76d1c2c24869e6ca2c50d",
       "install_to": ".agentic-workflows/agents/amp/frndos-pr-review.md",
       "type": "agent"
     },
@@ -338,22 +338,22 @@
       "type": "agent"
     },
     "agents/tools/opencode/frndos-orchestra.md": {
-      "sha256": "66833ccdb09d3e46b9ed10517ca64a428afa65fa545b6523b12947836c14ce6d",
+      "sha256": "2a5fe542a1b6ef913678ed490f85a5d143bdd25bcd92b06c2b5876655b40247d",
       "install_to": ".agentic-workflows/agents/opencode/frndos-orchestra.md",
       "type": "agent"
     },
     "agents/tools/opencode/frndos-brainstorm.md": {
-      "sha256": "89af72bee3180e17fd1e1037fa12e15d1a9aa8833646c50d04052365aa25476d",
+      "sha256": "dbfa7d6d8f3a516ff489153a2d2b4591645f89383001c5abcfe8f36b91d15e4d",
       "install_to": ".agentic-workflows/agents/opencode/frndos-brainstorm.md",
       "type": "agent"
     },
     "agents/tools/opencode/frndos-prd.md": {
-      "sha256": "db72a06c33c602f084a6e461b046ee8b57448c7b30fe8ccae4bcdc551a37d268",
+      "sha256": "33bb103d69a35a8e2f5d0b96f22de3e805e31c63e1f3fcfe72d76c6d428b1483",
       "install_to": ".agentic-workflows/agents/opencode/frndos-prd.md",
       "type": "agent"
     },
     "agents/tools/opencode/frndos-splitter.md": {
-      "sha256": "2c1574e994ac894b42035d351eec2277500369fd3c137fac3c8771892c1f133a",
+      "sha256": "bdae5bfc5486f1dc7e718b940d74e5713dbb45af78f57aa3a62684df9a160485",
       "install_to": ".agentic-workflows/agents/opencode/frndos-splitter.md",
       "type": "agent"
     },
@@ -363,12 +363,12 @@
       "type": "agent"
     },
     "agents/tools/opencode/frndos-pr.md": {
-      "sha256": "9b2fc935f33e6d902b6cf78ae560c1e83530f7f40c4f1e1238fc1bd403f401b4",
+      "sha256": "521f1c103d11634cd0e606a2f320387c211fbdfbd3e551213dfafeaf901ef093",
       "install_to": ".agentic-workflows/agents/opencode/frndos-pr.md",
       "type": "agent"
     },
     "agents/tools/opencode/frndos-pr-review.md": {
-      "sha256": "8d9cbc0d3a85069f80055a593425c94211cd99826fc85c9d2745a1f32cc4b7cf",
+      "sha256": "319936974cec43eff1ec25e194e7451a2bbdfc98ee588f35c137c6c0924d8100",
       "install_to": ".agentic-workflows/agents/opencode/frndos-pr-review.md",
       "type": "agent"
     },
