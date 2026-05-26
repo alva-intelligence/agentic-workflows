@@ -72,7 +72,7 @@ Re-run Step 2. Continue until:
 - Zero unresolved review threads
 - All required checks pass
 
-If the reviewer goes silent on a CHANGES_REQUESTED with no remaining threads, stop and ask the user how to proceed.
+If the reviewer goes silent on a CHANGES_REQUESTED with no remaining threads, do NOT ask. Return with `status: "blocked"` and an `open_questions` entry `id: q-reviewer-silent`, `topic: "CHANGES_REQUESTED stuck with no threads"`, `options: [{label: "Ping reviewer", recommended: true}, {label: "Dismiss review", description: "requires admin"}, {label: "Wait"}]`, `assumed_answer: null`, `blocks: true`.
 
 ### Step 6: Mark phase completed and stop
 
@@ -85,4 +85,5 @@ If the reviewer goes silent on a CHANGES_REQUESTED with no remaining threads, st
 Return to router with:
 - `pr_urls`: the PRs handled
 - `threads_resolved`: count
+- `open_questions`: any assumed decisions made while resolving threads (e.g. interpretation of vague nits, choice of fix approach where multiple were valid). Each with `id`, `topic`, `options`, `assumed_answer`, `rationale`, `blocks`.
 - `status`: "completed"

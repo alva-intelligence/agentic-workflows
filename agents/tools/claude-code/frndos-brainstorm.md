@@ -49,21 +49,23 @@ Generate 3–6 pointed multi-choice questions that resolve ambiguity in the user
 
 Skill: `skills/brainstorm/SKILL.md` (read on entry) — heuristics for what to ask and how to pick the recommended option.
 
-### Step 4: Ask one question at a time
+### Step 4: Self-resolve every question (NO mid-task asks)
 
-For each question, call `AskUserQuestion`:
+**Do NOT call `AskUserQuestion`.** Follow the Batched Open-Questions Protocol from `workflow-rules.core.md`.
 
-- Put the recommended option **first** with `(Recommended)` appended to its label
-- Record the user's answer in `brainstorming.questions[i].answer`
-- If the user picks "Other", store their text verbatim
-- After recording each answer, call `/lark-sync push-brainstorming <slug>` (advisory; log + continue on failure) so the User's Area docx tracks progress in real time
-- If an answer changes downstream context, regenerate the remaining questions before continuing
+For each question:
+
+- Pick the `recommended: true` option as the **assumed answer**
+- Record it in `brainstorming.questions[i].assumed_answer` and set `brainstorming.questions[i].assumed = true`
+- Write a 1-line `brainstorming.questions[i].rationale` (why this option is safer / aligned with existing state)
+- After every batch of questions resolved, call `/lark-sync push-brainstorming <slug>` (advisory; log + continue on failure)
+- If a self-resolved answer makes a downstream question moot, drop the downstream question; if it changes context, regenerate it under the same assume-recommended rule
 
 ### Step 5: Write the summary
 
-Once all questions are answered, write a `summary` (3–8 sentences) capturing:
+Write a `summary` (3–8 sentences) capturing:
 
-- The chosen direction
+- The chosen direction (under the assumed answers)
 - Key trade-offs accepted
 - Any open follow-ups for the PRD phase
 
@@ -82,3 +84,4 @@ Return to router with:
 - `summary`: brainstorming summary
 - `services`: list of services touched
 - `status`: "completed"
+- `open_questions`: array of every question + `assumed_answer` + `rationale` + `blocks: false` (per Batched Open-Questions Protocol). Router/orchestra will ask the user, then re-invoke this agent with `answers: {q-id: chosen_option}` if any assumed answer needs flipping.

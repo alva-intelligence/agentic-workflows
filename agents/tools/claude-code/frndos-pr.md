@@ -77,15 +77,11 @@ Produce a **Security audit** summary with the skill's findings and resolution st
 
 Save the summary to `features[<slug>].security_audit_summary`.
 
-### Step 6: Confirm with user
+### Step 6: Do NOT pause — proceed to draft and open
 
-Use `AskUserQuestion`:
+Per Batched Open-Questions Protocol, do not call `AskUserQuestion`. Default: proceed to open the PR. Both summaries (self-review + security audit) ship in the PR body, so the user can review post-open and request fixes via PR comments.
 
-> "Self-review and security audit complete. Open the PR?
-> - Yes — open PR now
-> - No — let me look at the summaries first"
-
-Show both summaries.
+If you want the user to double-check before opening, record an `open_questions` entry `id: q-open-pr` with options `[{label: "Open PR now", recommended: true}, {label: "Hold for user review"}]` and `assumed_answer: "Open PR now"` — then proceed. The orchestra/main can re-invoke to revert if the user picks "Hold".
 
 ### Step 7: Draft PR
 

@@ -35,26 +35,30 @@ Identify candidate services from `initial_request`. For each, build a short snap
 
 Skill: `skills/brainstorm/SKILL.md`.
 
-### Step 4: Ask the user
+### Step 4: Self-resolve every question (NO mid-task asks)
 
-Amp's ask is plain text. Present each question as:
+**Do NOT ask the user mid-task** (no plain-text ask-and-wait). Follow the Batched Open-Questions Protocol from `workflow-rules.core.md`.
 
-```
-Q: <prompt>
-  1. <label> [(Recommended)]
-     <description>
-  2. <label>
-     <description>
-  ...
-  Or type your own answer.
-```
+For each question:
 
-Wait for the user's reply. Record answer in `brainstorming.questions[i]`. After each answer, call `/lark-sync push-brainstorming <slug>` (advisory; log + continue on failure).
+- Pick the `recommended: true` option as the **assumed answer**
+- Record it in `brainstorming.questions[i].assumed_answer` and set `brainstorming.questions[i].assumed = true`
+- Write a 1-line `brainstorming.questions[i].rationale` (why this option is safer / aligned with existing state)
+- After every batch of questions resolved, call `/lark-sync push-brainstorming <slug>` (advisory; log + continue on failure)
+- If a self-resolved answer makes a downstream question moot, drop it; if it changes context, regenerate it under the same assume-recommended rule
 
 ### Step 5: Write the summary
 
-3–8 sentences. Save to `brainstorming.summary`; set `brainstorming.completed_at`. Call `/lark-sync push-brainstorming <slug>`.
+3–8 sentences capturing the chosen direction under the assumed answers. Save to `brainstorming.summary`; set `brainstorming.completed_at`. Call `/lark-sync push-brainstorming <slug>`.
 
 ### Step 6: Mark phase completed and stop
 
 Flip `features[active_feature].phase_status` to `"completed"`. Call `/lark-sync push <slug>` (updates Phase status field) and `/lark-sync push-brainstorming <slug>` (final mirror). Do NOT auto-advance. Tell the user: "Brainstorming complete. Run `/workflow next` to advance to PRD creation."
+
+## ON COMPLETION
+
+Return to router with:
+- `summary`: brainstorming summary
+- `services`: list of services touched
+- `status`: "completed"
+- `open_questions`: array of every question + `assumed_answer` + `rationale` + `blocks: false`. Router/orchestra will ask the user, then re-invoke this agent with `answers: {q-id: chosen_option}` if any assumed answer needs flipping.

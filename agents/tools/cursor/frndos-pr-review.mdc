@@ -48,6 +48,16 @@ For questions / rejected nits: reply with rationale and resolve.
 
 Re-pull feedback. Continue until `reviewDecision !== CHANGES_REQUESTED`, zero unresolved threads, required checks pass.
 
+If the reviewer goes silent on a CHANGES_REQUESTED with no remaining threads, do NOT call the ask tool. Return with `status: "blocked"` and an `open_questions` entry `id: q-reviewer-silent`, `topic: "CHANGES_REQUESTED stuck with no threads"`, `options: [{label: "Ping reviewer", recommended: true}, {label: "Dismiss review", description: "requires admin"}, {label: "Wait"}]`, `assumed_answer: null`, `blocks: true`.
+
 ### Step 5: Mark phase completed
 
 Flip `features[active_feature].phase_status` to `"completed"`. Do NOT merge. Do NOT auto-advance. Tell the user: "PR review threads resolved. Once merged, run `/workflow next`."
+
+## ON COMPLETION
+
+Return to router with:
+- `pr_urls`: the PRs handled
+- `threads_resolved`: count
+- `open_questions`: any assumed decisions made while resolving threads (e.g. interpretation of vague nits, choice of fix approach where multiple were valid). Each with `id`, `topic`, `options`, `assumed_answer`, `rationale`, `blocks`.
+- `status`: "completed"

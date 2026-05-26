@@ -144,15 +144,48 @@ There is **no separate wireframe phase, branch, PR, scaffold, or skill**.
 - `/workflow switch <feature-slug>` — switch between active features
 - `/workflow resume <slug>` — pick up someone else's feature; the agent reconstructs phase from committed artifacts
 
-### Always Ask Before Executing
+### Ask-User Protocol — Two Tiers
 
-**MANDATORY for every agent:** Before performing ANY action:
-1. **Explain** what you plan to do and why
-2. **Ask questions** if anything is unclear — use the ask tool (Claude Code: `AskUserQuestion`; Cursor: ask tool; OpenCode: question tool; Amp: ask as plain text and wait)
-3. **Give suggestions** if there are multiple valid approaches
-4. **Wait for user confirmation** before executing
+Agents fall into **two tiers** with different user-interaction rules. Pick the right tier by agent name before doing anything else.
 
-NEVER execute code changes without explaining the plan first. NEVER make assumptions about requirements without asking. NEVER skip confirmation. NEVER auto-proceed after presenting a plan. NEVER auto-advance phases when `phase_status` flips to `completed`.
+**Tier 1 — Implementation agents:** `frndos-implement`, `frndos-engineer`.
+
+These agents write code and MUST be interactive:
+1. **Explain** the plan before changing files
+2. **Ask** via the ask tool (`AskUserQuestion` / equivalent) when requirements are unclear
+3. **Wait for user confirmation** before executing destructive or non-trivial changes
+4. NEVER auto-advance phases when `phase_status` flips to `completed`
+
+**Tier 2 — Non-implementation agents:** `frndos-brainstorm`, `frndos-prd`, `frndos-splitter`, `frndos-architect`, `frndos-pr`, `frndos-pr-review`, `frndos-track`.
+
+These agents are **non-interactive**. They MUST NOT call `AskUserQuestion` (or the tool's equivalent) mid-task. Instead, they follow the **Batched Open-Questions Protocol** below. Rationale: every mid-task ask forces the main thread to wait, ping-pong context, and re-spawn the agent. Batching everything to the final output lets the main thread ask the user once with all the context in hand.
+
+**Tier 3 — Router:** `frndos-orchestra`.
+
+Orchestra is the user-facing router that bridges user ↔ sub-agents. It IS allowed to ask the user — that is its job. Sub-agents return `open_questions` in their final output; orchestra reads them, asks the user, then re-delegates with answers attached.
+
+### Batched Open-Questions Protocol (Tier 2)
+
+Tier 2 agents follow this loop:
+
+1. **Run all research and work first.** Use code-graph MCP, grep, file reads, MCP servers, etc. Produce the artifacts the phase demands (snapshots, PRD draft, split, review notes).
+2. **When ambiguity hits**, do NOT stop. Pick the **safest reasonable default**:
+   - If you generated a multi-choice question with a `recommended: true` option, pick the recommended option.
+   - Otherwise pick the option that's lower-friction, aligns better with existing system behavior, or is the smallest reversible step.
+   - Record the choice as an **assumption** in the agent's scratch output: `assumption: <decision>, rationale: <one line>`.
+3. **Collect every assumption + every still-unanswered question** into a single `open_questions` array on the final output. Each entry has:
+   - `id`: short slug (e.g. `q-flag-scope`)
+   - `topic`: 1-line summary
+   - `options`: array of `{label, description, recommended}` — exactly one `recommended: true`
+   - `assumed_answer`: the option label you picked (if you self-resolved); `null` if you couldn't pick
+   - `rationale`: 1-line why
+   - `blocks`: `false` if you proceeded under the assumption; `true` if the agent had to stop early
+4. **Finish all reachable work** under those assumptions. Write artifacts (PRDs, summaries, state) reflecting the assumed answers. Mark assumed answers clearly in the artifact (e.g. `*(assumed — see open_questions[q-flag-scope])*`).
+5. **Return to main thread** with the artifact + `open_questions`. The main thread (or orchestra) asks the user, then re-invokes the agent with `answers: {q-id: chosen_option}` to finalize.
+
+**Hard blocker exception:** if the agent literally cannot proceed at all (e.g. required input file missing, external system unreachable, no `recommended:true` option fits and any pick would be destructive), return early with `status: "blocked"` and the blocker in `open_questions[].blocks = true`. Do NOT call `AskUserQuestion`.
+
+**State writes still happen.** Tier 2 agents still flip `phase_status` to `inprogress` on entry and `completed` when their gate is satisfied — even if open questions remain. Open questions are review items for the next phase, not phase blockers, unless `blocks: true` is set on any entry.
 
 ### Parallel features (JJ workspaces)
 

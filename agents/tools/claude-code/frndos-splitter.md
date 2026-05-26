@@ -39,10 +39,9 @@ This phase replaces the old `branch_creation` phase. Before any PRD work:
    - `feature` → `feature/`
    - `bug` → `fix/`
    - `improvement` → `improvement/`
-   - If `type` missing, ask user to pick (feature/fix/improvement) and persist back to state.
-4. Explain the plan and ask the user via `AskUserQuestion`:
-   > "Create branch `<prefix><worker>/vc-<slug>` from `<base-branch>`?"
-5. On confirm:
+   - If `type` missing, default to `feature` and record `q-feature-type` in `open_questions` (options: feature/fix/improvement, `recommended: "feature"`).
+4. Do NOT ask. Proceed to create branch `<prefix><worker>/vc-<slug>` from `<base-branch>`. Record the branch name in `open_questions` only if any naming aspect was assumed (e.g. worker missing).
+5. Create + push:
    ```bash
    git checkout -b <prefix><worker>/vc-<slug>
    git push -u origin <prefix><worker>/vc-<slug>
@@ -64,15 +63,20 @@ For each service in the PRD's `services` frontmatter, read enough of the service
 - Integration points with other services this feature will cross
 - Anything already in progress that might conflict (check `<service>/docs/tracks/` for active work)
 
-### Step 5: Relentless clarifying questions (MANDATORY)
+### Step 5: Self-resolve every split ambiguity (NO mid-task ask)
 
-Before splitting, use `AskUserQuestion` to surface EVERY ambiguity that would change how the PRD splits across services. Prefer multiple small questions over one mega-question. Examples:
+Per Batched Open-Questions Protocol, do NOT call `AskUserQuestion`. For every ambiguity that affects how the PRD splits across services:
 
-- "The PRD mentions 'real-time updates' — is this WebSocket, SSE, or polling? (affects api + web scope)"
-- "Who owns the [feature]? Should it live in ai-service or data-service?"
-- "Is the frontend calling api directly, or going through data-service for this query?"
+- Generate 2–4 options with `recommended: true` on the safer/lower-friction option (typically: match existing service ownership, use simplest transport, keep boundaries already in the codebase)
+- Pick the recommended option as `assumed_answer`
+- Append a full entry to `open_questions` with `id`, `topic`, `options`, `assumed_answer`, `rationale`, `blocks: false`
 
-Do NOT proceed with splitting until all ambiguities are answered and recorded.
+Examples (now self-resolved):
+- "Real-time updates: WebSocket vs SSE vs polling?" → default: polling (simplest, lowest infra change)
+- "Owns the [feature] — ai-service or data-service?" → default: whichever already owns the closest existing pipeline
+- "Frontend calls api directly vs through data-service?" → default: match the pattern of the closest existing query
+
+Proceed to Step 6 under the assumed answers.
 
 ### Step 6: For each service — draft and confirm
 
@@ -84,8 +88,8 @@ b. Extract relevant:
    - Data model changes
    - Dependencies on other services
 c. Generate implementation tasks (TASK-1, TASK-2, ...)
-d. **Present draft** to user — explain what's in this service PRD
-e. **Use `AskUserQuestion` for approval** — wait for explicit "approved" before writing. Also surface any remaining per-service ambiguities here.
+d. Do NOT pause for review. Write the draft directly.
+e. Any per-service ambiguity becomes an `open_questions` entry with a self-resolved `assumed_answer`. Mark assumed sections in the PRD with `*(assumed — see open_questions[<id>])*`.
 f. Write service PRD to `<service>/docs/prd/<slug>.md`
 g. Create track file at `<service>/docs/tracks/<slug>.track.md`
 
@@ -94,7 +98,8 @@ g. Create track file at `<service>/docs/tracks/<slug>.track.md`
 - Exit plan mode
 - Update `.workflow-state.json` — populate `service_prds` with paths
 - Flip `features[<slug>].phase_status` to `"completed"`. Do NOT auto-advance.
-- Report summary: "Feature branch created. Service PRDs created for: api, web. Run `/workflow next` to advance to implementation."
+- Report summary to main with `open_questions` array (every assumed decision from steps 3 onward). Main/orchestra asks the user; re-invoke this agent with `answers: {q-id: chosen_option}` if any override flips a split decision.
+- Final line: "Feature branch + service PRDs created under assumed answers. Review `open_questions`, then `/workflow next`."
 
 ## SERVICE DIRECTORIES
 

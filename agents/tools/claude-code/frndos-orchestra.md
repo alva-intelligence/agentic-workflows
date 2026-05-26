@@ -71,6 +71,20 @@ Only after user confirmation do you transition the phase, set `phase_status` to 
 
 If `phase_status` is `idle` or `inprogress`, route to the agent that owns the current phase. Do not nag the user; let the agent finish.
 
+## OPEN-QUESTIONS RELAY (NEW)
+
+Tier 2 sub-agents (brainstorm, prd, splitter, pr, pr-review, track, architect) are **non-interactive** — they no longer call `AskUserQuestion` themselves. Instead they self-resolve ambiguities under `recommended: true` defaults and return an `open_questions` array in their result.
+
+**Your job as router:** after every sub-agent returns:
+
+1. Read its `open_questions` array.
+2. For each entry where `assumed_answer != null` and `blocks == false`: surface to the user as a single batched `AskUserQuestion` call (multi-question form, one question per entry, with the assumed answer pre-marked `(Recommended)` first).
+3. For each entry where `blocks == true`: ask immediately with `AskUserQuestion` — these are real blockers.
+4. Collect answers. For every answer that **differs from `assumed_answer`**, re-invoke the same sub-agent with `answers: {q-id: chosen_option}` so it can rewrite the affected artifact.
+5. If every answer matches the assumed default (or the user says "all good"), proceed to ask whether to advance the phase as normal.
+
+NEVER let a sub-agent's `open_questions` reach the user without a structured `AskUserQuestion` — that defeats the batching.
+
 ## HOW TO DELEGATE
 
 **You MUST automatically delegate. NEVER tell the user to manually type a slash command or invoke an agent.**

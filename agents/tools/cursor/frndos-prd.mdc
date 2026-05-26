@@ -30,13 +30,19 @@ You receive from the user (routed by frndos-orchestra):
 
 Switch Cursor to **plan mode** before reading ANY file or forming conclusions. Research and brainstorming (Steps 2-6) must happen in plan mode. Exit plan mode only when ready to write the PRD file in Step 8.
 
-### Step 2: Gather raw input
+### Step 2: Gather raw input (NO mid-task ask)
 
-Use Cursor's **ask tool** to request the user's feature description, Lark notes, or Lark URL. If a Lark URL is provided, ask user to paste the content.
+Per Batched Open-Questions Protocol, do NOT call the ask tool. Source material comes from inputs already attached when this agent was invoked (`initial_request`, `brainstorming.summary`, any `lark_url`/`lark_paste`/`description` field). If a `lark_url` is present and Lark MCP is available, fetch via Lark MCP. If Lark MCP is unavailable, record in `open_questions`:
+- `id: q-lark-source`, `topic: "Lark MCP unavailable, doc not fetched"`, `assumed_answer: null`, `blocks: true`, `rationale: "Lark URL provided but MCP not configured; user must paste content or run /onboard"`
 
-### Step 3: Estimate PRD size and propose splitting if large (MANDATORY)
+If neither URL nor paste exists, proceed with `initial_request + brainstorming.summary` only.
 
-Rough token count ≈ `char_count / 3.5`. If estimated drafted PRD would exceed ~8000 tokens, use the ask tool to propose splitting into priority-ordered sub-PRDs (P0/P1/P2). Each sub-PRD becomes its own feature with a shared parent slug (`<slug>-p0`, `<slug>-p1`, ...). Record in `.workflow-state.json`: parent has `sub_features`, each sub-PRD has `parent_feature`. Each goes through the full workflow independently.
+### Step 3: Estimate PRD size and self-decide on splitting
+
+Rough token count ≈ `char_count / 3.5`. If estimated drafted PRD would exceed ~8000 tokens: do NOT ask. Auto-split into priority-ordered sub-PRDs (`<slug>-p0`, `<slug>-p1`, ...). Record an open question:
+- `id: q-prd-split`, `topic: "Auto-split large PRD into P0/P1/P2"`, `options: [{label: "Keep auto-split", recommended: true}, {label: "Single mega-PRD"}, {label: "Different boundaries"}]`, `assumed_answer: "Keep auto-split"`, `blocks: false`
+
+Record `features[<parent-slug>].sub_features` and each child's `parent_feature`. Draft the **P0** sub-PRD this run. If under threshold, proceed with a single PRD.
 
 ### Step 4: Research current system state (MANDATORY — BEFORE DRAFTING)
 
@@ -44,36 +50,28 @@ You MUST complete this before drafting:
 1. **Read relevant service code** (`api/app/`, `web/src/`, `ai-service/app/`, `data-service/app/`) — find existing overlap
 2. **Read existing PRDs in `docs/prd/`** — related/overlapping features
 3. **Check recent commits on base branches** (`develop` / `development`) in affected areas
-4. **Summarize findings** for the user: "Here's what already exists that this PRD must reconcile with: [list]."
+4. **Summarize findings**: "Here's what already exists that this PRD must reconcile with: [list]."
 
-### Step 5: Challenge assumptions (MANDATORY)
+### Step 5: Challenge assumptions and self-resolve
 
-Identify at least **3** aspects of the user's description that are ambiguous, underspecified, or conflict with existing system behavior. Ask about each via the ask tool. Prefer multiple small questions over one mega-question.
+Identify at least **3** ambiguities or conflicts between the user's description and existing system behavior. For each: generate 2–4 options with `recommended: true` on the safer/lower-friction one, self-resolve under that recommendation, and record full entry in `open_questions` (`id`, `topic`, `options`, `assumed_answer`, `rationale`, `blocks: false`). Do NOT call the ask tool.
 
-### Step 6: Relentless clarifying questions (MANDATORY)
+### Step 6: Surface every remaining ambiguity into `open_questions`
 
-Surface EVERY remaining ambiguity or assumption via the ask tool. Do NOT draft until ALL are answered. Include baseline scoping questions:
-- Which services does this feature touch?
-- Primary users?
-- Technical constraints?
-- "Done" criteria?
-- Open questions?
+Sweep notes one more time. Every remaining ambiguity becomes a multi-choice entry in `open_questions` with `recommended:true` default and `assumed_answer`. Also self-resolve baseline scoping (services, primary users, constraints, acceptance criteria, open decisions) into `open_questions`.
 
-### Step 7: Wait for all answers — do NOT assume or proceed
+### Step 7: Do NOT wait — proceed to draft under assumed answers
 
 ### Step 8: Exit plan mode and draft the PRD
 
-Read template from `.agentic-workflows/templates/prd/main-prd.template.md`. Fill in ALL sections based on input + research + clarifications. Include an "Existing System Reconciliation" subsection and an "Assumptions and Clarifications" subsection.
+Read template from `.agentic-workflows/templates/prd/main-prd.template.md`. Fill in ALL sections based on input + research + assumed answers. Include "Existing System Reconciliation" and "Assumptions and Clarifications" subsections. Mark every assumed answer inline in the PRD with `*(assumed — see open_questions[<id>])*`.
 
-### Step 9: Present for review
+### Step 9: Write the draft and finish (NO review pause)
 
-Show the draft and use the ask tool: "Does this look good? Any changes needed?"
-
-### Step 10: On approval
-
-- Ensure `docs/prd/` directory exists
+Do NOT call the ask tool for approval. Write the PRD straight to disk.
+- Ensure `docs/prd/` exists
 - Write to `docs/prd/<feature-slug>.md`
-- Update `.workflow-state.json`: set `prd_path`
+- Update `.workflow-state.json`: set `prd_path`, flip `phase_status` to `"completed"`. Do NOT auto-advance.
 
 ## PRD REQUIRED FRONTMATTER
 
@@ -103,10 +101,13 @@ services: [api, web, ai-service, data-service]
 
 ## ON COMPLETION
 
-After writing the PRD:
-- Update `.workflow-state.json`: set `prd_path`
-- Flip `features[active_feature].phase_status` to `"completed"` (do NOT auto-advance).
-- Inform user: "PRD created at `docs/prd/<slug>.md`. Run `workflow next` via frndos-orchestra to advance to PRD splitting (which also creates the feature branch)."
+Return to router with:
+- `prd_path`: path to the created PRD
+- `services`: list of services touched
+- `status`: "created"
+- `open_questions`: every assumed decision from Steps 3, 5, 6 (each with `id`, `topic`, `options`, `assumed_answer`, `rationale`, `blocks`). Orchestra/main asks the user; if anything flips, re-invoke with `answers: {q-id: chosen_option}` and it will rewrite affected PRD sections.
+
+Then inform main: "PRD drafted under assumed answers. Review `open_questions` with user; re-invoke for any overrides. Then `workflow next` to advance."
 
 ## ALWAYS ASK BEFORE EXECUTING
 

@@ -37,9 +37,9 @@ This phase replaces the old `branch_creation` phase. Before any PRD work:
 
 1. Determine base branch: `develop` for api/web, `development` for ai-service/data-service.
 2. `git checkout <base-branch> && git pull origin <base-branch>`.
-3. Resolve `<prefix>` from `features[<slug>].type` — `feature`→`feature/`, `bug`→`fix/`, `improvement`→`improvement/`. If type missing, ask user.
-4. Use the question tool: "Create branch `<prefix><worker>/vc-<slug>` from `<base-branch>`?"
-5. On confirm: `git checkout -b <prefix><worker>/vc-<slug> && git push -u origin <prefix><worker>/vc-<slug>`.
+3. Resolve `<prefix>` from `features[<slug>].type` — `feature`→`feature/`, `bug`→`fix/`, `improvement`→`improvement/`. If type missing, default to `feature` and record `q-feature-type` in `open_questions` (options: feature/fix/improvement, `recommended: "feature"`).
+4. Do NOT call the `question` tool. Proceed to create branch `<prefix><worker>/vc-<slug>` from `<base-branch>`. Record naming aspect in `open_questions` only if any aspect was assumed (e.g. worker missing).
+5. `git checkout -b <prefix><worker>/vc-<slug> && git push -u origin <prefix><worker>/vc-<slug>`.
 5. Update `.workflow-state.json`: set `features[<slug>].branch`.
 
 ### Step 2: Enter plan mode (MANDATORY)
@@ -53,9 +53,9 @@ Switch OpenCode to **plan mode** before reading any file. All research (Steps 3-
 3. Parse "Service Breakdown"
 4. For each service, read enough code to understand existing patterns, integration points, and any active work in `<service>/docs/tracks/` that may conflict
 
-### Step 4: Relentless clarifying questions (MANDATORY)
+### Step 4: Self-resolve every split ambiguity (NO mid-task ask)
 
-Before splitting, use the question tool to surface EVERY ambiguity affecting the split. Prefer multiple small questions over one mega-question. Do NOT proceed until answered.
+Per Batched Open-Questions Protocol, do NOT call the `question` tool. For every ambiguity that affects how the PRD splits across services: generate 2–4 options with `recommended: true` on the safer/lower-friction option, pick recommended as `assumed_answer`, append a full entry to `open_questions` (`id`, `topic`, `options`, `assumed_answer`, `rationale`, `blocks: false`). Proceed to Step 5 under assumed answers.
 
 ### Step 5: Draft each service PRD
 
@@ -63,9 +63,9 @@ For each service listed in PRD frontmatter `services`:
 a. Read service PRD template
 b. Extract relevant requirements, API endpoints, data model changes
 c. Generate implementation tasks (TASK-1, TASK-2, ...)
-d. Present draft to user
-e. Use the question tool for approval — surface any remaining per-service ambiguities here
-f. On approval, write to `<service>/docs/prd/<slug>.md`
+d. Do NOT pause for review. Write the draft directly.
+e. Any per-service ambiguity becomes an `open_questions` entry with a self-resolved `assumed_answer`. Mark assumed sections in the PRD with `*(assumed — see open_questions[<id>])*`.
+f. Write service PRD to `<service>/docs/prd/<slug>.md`
 g. Create track file at `<service>/docs/tracks/<slug>.track.md`
 
 ### Step 6: Finalize
@@ -124,10 +124,12 @@ Required sections: Status Table, Task Checklist (derived from service PRD tasks)
 
 ## ON COMPLETION
 
-After all service PRDs and track files are created:
-- Update `.workflow-state.json` with service_prds paths
-- Return to frndos-orchestra with: `service_prds` paths, `status: "split_complete"`
-- Inform user: "Service PRDs and track files created. Ready to move to implementation phase. Run `workflow next` to proceed."
+Return to router with:
+- `service_prds` paths, `track_files` paths
+- `status: "split"`
+- `open_questions`: every assumed decision from Steps 1, 4, 5 (each with `id`, `topic`, `options`, `assumed_answer`, `rationale`, `blocks`). Main/orchestra asks the user; re-invoke this agent with `answers: {q-id: chosen_option}` if any override flips a split decision.
+
+Inform user: "Feature branch + service PRDs created under assumed answers. Review `open_questions`, then `/workflow next`."
 
 ## ALWAYS ASK BEFORE EXECUTING
 
