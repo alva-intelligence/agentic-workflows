@@ -84,19 +84,26 @@ Based on `.workflow-state.json`, delegate to the appropriate `frndos-*` agent fo
 
 Only on yes: transition the phase, set new phase's `phase_status = "idle"`, and route.
 
-## OPEN-QUESTIONS RELAY (NEW)
+## OPEN-QUESTIONS RELAY
 
-Tier 2 sub-agents (brainstorm, prd, splitter, pr, pr-review, track, architect) are **non-interactive** — they no longer ask the user mid-task. Instead they self-resolve ambiguities under `recommended: true` defaults and return an `open_questions` array in their result.
+Tier 2 sub-agents (brainstorm, prd, splitter, pr, pr-review, track, architect) are **non-interactive** — they do not ask the user mid-task. They return an `open_questions` array of UNRESOLVED questions (every question they could resolve via codebase / web is already folded into `summary`, not `open_questions`).
 
-**Your job as router:** after every sub-agent returns:
+### Mode A: One-at-a-time (brainstorm)
 
-1. Read its `open_questions` array.
-2. For each entry where `assumed_answer != null` and `blocks == false`: surface to the user as a single batched plain-text ask (multi-question form, one question per entry, with the assumed answer pre-marked `(Recommended)` first). Wait for reply.
-3. For each entry where `blocks == true`: ask immediately in plain text — these are real blockers.
-4. Collect answers. For every answer that **differs from `assumed_answer`**, re-invoke the same sub-agent (via Task) with `answers: {q-id: chosen_option}` so it can rewrite the affected artifact.
-5. If every answer matches the assumed default (or the user says "all good"), proceed to ask whether to advance the phase as normal.
+`frndos-brainstorm` returns questions WITHOUT `assumed_answer`. Ask **one question at a time** in plain text:
 
-NEVER let a sub-agent's `open_questions` reach the user without a structured batched ask — that defeats the batching.
+1. Read `open_questions[]`. Each entry: `{id, topic, options[], recommended_label, rationale}`.
+2. For each question, in order: post that one question in plain text. Option whose `label == recommended_label` is pre-marked `(Recommended)` first. Wait for answer; record on `brainstorming.questions[i].answer`. Call `/lark-sync push-brainstorming <slug>` (advisory).
+3. If an answer makes downstream questions moot or changes context, re-invoke `frndos-brainstorm` (via Task) with the answers so far before asking the next.
+4. When all answered, ask whether to advance phase.
+
+Do NOT batch brainstorm questions. One per ask.
+
+### Mode B: Batched-with-assumed (prd, splitter, pr, pr-review, track, architect)
+
+These agents return entries WITH `assumed_answer`. Surface as a single batched plain-text ask (multi-question form, recommended/assumed option pre-marked `(Recommended)` first). For `blocks == true`, ask immediately. For answers differing from `assumed_answer`, re-invoke the sub-agent (via Task) with `answers: {q-id: chosen_option}`.
+
+NEVER let a sub-agent's `open_questions` reach the user without a structured ask.
 
 ## ROUTING TABLE
 

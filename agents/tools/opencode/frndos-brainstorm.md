@@ -51,30 +51,35 @@ After every resolved branch, walk the downstream branches it opens. Drop branche
 
 Skill: `skills/brainstorm/SKILL.md`.
 
-### Step 4: Self-resolve every question (NO mid-task asks)
+### Step 4: Produce final unresolved questions list
 
-**Do NOT call the `question` tool.** Follow the Batched Open-Questions Protocol from `workflow-rules.core.md`.
+Output ONLY unresolved questions. Drop every question resolved via codebase/web — those facts go into `summary`, not `open_questions`.
 
-For each question:
+Do NOT call the `question` tool. Do NOT self-resolve under assumed answers. No `assumed_answer` field. Orchestra asks user one at a time.
 
-- Pick the `recommended: true` option as the **assumed answer**
-- Record it in `brainstorming.questions[i].assumed_answer` and set `brainstorming.questions[i].assumed = true`
-- Write a 1-line `brainstorming.questions[i].rationale` (why this option is safer / aligned with existing state)
-- After every batch of questions resolved, call `/lark-sync push-brainstorming <slug>` (advisory)
-- If a self-resolved answer makes a downstream question moot, drop it; if it changes context, regenerate it under the same assume-recommended rule
+For each unresolved question, record in `brainstorming.questions[]`:
+- `id`: short kebab slug
+- `topic`: 1-line summary
+- `options[]`: `{label, value, description, recommended}`; exactly one `recommended: true`. Cite codebase path / URL in `description` if relevant.
+- `recommended_label`: copy of recommended option's label
+- `rationale`: 1-line why recommended is safer / aligned
+
+Call `/lark-sync push-brainstorming <slug>` (advisory).
 
 ### Step 5: Write the summary
 
-3–8 sentences capturing the chosen direction under the assumed answers. Save to `brainstorming.summary`; set `brainstorming.completed_at`. Call `/lark-sync push-brainstorming <slug>`.
+3–8 sentences capturing facts resolved via codebase/web exploration and the direction they suggest. Save to `brainstorming.summary`; set `brainstorming.completed_at`. Call `/lark-sync push-brainstorming <slug>`.
 
 ### Step 6: Mark phase completed and stop
 
-Flip `features[active_feature].phase_status` to `"completed"`. Call `/lark-sync push <slug>` (updates Phase status field) and `/lark-sync push-brainstorming <slug>` (final mirror). Do NOT auto-advance. Tell the user: "Brainstorming complete. Run `/workflow next` to advance to PRD creation."
+Flip `features[active_feature].phase_status` to `"completed"`. Call `/lark-sync push <slug>` and `/lark-sync push-brainstorming <slug>`. Do NOT auto-advance. Return control to orchestra.
 
 ## ON COMPLETION
 
 Return to router with:
-- `summary`: brainstorming summary
+- `summary`: brainstorming summary (facts only)
 - `services`: list of services touched
 - `status`: "completed"
-- `open_questions`: array of every question + `assumed_answer` + `rationale` + `blocks: false`. Router/orchestra will ask the user, then re-invoke this agent with `answers: {q-id: chosen_option}` if any assumed answer needs flipping.
+- `open_questions`: array of UNRESOLVED questions only. Each: `{id, topic, options[], recommended_label, rationale}`. No `assumed_answer`.
+
+**Instruction to orchestra/main:** ask these questions **one at a time** via the user-facing ask tool. One question per call. Do NOT batch. Record each answer on `brainstorming.questions[i].answer`. When all answered, advance phase.

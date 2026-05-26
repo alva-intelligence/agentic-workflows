@@ -65,39 +65,45 @@ Each option has `label`, `value`, optional `description`, and `recommended` (boo
 
 Skill: `skills/brainstorm/SKILL.md` (read on entry) — heuristics for what to ask and how to pick the recommended option.
 
-### Step 4: Self-resolve every question (NO mid-task asks)
+### Step 4: Produce final unresolved questions list
 
-**Do NOT call `AskUserQuestion`.** Follow the Batched Open-Questions Protocol from `workflow-rules.core.md`.
+You output ONLY the questions you could not resolve via codebase exploration or web search. Drop every question that got answered along the way — those answers go into `summary`, not into `open_questions`.
 
-For each question:
+Do NOT call `AskUserQuestion`. Do NOT self-resolve under assumed answers. Do NOT include `assumed_answer` fields. Orchestra will ask the user one at a time.
 
-- Pick the `recommended: true` option as the **assumed answer**
-- Record it in `brainstorming.questions[i].assumed_answer` and set `brainstorming.questions[i].assumed = true`
-- Write a 1-line `brainstorming.questions[i].rationale` (why this option is safer / aligned with existing state)
-- After every batch of questions resolved, call `/lark-sync push-brainstorming <slug>` (advisory; log + continue on failure)
-- If a self-resolved answer makes a downstream question moot, drop the downstream question; if it changes context, regenerate it under the same assume-recommended rule
+For each remaining unresolved question, record in `brainstorming.questions[]`:
+
+- `id`: short kebab slug (e.g. `q-flag-scope`)
+- `topic`: 1-line summary of the decision
+- `options[]`: `{label, value, description, recommended}` — exactly one option has `recommended: true`. Cite codebase path / URL inline in `description` whenever the recommendation derives from one.
+- `recommended_label`: copy of the `recommended:true` option's label, for fast main-thread reading
+- `rationale`: 1-line why the recommended option is safer / aligned with existing state
+
+Save list to `features[active_feature].brainstorming.questions`. Call `/lark-sync push-brainstorming <slug>` (advisory).
 
 ### Step 5: Write the summary
 
 Write a `summary` (3–8 sentences) capturing:
 
-- The chosen direction (under the assumed answers)
-- Key trade-offs accepted
-- Any open follow-ups for the PRD phase
+- What got resolved via codebase exploration + web search (facts, not questions)
+- The direction those facts suggest
+- Any open follow-ups outside the multi-choice questions
 
-Save to `features[active_feature].brainstorming.summary`. Set `brainstorming.completed_at` to the current ISO timestamp. Call `/lark-sync push-brainstorming <slug>` to mirror the final state into the User's Area docx.
+Save to `features[active_feature].brainstorming.summary`. Set `brainstorming.completed_at` to the current ISO timestamp. Call `/lark-sync push-brainstorming <slug>`.
 
 ### Step 6: Mark phase completed and stop
 
 - Flip `features[active_feature].phase_status` to `"completed"` in `.workflow-state.json`
-- Call `/lark-sync push <slug>` to update the Lark task's `Phase status` field (advisory; log + continue on failure)
-- Call `/lark-sync push-brainstorming <slug>` once more (final-state mirror)
-- Do **not** transition to `prd_creation` automatically. Tell the user: "Brainstorming complete. Run `/workflow next` to advance to PRD creation."
+- Call `/lark-sync push <slug>` (advisory)
+- Call `/lark-sync push-brainstorming <slug>` once more (final mirror)
+- Do **not** transition to `prd_creation` automatically. Return control to orchestra.
 
 ## ON COMPLETION
 
 Return to router with:
-- `summary`: brainstorming summary
+- `summary`: brainstorming summary (facts resolved via exploration)
 - `services`: list of services touched
 - `status`: "completed"
-- `open_questions`: array of every question + `assumed_answer` + `rationale` + `blocks: false` (per Batched Open-Questions Protocol). Router/orchestra will ask the user, then re-invoke this agent with `answers: {q-id: chosen_option}` if any assumed answer needs flipping.
+- `open_questions`: array of UNRESOLVED questions only. Each entry: `{id, topic, options[], recommended_label, rationale}`. No `assumed_answer`. No questions that got resolved by codebase/web — those facts live in `summary`.
+
+**Instruction to orchestra/main:** ask these questions **one at a time** via `AskUserQuestion` (or tool equivalent). One question per call. Do NOT batch all questions into a single multi-question call. After each answer, record it on the matching `brainstorming.questions[i].answer`, then proceed to the next question. When all are answered, advance phase.

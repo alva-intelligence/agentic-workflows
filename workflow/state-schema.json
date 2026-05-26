@@ -178,6 +178,11 @@
           "type": "object",
           "additionalProperties": { "type": "string" }
         },
+        "external_state_snapshots": {
+          "description": "Map of vendor/library/SDK name to a short fact (with URL) pulled via web search/fetch when training data was potentially stale. Optional.",
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
         "completed_at": {
           "type": ["string", "null"],
           "format": "date-time"
@@ -202,11 +207,21 @@
           "type": "string",
           "minLength": 1
         },
+        "topic": {
+          "description": "1-line summary of the decision. Optional supplement to prompt.",
+          "type": "string"
+        },
         "options": {
           "type": "array",
-          "minItems": 2,
-          "maxItems": 4,
           "items": { "$ref": "#/definitions/brainstorm_option" }
+        },
+        "recommended_label": {
+          "description": "Label of the option whose recommended === true. Pre-marked '(Recommended)' when orchestra asks the user. Should match exactly one option's label.",
+          "type": "string"
+        },
+        "rationale": {
+          "description": "1-line why the recommended option is safer / aligned with existing state.",
+          "type": "string"
         },
         "answer": {
           "description": "The chosen option's value, or free-text 'Other' content. Null until the user answers.",

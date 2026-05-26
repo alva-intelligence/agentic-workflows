@@ -71,19 +71,32 @@ Only after user confirmation do you transition the phase, set `phase_status` to 
 
 If `phase_status` is `idle` or `inprogress`, route to the agent that owns the current phase. Do not nag the user; let the agent finish.
 
-## OPEN-QUESTIONS RELAY (NEW)
+## OPEN-QUESTIONS RELAY
 
-Tier 2 sub-agents (brainstorm, prd, splitter, pr, pr-review, track, architect) are **non-interactive** — they no longer call `AskUserQuestion` themselves. Instead they self-resolve ambiguities under `recommended: true` defaults and return an `open_questions` array in their result.
+Tier 2 sub-agents (brainstorm, prd, splitter, pr, pr-review, track, architect) are **non-interactive** — they do not call `AskUserQuestion` themselves. They return an `open_questions` array of UNRESOLVED questions (every question they could resolve via codebase exploration or web search is already folded into `summary`, not `open_questions`).
 
-**Your job as router:** after every sub-agent returns:
+**Two relay modes — pick by sub-agent:**
 
-1. Read its `open_questions` array.
-2. For each entry where `assumed_answer != null` and `blocks == false`: surface to the user as a single batched `AskUserQuestion` call (multi-question form, one question per entry, with the assumed answer pre-marked `(Recommended)` first).
-3. For each entry where `blocks == true`: ask immediately with `AskUserQuestion` — these are real blockers.
-4. Collect answers. For every answer that **differs from `assumed_answer`**, re-invoke the same sub-agent with `answers: {q-id: chosen_option}` so it can rewrite the affected artifact.
-5. If every answer matches the assumed default (or the user says "all good"), proceed to ask whether to advance the phase as normal.
+### Mode A: One-at-a-time (brainstorm)
 
-NEVER let a sub-agent's `open_questions` reach the user without a structured `AskUserQuestion` — that defeats the batching.
+`frndos-brainstorm` returns questions WITHOUT `assumed_answer`. The user must answer every one. Ask **one question at a time** via `AskUserQuestion`:
+
+1. Read `open_questions[]`. Each entry has `{id, topic, options[], recommended_label, rationale}`.
+2. For each question, in order:
+   - Build a single `AskUserQuestion` call with that one question. List options in the order returned; the option whose `label == recommended_label` is pre-marked `(Recommended)` and listed first.
+   - Wait for the answer. Record on `features[active_feature].brainstorming.questions[i].answer`. Call `/lark-sync push-brainstorming <slug>` (advisory).
+   - If the answer makes any downstream question moot or changes context, re-invoke `frndos-brainstorm` with the answers so far before asking the next question. Otherwise continue to the next question.
+3. When every question has an answer, ask whether to advance the phase.
+
+Do NOT batch brainstorm questions into a single multi-question `AskUserQuestion` call. One question per call.
+
+### Mode B: Batched-with-assumed (prd, splitter, pr, pr-review, track, architect)
+
+These agents return entries WITH `assumed_answer` set. Surface to the user as a single batched `AskUserQuestion` call (multi-question form, one question per entry, recommended/assumed option pre-marked `(Recommended)` first). For entries with `blocks == true`, ask immediately. For answers that differ from `assumed_answer`, re-invoke the sub-agent with `answers: {q-id: chosen_option}`.
+
+---
+
+NEVER let a sub-agent's `open_questions` reach the user without a structured `AskUserQuestion` call.
 
 ## HOW TO DELEGATE
 

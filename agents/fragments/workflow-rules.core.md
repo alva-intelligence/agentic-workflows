@@ -102,8 +102,10 @@ Every gate also requires `phase_status === 'completed'`.
 
 1. Load latest state of every relevant service (paths, key symbols, recent changes — `code-review-graph` MCP tools first, fall back to grep/read). Use web search/fetch for external SDK/API/framework behavior.
 2. **Grill protocol:** walk every branch of the decision tree implied by `initial_request`. Resolve each ambiguity in order: (a) codebase exploration, (b) web search, (c) only if neither resolves it, author a multi-choice question. No quotas — no minimum or maximum on question count or options per question. Exactly one option per question carries `recommended: true`.
-3. Do NOT call the ask tool. Self-resolve under `recommended:true` (Batched Open-Questions Protocol). Return everything in `open_questions` for orchestra to batch-ask the user.
-4. Write a `summary` capturing the chosen direction under assumed answers, then flip `phase_status` to `completed` and stop.
+3. **Drop resolved questions.** Any question answered via codebase or web becomes a fact in `summary`, NOT an `open_questions` entry. `open_questions` contains ONLY truly unresolved decisions that need user input.
+4. Do NOT call the ask tool. Do NOT self-resolve under `assumed_answer`. Return `open_questions[]` as `{id, topic, options[], recommended_label, rationale}` — no `assumed_answer` field.
+5. Write a `summary` capturing facts resolved via exploration. Flip `phase_status` to `completed` and stop.
+6. **Orchestra asks the user one question at a time** (Mode A relay in `frndos-orchestra.md`) — never batch brainstorm questions.
 
 Skill: `skills/brainstorm/SKILL.md`.
 
@@ -165,6 +167,8 @@ These agents are **non-interactive**. They MUST NOT call `AskUserQuestion` (or t
 Orchestra is the user-facing router that bridges user ↔ sub-agents. It IS allowed to ask the user — that is its job. Sub-agents return `open_questions` in their final output; orchestra reads them, asks the user, then re-delegates with answers attached.
 
 ### Batched Open-Questions Protocol (Tier 2)
+
+**Exception — `frndos-brainstorm`** does NOT self-resolve under `assumed_answer`. It drops every codebase/web-resolved question into `summary` and returns only truly unresolved questions in `open_questions` with no `assumed_answer` field. Orchestra asks brainstorm questions one at a time (Mode A relay). The rest of this section applies to other Tier 2 agents (prd, splitter, pr, pr-review, architect, track).
 
 Tier 2 agents follow this loop:
 

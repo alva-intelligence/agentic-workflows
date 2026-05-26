@@ -53,13 +53,17 @@ After every resolved branch, walk the downstream branches it opens. Drop branche
 
 Use `references/question-patterns.md` for shape and pitfalls.
 
-### Step 3: Self-resolve under Batched Open-Questions Protocol
+### Step 3: Produce final unresolved questions list
 
-Do NOT call the ask tool mid-task. Pick the `recommended:true` option as `assumed_answer` for each question, record rationale, and return everything to orchestra in `open_questions`. See `agents/fragments/workflow-rules.core.md` → "Batched Open-Questions Protocol".
+Output ONLY questions you could not resolve via codebase exploration or web search. Drop any question that got answered along the way — that fact belongs in `summary`, not `open_questions`.
+
+Do NOT call the ask tool. Do NOT self-resolve under assumed answers. No `assumed_answer` field. Orchestra asks user one at a time.
+
+For each unresolved question, record `{id, topic, options[], recommended_label, rationale}`. Exactly one option has `recommended: true`; copy its label into `recommended_label`.
 
 ### Step 4: Write the summary
 
-3–8 sentences. Capture chosen direction, key trade-offs accepted, open follow-ups for PRD phase. Save to `brainstorming.summary`. Set `brainstorming.completed_at`.
+3–8 sentences. Capture facts resolved via codebase/web exploration and the direction they suggest. Save to `brainstorming.summary`. Set `brainstorming.completed_at`.
 
 ### Step 5: Mark phase completed and stop
 
