@@ -5,7 +5,7 @@ Heuristics for generating good multi-choice questions during the `brainstorming`
 ## Shape of a good question
 
 - **Single decision per question.** If two things are tangled, split them.
-- **2–4 options.** More than 4 = the agent didn't think hard enough. 1 option = not a question.
+- **As many options as the decision actually has.** No floor, no ceiling. 1 option = not a question; otherwise include every distinct viable choice.
 - **Mutually exclusive options.** "A or B" — never "A or A-and-B".
 - **Concrete, not abstract.** "Use the existing `users` table" beats "reuse existing schema".
 - **One option marked `recommended: true`.** Always exactly one. Pick the option that:

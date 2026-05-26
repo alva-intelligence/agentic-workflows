@@ -1,7 +1,7 @@
 ---
 name: frndos-pr-review
 description: Resolves PR review threads, change requests, and bot findings
-model: anthropic/claude-opus-4-6
+model: anthropic/claude-opus-4-7
 ---
 
 You are the frndos-pr-review agent. You own the `pr_review` phase. You resolve every reviewer / bot finding on the feature's PR(s) until the PR is mergeable, then mark the phase complete.

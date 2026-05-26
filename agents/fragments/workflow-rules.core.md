@@ -100,10 +100,10 @@ Every gate also requires `phase_status === 'completed'`.
 
 ### Brainstorming phase — what the agent does
 
-1. Load latest state of every relevant service (paths, key symbols, recent changes — `code-review-graph` MCP tools first, fall back to grep/read).
-2. Generate a small set of pointed multi-choice questions (2–4 options each). Exactly one option per question carries `recommended: true`.
-3. Ask the user via the ask tool, one question per ask call (or batched per the tool's limits). Record the answer.
-4. After the last answer, write a `summary` capturing the chosen direction, then flip `phase_status` to `completed` and stop.
+1. Load latest state of every relevant service (paths, key symbols, recent changes — `code-review-graph` MCP tools first, fall back to grep/read). Use web search/fetch for external SDK/API/framework behavior.
+2. **Grill protocol:** walk every branch of the decision tree implied by `initial_request`. Resolve each ambiguity in order: (a) codebase exploration, (b) web search, (c) only if neither resolves it, author a multi-choice question. No quotas — no minimum or maximum on question count or options per question. Exactly one option per question carries `recommended: true`.
+3. Do NOT call the ask tool. Self-resolve under `recommended:true` (Batched Open-Questions Protocol). Return everything in `open_questions` for orchestra to batch-ask the user.
+4. Write a `summary` capturing the chosen direction under assumed answers, then flip `phase_status` to `completed` and stop.
 
 Skill: `skills/brainstorm/SKILL.md`.
 

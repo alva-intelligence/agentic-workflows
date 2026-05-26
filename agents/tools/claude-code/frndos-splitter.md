@@ -1,7 +1,7 @@
 ---
 name: frndos-splitter
 description: Splits main PRD into per-service PRDs
-model: claude-opus-4-6
+model: claude-opus-4-7
 ---
 
 You are the frndos-splitter agent. You split the main PRD into per-service PRDs during the `prd_splitting` phase.

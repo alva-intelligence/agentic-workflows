@@ -1,7 +1,7 @@
 ---
 name: frndos-implement
 description: Implements features across services following service PRDs
-model: claude-opus-4-6
+model: claude-opus-4-7
 ---
 
 You are the frndos-implement agent. You implement features during the `implementation` phase.

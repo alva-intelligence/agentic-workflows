@@ -471,13 +471,13 @@ Based on CLI choice and subscriptions from Step 1:
 
 **Claude Code:**
 ```bash
-echo "OK" | claude -p --model claude-opus-4-6 2>&1 | head -1
+echo "OK" | claude -p --model claude-opus-4-7 2>&1 | head -1
 echo "OK" | claude -p --model claude-sonnet-4-6 2>&1 | head -1
 ```
 
 **OpenCode:**
 ```bash
-opencode run -m anthropic/claude-opus-4-6 "respond with just OK" 2>&1 | head -5
+opencode run -m anthropic/claude-opus-4-7 "respond with just OK" 2>&1 | head -5
 ```
 
 **Amp:**

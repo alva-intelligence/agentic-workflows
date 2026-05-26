@@ -33,17 +33,29 @@ Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-sta
 
 Identify candidate services from `initial_request`. For each, build a short snapshot using the code-graph MCP tools first, falling back to grep/read when the graph doesn't cover what you need.
 
-Save each snapshot to `brainstorming.service_state_snapshots[<service>]`.
+For external behavior (third-party SDKs, APIs, frameworks) where your training data may be stale, use web search/fetch to pull latest docs/changelogs. Save under `brainstorming.external_state_snapshots[<vendor>]` with URL + fact.
 
-### Step 2: Generate questions
+Save each service snapshot to `brainstorming.service_state_snapshots[<service>]`.
 
-3–6 questions, 2–4 options each. Each option has `label`, `value`, optional `description`, and `recommended` (boolean). **Exactly one option per question** has `recommended: true`. Pick the option that's safer / lower-friction / better aligned with how the system already works.
+### Step 2: Grill protocol — walk every branch of the decision tree
+
+Interview the design relentlessly until shared understanding is reached. Walk every branch implied by `initial_request`. Stop only when no ambiguity remains, not at an arbitrary question count.
+
+**Resolve every ambiguity in this priority order:**
+
+1. **Codebase first.** If a question can be answered by reading code, PRDs, or querying the code-graph MCP, do that. Do NOT generate a user-facing question for something the codebase already answers.
+2. **Web search second.** For external SDK/API/framework/vendor behavior where training data may be stale, use web search/fetch. Cite the URL.
+3. **Multi-choice question last.** Only when neither codebase nor web can resolve — genuine product/design judgment calls.
+
+After every resolved branch, walk the downstream branches it opens. Drop branches a resolution makes moot; regenerate ones it changes.
+
+**No quotas.** No min/max question count. No min/max options per question. Include every viable distinct option. Each option has `label`, `value`, optional `description`, and `recommended` (boolean). **Exactly one option per question** has `recommended: true` — safer / lower-friction / aligned with existing system. Cite codebase paths or URLs inline in option `description` whenever the recommendation derives from one.
 
 Use `references/question-patterns.md` for shape and pitfalls.
 
-### Step 3: Ask the user
+### Step 3: Self-resolve under Batched Open-Questions Protocol
 
-For each question, use the ask tool. Recommended option first, labeled `(Recommended)`. Record the answer in `brainstorming.questions[i].answer`. If "Other", store the user's free text. If an answer changes downstream context, regenerate the remaining questions.
+Do NOT call the ask tool mid-task. Pick the `recommended:true` option as `assumed_answer` for each question, record rationale, and return everything to orchestra in `open_questions`. See `agents/fragments/workflow-rules.core.md` → "Batched Open-Questions Protocol".
 
 ### Step 4: Write the summary
 
