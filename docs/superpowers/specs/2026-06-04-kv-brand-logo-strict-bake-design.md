@@ -37,7 +37,7 @@ never altered by a generative model — i.e. a strict, deterministic paste.
 | 3 | How "place logo + where" is decided | **LLM structured output** from the image-mode agent. |
 | 4 | Logo background handling | **Composite as-is** (assume transparent PNG); zero modification of the logo. |
 | 5 | Persistence across regenerations | **Sticky.** A small `{anchor, scale}` spec is persisted and auto re-baked on every subsequent generation until removed. |
-| 6 | Where compositing + state live | **ai-service composites; web persists the spec; api supplies the logo bytes + spec.** |
+| 6 | Where compositing + state live | **ai-service composites (download → stamp → re-upload); api supplies the logo bytes, supplies the persisted spec, and persists the resolved spec by intercepting the ai-service stream. Web needs no changes.** |
 
 ### Baked-in vs. existing overlay (explicit, to avoid confusion)
 
@@ -50,31 +50,38 @@ treatment (movable layers flattened at export).
 ## Architecture overview
 
 ```
-┌────────── web ──────────┐     ┌──────────────── api (Laravel) ────────────────┐
-│ KV studio chat          │     │ ChatService::streamKvGenerator                 │
-│  - sends user turn       │────▶│  - if image-producing + brand-knowledge + brand│
-│  - on `logo_stamp_state` │     │    has logo: read logo bytes from S3 (Storage  │
-│    event: PATCH studio    │     │    disk) → base64 → request.brand_logo         │
-│    file `brand_logo_stamp`│◀────│  - include persisted studio_file.brand_logo_   │
-└──────────────────────────┘     │    stamp in request                            │
-                                  └───────────────────────┬────────────────────────┘
-                                                          │  KvStreamRequest
-                                                          ▼
-                          ┌──────────────────── ai-service ───────────────────────┐
-                          │ kv_generator/service.py (image / craft / edit / resize)│
-                          │  1. image-mode agent → ImageModeOutput{image_prompt,    │
-                          │     logo_directive{action,anchor,scale}}  (prompt has   │
-                          │     NO logo mention)                                    │
-                          │  2. resolve_stamp(directive, request.brand_logo_stamp)  │
-                          │     → ResolvedStamp | None                              │
-                          │  3. generate scene (text-to-image or existing img2img,  │
-                          │     logo NOT involved)                                  │
-                          │  4. if ResolvedStamp and request.brand_logo present:    │
-                          │     stamp_logo(scene_bytes, logo_bytes, anchor, scale)  │
-                          │     (PIL composite, flatten) → final bytes              │
-                          │  5. upload final bytes to S3                            │
-                          │  6. emit `logo_stamp_state` event (ResolvedStamp|null)  │
-                          └─────────────────────────────────────────────────────────┘
+  web: NO CHANGES (the logo is baked into the returned generation image; the
+       stamp spec is server-internal). The browser renders generation_done as today.
+
+┌──────────────────────────── api (Laravel) ─────────────────────────────┐
+│ ChatService::streamKvGenerator                                          │
+│  outbound (build KvStreamRequest):                                      │
+│   - if image-producing + brand-knowledge + brand has logo: read logo    │
+│     bytes via Storage::disk('s3')->get(getRawOriginal('logo')) →        │
+│     base64 → request.brand_logo {data_base64, mime_type}               │
+│   - include persisted studio_files.brand_logo_stamp in request          │
+│  inbound (consume ai-service NDJSON stream, same loop as generation_     │
+│   ready): on `logo_stamp_state` event → write studio_files.brand_logo_  │
+│   stamp (the resolved {anchor,scale} or null). No browser relay needed. │
+└───────────────────────────────────┬─────────────────────────────────────┘
+                                     │  KvStreamRequest / NDJSON events
+                                     ▼
+          ┌──────────────────── ai-service ───────────────────────┐
+          │ kv_generator/service.py (image / craft / edit / resize)│
+          │  1. refine image_prompt as today (logo NOT mentioned)  │
+          │  2. classify_logo_directive(chat_history, prompt,      │
+          │     logo_available) → {action, anchor, scale}          │
+          │     (dedicated small-model JSON call)                   │
+          │  3. resolve_stamp(directive, request.brand_logo_stamp) │
+          │     → ResolvedStamp | None                             │
+          │  4. generate scene (logo NOT involved)                 │
+          │  5. if ResolvedStamp and request.brand_logo present:   │
+          │     download generated image → stamp_logo() PIL        │
+          │     composite/flatten → re-upload via upload_file_to_s3│
+          │     → replace render image_url/thumbnail_url           │
+          │  6. emit GenerationReadyEvent (as today) +             │
+          │     LogoStampStateEvent(stamp=ResolvedStamp|null)      │
+          └─────────────────────────────────────────────────────────┘
 ```
 
 ## Components
@@ -95,11 +102,17 @@ treatment (movable layers flattened at export).
 - Do **not** persist `brand_logo` bytes anywhere — it is request-scoped only.
 
 **Studio file model + migration**
-- New nullable jsonb column `brand_logo_stamp` on the studio files table:
-  `{ "anchor": "<9-grid>", "scale": "small|medium|large" }` or `null`.
-- New (or reuse existing) PATCH endpoint so web can update `brand_logo_stamp` when it receives the
-  `logo_stamp_state` stream event. If a studio-file update endpoint already exists, extend its
-  allowed fields rather than adding a new route.
+- New nullable jsonb column `brand_logo_stamp` on `studio_files`:
+  `{ "anchor": "<9-grid>", "scale": "small|medium|large" }` or `null`. Add to the model `$fillable`
+  + `$casts` (`'brand_logo_stamp' => 'array'`), mirroring the existing `overlays` column.
+
+**Inbound stream interception (persist the resolved spec)**
+- In the `switch ($parsedData['event'])` loop (`ChatService.php:631`), add a
+  `case 'logo_stamp_state':` that loads the studio file and writes
+  `brand_logo_stamp` = the event's `stamp` (the `{anchor, scale}` map, or `null` on remove). This
+  mirrors how `generation_ready` (`ChatService.php:774`) does a mid-stream DB write. No browser relay
+  and no new PATCH endpoint — the stamp is server-internal (the logo is already baked into the image
+  the browser receives).
 
 ### 2. ai-service — structured directive, resolver, compositor
 
@@ -114,22 +127,21 @@ treatment (movable layers flattened at export).
   compatibility but is unused by this feature (the agent no longer needs the URL).
 
 **`app/agents/kv_generator/prompts/image_mode.py`**
-- Remove all logo-URL / "embed pixel-for-pixel" instructions.
-- The image-mode agent now returns a structured object (Agno `response_model`):
+- Remove all logo-URL / "embed pixel-for-pixel" / sub-brand-logo instructions. The refined
+  `image_prompt` MUST NOT mention the logo at all (the logo is composited separately).
+
+**Logo-intent classifier (dedicated LLM call, not the main refiner)**
+- Rather than re-plumb the streaming refiner (`_llm_stream`) to emit a Pydantic model, add a focused
+  classifier call — same pattern as the existing `_stream_post_generation_summary` gpt-4o-mini call.
+- `classify_logo_directive(chat_history, user_prompt, logo_available: bool) -> LogoDirective`
+  returns structured JSON:
   ```
-  ImageModeOutput {
-    image_prompt: str          # describes the scene; MUST NOT mention the logo
-    logo_directive: {
-      action: "place" | "remove" | "none"
-      anchor: Anchor | null    # required when action == place
-      scale:  Scale  | null    # defaults applied downstream when null
-    }
-  }
+  LogoDirective { action: "place" | "remove" | "none", anchor: Anchor | null, scale: Scale | null }
   ```
-- Prompt guidance: "If the user asks to add/move the brand logo, set `action=place` with the
-  requested corner/scale (default `bottom-right`/`medium`). If they ask to remove it, set
-  `action=remove`. Otherwise `action=none`. NEVER describe the logo in `image_prompt` — the logo is
-  composited separately."
+- Instruction: "If the user asks to add/move the brand logo → `action=place` with the requested
+  corner/scale (default `bottom-right`/`medium`). Remove/hapus logo → `action=remove`. Otherwise
+  `action=none`." Runs only when `logo_available` (api sent `brand_logo`). Defensive default on any
+  error / missing key: `action=none`.
 
 **`app/agents/kv_generator/context_builder.py`**
 - `_format_brand_block`: drop the `- Logo URL: …` line. Add a single line `- Brand logo: available`
@@ -150,37 +162,46 @@ treatment (movable layers flattened at export).
   - Pure function, no I/O — unit-testable.
 
 **`app/agents/kv_generator/service.py`**
-- Image-mode flow: parse `ImageModeOutput`; use `image_prompt` for generation (logo-free).
-- After the scene bytes are produced and **before** S3 upload, in every image-producing path
-  (sketch generate, craft, edit, resize): `stamp = resolve_stamp(directive, request.brand_logo_stamp)`;
-  if `stamp and request.brand_logo`: `final = stamp_logo(scene, decode(request.brand_logo), stamp)`.
-- For non-image-mode regenerations (craft/edit/resize) there is no fresh `logo_directive`; they use
-  `action=none` semantics → the persisted `brand_logo_stamp` is re-applied automatically. This is
-  what makes the logo survive iteration and keeps it pristine even after a generative edit.
-- Emit a `logo_stamp_state` SSE event carrying the resolved stamp (`{anchor, scale}` or `null`).
-- Delete `brand_logo_fetcher.py` and its wiring; remove the B3 img-to-img-for-logo branch and tests.
+- Image-mode flow: refine `image_prompt` as today; run `classify_logo_directive(...)` to get the
+  directive; generate the scene logo-free (logo no longer appended to `attachments`).
+- Because the image tools (`edit_image_fn`, `_render_image`) return an already-uploaded `image_url`
+  (not raw bytes), the stamp step is **download → composite → re-upload**: after `render` is obtained,
+  `stamp = resolve_stamp(directive, request.brand_logo_stamp)`; if `stamp and request.brand_logo`:
+  `_download_image(render["image_url"])` → `stamp_logo(...)` → write to a temp file → `upload_file_to_s3(...)`
+  (mirror the `generate_image.py:412` call: `file_permission="public"`) → replace
+  `render["image_url"]` and `render["thumbnail_url"]` with the new URL.
+- Apply this stamp step in `_run_image_mode` (sketch + craft) and `_run_edit_mode`; resize reuses the
+  same helper. For regenerations with no fresh `place`/`remove` directive, the resolver returns the
+  persisted `brand_logo_stamp` (`action=none` semantics) → the logo survives iteration and stays
+  pristine even after a generative edit.
+- Emit `LogoStampStateEvent(stamp=<resolved {anchor,scale} or null>)` right after
+  `GenerationReadyEvent` so api persists it.
+- Delete `brand_logo_fetcher.py` and its wiring (`service.py:263-286`), the `logo_url` line in
+  `image_mode.py`/`craft_mode.py`, and their tests.
 
-### 3. web — persist the spec
+### 3. web — no changes
 
-- Handle the new `logo_stamp_state` SSE event: PATCH the studio file's `brand_logo_stamp`
-  (set to the spec, or `null` on remove). No canvas-layer rendering — the logo is already in the
-  returned image.
+The logo is baked into the generation image the browser already receives via `kv_generation_done`;
+the stamp spec is persisted server-side by api. The canvas renders the returned image unchanged.
+No new SSE event handling, no studio-file PATCH, no type changes are required for v1.
 
 ## Data flow (happy path)
 
 1. User: "tambahkan brand logo di kanan bawah, tanpa teks."
 2. api: image-producing + brand-knowledge ON + brand has logo → reads S3 logo bytes → base64 →
    `request.brand_logo`; `request.brand_logo_stamp = null` (first time).
-3. ai-service image-mode agent → `{image_prompt: "<scene, no logo>", logo_directive: {action:"place",
-   anchor:"bottom-right", scale:"medium"}}`.
+3. ai-service: refines `image_prompt` (no logo mention); classifier →
+   `{action:"place", anchor:"bottom-right", scale:"medium"}`.
 4. `resolve_stamp` → `{bottom-right, medium}`.
-5. Scene generated (logo-free). `stamp_logo` composites the real logo bottom-right. Flatten → upload.
-6. `logo_stamp_state {bottom-right, medium}` emitted → web PATCHes studio file.
+5. Scene generated (logo-free) and uploaded by the image tool. ai-service downloads it, `stamp_logo`
+   composites the real logo bottom-right, re-uploads, swaps the URL in `render`.
+6. `GenerationReadyEvent` (api writes the kv_generations row) + `LogoStampStateEvent {bottom-right,
+   medium}` → api writes `studio_files.brand_logo_stamp`.
 7. Next turn "buat background lebih biru": api sends `brand_logo` + persisted
-   `{bottom-right, medium}`; agent emits `action:none`; resolver returns the persisted spec; logo
-   re-baked automatically at the same spot.
-8. "hapus logo": agent emits `action:remove`; resolver returns `null`; no composite; web clears the
-   persisted spec.
+   `{bottom-right, medium}`; classifier returns `action:none`; resolver returns the persisted spec;
+   logo re-baked automatically at the same spot.
+8. "hapus logo": classifier returns `action:remove`; resolver returns `null`; no composite;
+   `LogoStampStateEvent {stamp:null}` → api clears `studio_files.brand_logo_stamp`.
 
 ## Edge cases
 
@@ -210,11 +231,12 @@ treatment (movable layers flattened at export).
 - KV stream request carries `brand_logo` (base64 + mime) when image-producing + brand has logo;
   carries `null` when brand has no logo or mode is chat.
 - KV stream request carries the persisted `brand_logo_stamp` from the studio file.
-- Studio-file PATCH persists/clears `brand_logo_stamp`.
+- Inbound `logo_stamp_state` event handling persists `{anchor, scale}` to
+  `studio_files.brand_logo_stamp`, and clears it to `null` on remove.
 - Migration: column exists, nullable, jsonb.
 
 **web**
-- `logo_stamp_state` event → studio-file PATCH called with the spec (and with `null` on remove).
+- No changes → no new tests.
 
 ## Out of scope (v1)
 
