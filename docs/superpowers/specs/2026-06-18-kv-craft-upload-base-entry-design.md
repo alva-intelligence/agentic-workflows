@@ -69,13 +69,24 @@ request a supported output size). So:
 | Within tolerance of `1:1` / `3:2` / `2:3` | Works normally; canvas adopts that ratio | Works |
 | Outside (extreme, e.g. 3.4:1) | **Gated** — chat warning "rasio X belum didukung untuk Craft", Craft action disabled | **Works** (ratio-preserving) |
 
-**Tolerance = ±10%.** Convert each ratio to a decimal (`width / height`):
-supported targets are `1:1` = 1.0, `3:2` = 1.5, `2:3` = 0.67. The uploaded
-aspect snaps to the nearest target when the relative difference is ≤ 10%;
-otherwise it is treated as extreme (Craft gated). Examples: 1.6 → 3:2 (~7%,
-snaps, Craft works); 3.44 banner → nearest 3:2 is ~129% off (extreme, Craft
-gated). When within tolerance, the canvas snaps to that supported ratio for
-the Craft output.
+**The model only outputs three sizes** (`edit_image.py` `OPENAI_SIZE_BY_RATIO`):
+`1:1` → 1024² (decimal 1.0), `16:9` → 1536×1024 (decimal **1.5**, i.e. 3:2),
+`9:16` → 1024×1536 (decimal **0.67**, i.e. 2:3). The `16:9` / `9:16` labels are
+the canonical artboard labels but render at 3:2 / 2:3.
+
+**Snap rule = nearest target, gate beyond 25%.** Convert the upload to a
+decimal (`width / height`). Snap to the nearest of the three target decimals
+{1.0, 1.5, 0.67} and use that target's label. Treat the upload as **extreme**
+(Craft gated) only when even the nearest target is off by **more than 25%**
+(relative). This lets common ratios through (4:3 ≈ 1.33, 3:2 = 1.5, 16:9 ≈ 1.78,
+5:4) — they snap to a supported label and Craft works — while genuinely extreme
+uploads gate. Examples: 1.78 → snaps to `16:9` (~19% off, supported); 1.33 →
+snaps to `16:9` (~11% off, supported); 3.44 banner → nearest is 1.5 at ~129% off
+→ **extreme, Craft gated**.
+
+The snap decision is computed **once, server-side at import** (see api below)
+and persisted as two metadata fields the web reads directly — `aspect_ratio`
+(the supported label, set only when supported) and `craft_supported` (bool).
 
 **Why upscale stays open:** upscale
 ([upscale_image.py](../../../ai-service/app/tools/upscale_image.py), surfaced
@@ -102,13 +113,25 @@ Craft action is explained before the user reaches for it.
 
 ### api (`alva-intelligence/frnd-api-php`, branch target `develop`)
 
-- **`KvGenerationService::persistImportFromUpload`** — probe the uploaded
-  image (`getimagesize` on the S3 object or accept client-reported
-  dimensions validated server-side) and persist `width`, `height`, and a
-  derived `aspect_ratio` string into `metadata`. Keep existing keys.
-- **Import request/controller** — accept optional `width` / `height` in the
-  payload (validated), or resolve them server-side; do not trust unbounded
-  client values.
+- **`ImportKvGenerationFromUploadRequest`** — accept `width` and `height`
+  (required integers, `min:1`, sane `max`). The web measures them from the
+  uploaded image before calling import (resolves Open Question on dimension
+  source: client-measured + server-validated, no new image library).
+- **`KvGenerationService::persistImportFromUpload`** — accept `width`/`height`
+  in the payload; compute the snap decision (nearest of {1.0, 1.5, 0.67},
+  gate beyond 25%) and persist into `metadata`, keeping existing keys:
+  - `width`, `height` (raw px)
+  - `aspect_ratio` — the supported label (`"1:1"`/`"16:9"`/`"9:16"`), set
+    **only when supported**; omitted when extreme
+  - `craft_supported` — bool
+  The snap math lives in a small pure helper (e.g. `KvAspectRatio::snap(int
+  $w, int $h): ?string`) so it is unit-testable in isolation.
+- **`KvGeneratorFileController::importGenerationFromUpload`** — extract the new
+  `width`/`height` from `$request->validated(...)` and pass them to the service.
+- **No controller change for Craft sizing** — the existing craft backfill at
+  [ThreadController.php:575](../../../api/app/Http/Controllers/Api/Chat/ThreadController.php)
+  already reads `data_get($baseGen->metadata, 'aspect_ratio')`, so a supported
+  uploaded base sizes Craft correctly with zero further work.
 - No new endpoint — reuse
   `POST /v1/studio/kv-generator/files/{id}/generations/import-from-upload`
   ([api.php:2011](../../../api/routes/api.php)).
@@ -124,11 +147,17 @@ Craft action is explained before the user reaches for it.
   already exists (`uploadAttachment.ts`, `promoteAttachmentToBase.ts`).
   Extract/share the "register as base" step so the canvas entry point and
   the chat-promotion path use one helper.
-- **Ratio detection + Craft gate** — derive the uploaded base's supported
-  ratio (or "unsupported") from the persisted dimensions. When unsupported,
-  disable the Craft action (Start Crafting pill + craft Design send) and
-  emit the proactive chat warning.
-- **Upscale stays enabled** regardless of ratio.
+- **Measure dimensions before import** — in the new upload block, load the
+  picked file into an `Image`/`createImageBitmap` to read `naturalWidth`/
+  `naturalHeight`, then pass them to `importKvGenerationFromUpload`
+  (extend its body type + `promoteAttachmentToBase`).
+- **Craft gate** — the base is extreme when `metadata.imported_from_upload`
+  is true and `metadata.craft_supported === false`. Feed that into the
+  `craftStatus` computation ([KvGeneratorLayout.tsx:699](../../../web/src/components/studio/kv-generator/KvGeneratorLayout.tsx))
+  so the Start Crafting pill / craft Design send disable, and emit the
+  proactive chat warning.
+- **Upscale stays enabled** regardless of ratio (`useUpscales` has no
+  model/ratio guard today — keep it that way).
 
 ### ai-service
 
@@ -141,11 +170,13 @@ through the existing `kv_resize` outpaint/reframe pipeline (polish at the
 nearest supported ratio, then outpaint back to the true banner aspect).
 Bigger build + more credits — deferred until there is demand.
 
-## Open Questions
+## Resolved decisions
 
-1. **Upscale on `user_upload` generations** — verify the upscale start path
-   (keyed on `kv_generation_id`) has no guard that rejects rows with
-   `model = 'user_upload'`. If it does, relax it.
-2. **Dimension source** — probe server-side from the S3 object (robust,
-   one fetch) vs. accept client-measured dimensions (cheaper, must be
-   validated). Lean server-side unless it adds meaningful latency.
+- **Snap rule:** nearest of {1.0, 1.5, 0.67}; gate Craft only when off by
+  > 25% (relative).
+- **Dimension source:** client-measured `width`/`height`, server-validated.
+  No new image library (composer has no Intervention/Image; `getimagesize`
+  on remote URLs is avoided).
+- **Upscale on `user_upload`:** `useUpscales` has no model/ratio guard today,
+  so upscale already works on uploaded bases — no change needed, just don't
+  add a guard.
