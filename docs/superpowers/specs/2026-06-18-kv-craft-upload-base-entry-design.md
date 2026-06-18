@@ -23,11 +23,14 @@ Two related gaps in the KV Generator Craft flow:
    the image's pixel dimensions or aspect ratio. So a Craft polish over an
    uploaded base has no `aspect_ratio` to pin.
 
-3. **The image model only supports three aspect ratios.** gpt-image accepts
-   `1:1` (1024²), `16:9` (1536×1024 ≈ 3:2), `9:16` (1024×1536 ≈ 2:3) and
-   nothing else ([edit_image.py:76](../../../ai-service/app/tools/edit_image.py)).
-   An extreme upload (e.g. a 3.4:1 banner) cannot be reproduced by a Craft
-   polish — it would silently collapse toward a square.
+3. **Our code pins craft size to three legacy labels.** `OPENAI_SIZE_BY_RATIO`
+   ([edit_image.py:76](../../../ai-service/app/tools/edit_image.py)) only maps
+   `1:1`/`16:9`/`9:16` — a gpt-image-1 relic. The product runs **gpt-image-2**,
+   which accepts **flexible** dimensions (≤ 3:1, /16, edge ≤3840) on edits too
+   (verified). Because we don't send an explicit conformed size for an uploaded
+   base, craft falls back to `size=auto`, which does **not** preserve the input
+   ratio (verified: square in → 3:2 out) — that is why a wide banner came back
+   portrait. Only ratios **> 3:1** are a true model limit (HTTP 400).
 
 ## Goal
 
@@ -55,38 +58,42 @@ adopts the uploaded image's aspect ratio for display.
 The existing chat-attachment promotion path stays as-is (it is not the
 primary entry point but remains a valid fallback).
 
-### Custom-size handling
+### Custom-size handling — preserve the base ratio
 
-On import, the API probes the image and persists its real dimensions +
-aspect ratio. The uploaded base is **always** displayed at its true ratio
-(it is just an image).
+**Core principle: craft output aspect ratio MUST equal the base image's
+aspect ratio.** On import the API persists the base's real dimensions; craft
+then renders at those dimensions (conformed) so the polish matches what the
+user uploaded.
 
-The aspect-ratio constraint only bites the **Craft polish** (img-to-img must
-request a supported output size). So:
+**Model capability (verified empirically, 2026-06-18).** The product uses
+**gpt-image-2**, which — unlike gpt-image-1's three fixed sizes — accepts
+**flexible output dimensions** on both `generations` and `edits`:
 
-| Uploaded aspect | Craft | Upscale |
+- edge ≤ 3840 px, both edges a multiple of 16
+- total pixels in [655 360, 8 294 400]
+- long:short aspect ratio ≤ **3:1**
+
+Empirical test: an `images/edits` call with `model=gpt-image-2`,
+`size=1536x768` (2:1, not one of the legacy three) returned a 1536×768 image.
+A call with `size=auto` did **not** preserve the input ratio (square in →
+3:2 out). So the rule is: **send an explicit conformed size; never rely on
+`auto`.** (The old `OPENAI_SIZE_BY_RATIO` three-entry map is a gpt-image-1
+relic and is the real bottleneck — not the model.)
+
+**Behavior by ratio:**
+
+| Base aspect (long:short) | Craft | Upscale |
 |---|---|---|
-| Within tolerance of `1:1` / `3:2` / `2:3` | Works normally; canvas adopts that ratio | Works |
-| Outside (extreme, e.g. 3.4:1) | **Gated** — chat warning "rasio X belum didukung untuk Craft", Craft action disabled | **Works** (ratio-preserving) |
+| ≤ 3:1 (the vast majority — 1:1, 4:3, 3:2, 16:9, 2:1, up to 3:1) | **Works; output ratio = base ratio** (explicit conformed size) | Works |
+| > 3:1 (e.g. 3.44:1 banner) | **Gated** — model can't render beyond 3:1; chat warning, Craft disabled on every path (pill + chat Design) | **Works** (ratio-preserving) |
 
-**The model only outputs three sizes** (`edit_image.py` `OPENAI_SIZE_BY_RATIO`):
-`1:1` → 1024² (decimal 1.0), `16:9` → 1536×1024 (decimal **1.5**, i.e. 3:2),
-`9:16` → 1024×1536 (decimal **0.67**, i.e. 2:3). The `16:9` / `9:16` labels are
-the canonical artboard labels but render at 3:2 / 2:3.
+**`craft_supported`** = base ratio within `[1/3, 3]`. Only ratios beyond that
+are gated; true preservation of > 3:1 needs outpaint (Phase 2).
 
-**Snap rule = nearest target, gate beyond 25%.** Convert the upload to a
-decimal (`width / height`). Snap to the nearest of the three target decimals
-{1.0, 1.5, 0.67} and use that target's label. Treat the upload as **extreme**
-(Craft gated) only when even the nearest target is off by **more than 25%**
-(relative). This lets common ratios through (4:3 ≈ 1.33, 3:2 = 1.5, 16:9 ≈ 1.78,
-5:4) — they snap to a supported label and Craft works — while genuinely extreme
-uploads gate. Examples: 1.78 → snaps to `16:9` (~19% off, supported); 1.33 →
-snaps to `16:9` (~11% off, supported); 3.44 banner → nearest is 1.5 at ~129% off
-→ **extreme, Craft gated**.
-
-The snap decision is computed **once, server-side at import** (see api below)
-and persisted as two metadata fields the web reads directly — `aspect_ratio`
-(the supported label, set only when supported) and `craft_supported` (bool).
+**Conform** (base `w×h` → output size string): clamp ratio to `[1/3, 3]`, pick
+edges on that ratio targeting ~1.5 MP, round each edge to a multiple of 16,
+keep within the pixel/edge bounds. Same ratio in → same ratio out (within /16
+quantization).
 
 **Why upscale stays open:** upscale
 ([upscale_image.py](../../../ai-service/app/tools/upscale_image.py), surfaced
@@ -107,7 +114,17 @@ Craft action is explained before the user reaches for it.
 | Chat-attachment → base promotion | unchanged (still valid) |
 | Craft over a supported-ratio uploaded base | works like a normal polish |
 | Upscale / download | unchanged; works on uploaded bases too |
-| ai-service | no changes in Phase 1 — the ratio gate lives in web/api |
+
+## Phasing
+
+- **This iteration (Phase 1):** ratio preservation for **≤ 3:1** bases — the
+  vast majority of uploads. ai-service sends an explicit conformed size; the
+  craft output ratio equals the base ratio. `> 3:1` bases are **gated as an
+  interim** (blocked on every craft path + warning + upscale/download) so the
+  OpenAI 400 never reaches the user.
+- **Next iteration (Phase 2):** replace the `> 3:1` gate with **outpaint** —
+  craft at 3:1, then extend the canvas to the true ratio via the existing
+  `kv_resize` pipeline. This is the chosen long-term behavior for `> 3:1`.
 
 ## Implementation
 
@@ -115,26 +132,37 @@ Craft action is explained before the user reaches for it.
 
 - **`ImportKvGenerationFromUploadRequest`** — accept `width` and `height`
   (required integers, `min:1`, sane `max`). The web measures them from the
-  uploaded image before calling import (resolves Open Question on dimension
-  source: client-measured + server-validated, no new image library).
+  uploaded image before calling import (client-measured + server-validated,
+  no new image library).
 - **`KvGenerationService::persistImportFromUpload`** — accept `width`/`height`
-  in the payload; compute the snap decision (nearest of {1.0, 1.5, 0.67},
-  gate beyond 25%) and persist into `metadata`, keeping existing keys:
+  and persist into `metadata`, keeping existing keys:
   - `width`, `height` (raw px)
-  - `aspect_ratio` — the supported label (`"1:1"`/`"16:9"`/`"9:16"`), set
-    **only when supported**; omitted when extreme
-  - `craft_supported` — bool
-  The snap math lives in a small pure helper (e.g. `KvAspectRatio::snap(int
-  $w, int $h): ?string`) so it is unit-testable in isolation.
-- **`KvGeneratorFileController::importGenerationFromUpload`** — extract the new
-  `width`/`height` from `$request->validated(...)` and pass them to the service.
-- **No controller change for Craft sizing** — the existing craft backfill at
-  [ThreadController.php:575](../../../api/app/Http/Controllers/Api/Chat/ThreadController.php)
-  already reads `data_get($baseGen->metadata, 'aspect_ratio')`, so a supported
-  uploaded base sizes Craft correctly with zero further work.
+  - `craft_supported` — bool = base ratio within `[1/3, 3]`
+- **`KvAspectRatio` helper** — replace the old snap-to-three logic with a
+  simple `isSupported(int $w, int $h): bool` (ratio within `[1/3, 3]`). No
+  more `"16:9"`-style label snapping; ai-service derives the exact size from
+  the base image. (Remove/repoint the `snap()` + its unit test accordingly.)
+- **`KvGeneratorFileController::importGenerationFromUpload`** — forward the new
+  `width`/`height` to the service.
 - No new endpoint — reuse
   `POST /v1/studio/kv-generator/files/{id}/generations/import-from-upload`
   ([api.php:2011](../../../api/routes/api.php)).
+
+### ai-service (`alva-intelligence/frnd-ai-services`, branch target `development`)
+
+- **Conform + explicit size for craft.** In the craft img-to-img path
+  ([service.py](../../../ai-service/app/agents/kv_generator/service.py) →
+  [edit_image.py](../../../ai-service/app/tools/edit_image.py)), derive the
+  output `size` from the **base image's actual pixel dimensions** conformed to
+  gpt-image-2's constraints (clamp ratio to `[1/3, 3]`, edges /16, edge ≤3840,
+  total px in [655 360, 8 294 400]) and send it **explicitly**. **Never rely on
+  `size=auto`** — verified to drift (square in → 3:2 out).
+- **Replace `OPENAI_SIZE_BY_RATIO`** (the gpt-image-1 three-entry relic) so the
+  size resolver accepts an explicit `"W×H"` pixel string for gpt-image-2; keep
+  the three labels as a fallback for legacy/sketch callers.
+- Empirically verified (2026-06-18): gpt-image-2 `edits` honors `1536×768`
+  (2:1) and `1536×512` (3:1); `2048×592` (3.46:1) returns
+  `400 "maximum supported aspect ratio is 3:1"` — hence the `> 3:1` gate.
 
 ### web (`alva-intelligence/frnd-web`, branch target `develop`)
 
@@ -151,32 +179,35 @@ Craft action is explained before the user reaches for it.
   picked file into an `Image`/`createImageBitmap` to read `naturalWidth`/
   `naturalHeight`, then pass them to `importKvGenerationFromUpload`
   (extend its body type + `promoteAttachmentToBase`).
-- **Craft gate** — the base is extreme when `metadata.imported_from_upload`
-  is true and `metadata.craft_supported === false`. Feed that into the
-  `craftStatus` computation ([KvGeneratorLayout.tsx:699](../../../web/src/components/studio/kv-generator/KvGeneratorLayout.tsx))
-  so the Start Crafting pill / craft Design send disable, and emit the
-  proactive chat warning.
+- **Craft gate (> 3:1 only, interim)** — the base is gated when
+  `metadata.imported_from_upload` is true and `metadata.craft_supported ===
+  false`. This must block **every** craft-image path so the OpenAI 400 never
+  fires:
+  - `craftStatus` → `disabled` ([KvGeneratorLayout.tsx](../../../web/src/components/studio/kv-generator/KvGeneratorLayout.tsx)) — disables the Start Crafting pill (done) and suppresses the overlay (done).
+  - **the chat "Design" send** — block the freeform craft-image send in
+    `onSend` when the base is unsupported (the currently-open gap), showing
+    the warning instead of sending. Brainstorm/chat stays allowed.
+  - proactive chat warning on import of a `> 3:1` base.
 - **Upscale stays enabled** regardless of ratio (`useUpscales` has no
   model/ratio guard today — keep it that way).
 
-### ai-service
+## Phase 2 (next iteration — the chosen `> 3:1` behavior)
 
-None for Phase 1.
-
-## Phase 2 (noted, out of scope here)
-
-Support Craft at arbitrary aspect ratios by routing extreme-ratio bases
-through the existing `kv_resize` outpaint/reframe pipeline (polish at the
-nearest supported ratio, then outpaint back to the true banner aspect).
-Bigger build + more credits — deferred until there is demand.
+Replace the `> 3:1` gate with **outpaint**: craft at 3:1 (the model's max),
+then extend the canvas left/right to the base's true ratio via the existing
+`kv_resize` outpaint pipeline — so even a 3.44:1 banner keeps its real ratio.
+Bigger build (multi-service, extra credits); tracked as the follow-up to this
+spec.
 
 ## Resolved decisions
 
-- **Snap rule:** nearest of {1.0, 1.5, 0.67}; gate Craft only when off by
-  > 25% (relative).
+- **Supported range:** craft preserves the base ratio for **≤ 3:1** by sending
+  an explicit conformed size to gpt-image-2 (verified). Only `> 3:1` is gated
+  (interim) → outpaint in Phase 2. The old snap-to-three / ±25% rule is
+  dropped (it was a gpt-image-1 assumption).
+- **Never use `size=auto`** for craft — it does not preserve the input ratio
+  (verified). Always send an explicit conformed `W×H`.
 - **Dimension source:** client-measured `width`/`height`, server-validated.
-  No new image library (composer has no Intervention/Image; `getimagesize`
-  on remote URLs is avoided).
-- **Upscale on `user_upload`:** `useUpscales` has no model/ratio guard today,
-  so upscale already works on uploaded bases — no change needed, just don't
-  add a guard.
+  No new image library.
+- **Upscale on `user_upload`:** `useUpscales` has no model/ratio guard — upscale
+  already works on uploaded bases; don't add a guard.
