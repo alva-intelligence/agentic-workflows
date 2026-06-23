@@ -99,6 +99,32 @@ web polls GET /studio/kv/motion/{id} (TanStack Query refetchInterval ~4s)
    status: queued → generating → done/failed → render <video> inline
 ```
 
+### Reuse boundary (video engine vs chat orchestration)
+
+Motion **reuses the same video engine FRND chat uses** —
+`app/tools/generate_video.py` (multi-provider Veo/Kling/Sora, S3 upload, token
+usage). It is NOT a new/parallel video integration. `generate_video` is a plain
+standalone callable (no `@tool` decorator, no Agno dependency) and is already
+invoked directly elsewhere (`app/tools/router.py`), so calling it directly from
+the motion job is an established pattern.
+
+Motion does **not** route through the Agno chat agent or the chat request flow
+(`ThreadController` + `isVideoGeneration`). Decision: **direct-call**, mirroring
+Resize (a one-shot studio job, not a conversational turn). Rationale:
+
+- **Determinism** — the button must always produce a video with the chosen
+  first frame + preset; an LLM-driven tool call could alter args, skip, or refuse.
+- **Cost/latency** — no extra LLM turn on top of an already slow (~30s–2min)
+  generation.
+- **No session coupling** — avoids the Agno `session_data` wholesale-rewrite
+  class of bug that one-shot jobs sidestep.
+- **Consistency** — matches Resize and the rest of studio one-shot generation.
+
+The deeper principle from prior guidance (reuse `app.tools.*`, no parallel
+integrations) is honored: we reuse `generate_video` verbatim. Routing through
+the Agno agent would only be warranted for a conversational/context-aware motion
+UX (e.g. "make the zoom slower" in chat), which is out of scope for v1.
+
 ### ai-service — new module `app/agents/kv_motion/` (mirrors `kv_resize/`)
 
 - `router.py` — `POST /ai/kv-motion` (internal endpoint).
