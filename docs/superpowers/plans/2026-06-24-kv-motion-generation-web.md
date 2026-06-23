@@ -102,6 +102,7 @@ export type KvMotion = {
   id: string;
   studioFileId: string;
   parentGenerationId: string;
+  parentMotionId: string | null;
   model: string;
   provider: KvMotionProvider;
   preset: string | null;
@@ -320,6 +321,7 @@ type WireMotion = {
   id: string;
   studio_file_id: string;
   parent_generation_id: string;
+  parent_motion_id: string | null;
   model: string;
   provider: KvMotionProvider;
   preset: string | null;
@@ -338,6 +340,7 @@ function toMotion(w: WireMotion): KvMotion {
     id: w.id,
     studioFileId: w.studio_file_id,
     parentGenerationId: w.parent_generation_id,
+    parentMotionId: w.parent_motion_id,
     model: w.model,
     provider: w.provider,
     preset: w.preset,
@@ -362,6 +365,7 @@ export async function createMotion(
   fileId: string,
   body: {
     parentGenerationId: string;
+    parentMotionId?: string | null; // set on guided regenerate (lineage)
     model: string;
     provider: KvMotionProvider;
     preset: string | null;
@@ -372,6 +376,7 @@ export async function createMotion(
 ): Promise<KvMotion> {
   const { data } = await axiosInstance.post(`v1/studio/files/${fileId}/motions`, {
     parent_generation_id: body.parentGenerationId,
+    parent_motion_id: body.parentMotionId ?? null,
     model: body.model,
     provider: body.provider,
     preset: body.preset,
@@ -444,6 +449,7 @@ export function useKvMotion(fileId: string, parentGenerationId: string | null) {
       prompt: string | null;
       duration: number;
       ratio: KvMotion["ratio"];
+      parentMotionId?: string | null; // set on guided regenerate
     }) => {
       if (!parentGenerationId) throw new Error("No active generation to animate");
       return createMotion(fileId, { parentGenerationId, ...vars });
@@ -575,6 +581,7 @@ const baseProps = {
   onGenerate: vi.fn(),
   motions: [],
   onDelete: vi.fn(),
+  onRegenerate: vi.fn(),
 };
 
 describe("KvMotionPanel", () => {
@@ -634,13 +641,14 @@ type Props = {
   onGenerate: () => void;
   motions: KvMotion[];
   onDelete: (motionId: string) => void;
+  onRegenerate: (motion: KvMotion) => void; // prefills panel + sets lineage
 };
 
 export function KvMotionPanel(props: Props) {
   const {
     disabled, modelId, onModelChange, preset, onPresetChange,
     prompt, onPromptChange, duration, onDurationChange, ratio, onRatioChange,
-    onGenerate, motions, onDelete,
+    onGenerate, motions, onDelete, onRegenerate,
   } = props;
 
   return (
@@ -755,6 +763,15 @@ export function KvMotionPanel(props: Props) {
               )}
               {m.status === "failed" && (
                 <p className="mt-1 text-red-400">{m.errorMessage}</p>
+              )}
+              {(m.status === "done" || m.status === "failed") && (
+                <button
+                  type="button"
+                  onClick={() => onRegenerate(m)}
+                  className="mt-1 text-[11px] text-primary hover:underline"
+                >
+                  Regenerate
+                </button>
               )}
             </li>
           ))}
@@ -884,7 +901,22 @@ const [motionPreset, setMotionPreset] = useState<string | null>("subtle_zoom");
 const [motionPrompt, setMotionPrompt] = useState("");
 const [motionDuration, setMotionDuration] = useState(8);
 const [motionRatio, setMotionRatio] = useState<"16:9" | "9:16" | "1:1">("9:16");
+// Guided-regenerate lineage: which prior motion this run was launched from.
+const [motionParentId, setMotionParentId] = useState<string | null>(null);
+
+// Regenerate: prefill the panel from a prior row and remember its lineage.
+// The user can then add steering text to the prompt before generating.
+const handleMotionRegenerate = useCallback((m: KvMotion) => {
+  setMotionModelId(m.model);
+  setMotionPreset(m.preset);
+  setMotionPrompt(m.prompt ?? "");
+  setMotionDuration(m.duration);
+  setMotionRatio(m.ratio);
+  setMotionParentId(m.id);
+}, []);
 ```
+
+(Import `KvMotion` from `@/types/kv/motion`.)
 
 (Import `DEFAULT_MOTION_MODEL_ID` from `@/types/kv/motion`. Derive `provider` from the selected model via `MOTION_MODELS.find(m => m.id === motionModelId)`.)
 
@@ -917,10 +949,13 @@ const [motionRatio, setMotionRatio] = useState<"16:9" | "9:16" | "1:1">("9:16");
             prompt: motionPrompt.trim() ? motionPrompt.trim() : null,
             duration: motionDuration,
             ratio: motionRatio,
+            parentMotionId: motionParentId,
           });
+          setMotionParentId(null); // lineage applies to this run only
         }}
         motions={motion.motions}
         onDelete={(id) => motion.remove.mutate(id)}
+        onRegenerate={handleMotionRegenerate}
       />
     </div>
   </div>

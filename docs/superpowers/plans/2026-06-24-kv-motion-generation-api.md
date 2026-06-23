@@ -87,6 +87,9 @@ return new class extends Migration
             $t->foreignUlid('studio_file_id')->constrained('studio_files')->cascadeOnDelete();
             $t->foreignUlid('parent_generation_id')->constrained('kv_generations')->cascadeOnDelete();
             $t->foreignUlid('created_by')->constrained('users')->cascadeOnDelete();
+            // Guided-regenerate lineage: points at the motion row this was re-run from.
+            $t->foreignUlid('parent_motion_id')->nullable()
+                ->constrained('kv_motion_generations')->nullOnDelete();
 
             $t->string('model');               // e.g. veo-3.1-fast-generate-preview
             $t->string('provider');            // google | kuaishou | openai
@@ -141,6 +144,7 @@ class KvMotionGeneration extends Model
     protected $fillable = [
         'studio_file_id',
         'parent_generation_id',
+        'parent_motion_id',
         'created_by',
         'model',
         'provider',
@@ -167,6 +171,11 @@ class KvMotionGeneration extends Model
     public function parentGeneration(): BelongsTo
     {
         return $this->belongsTo(KvGeneration::class, 'parent_generation_id');
+    }
+
+    public function parentMotion(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_motion_id');
     }
 
     public function creator(): BelongsTo
@@ -299,10 +308,11 @@ class StoreKvMotionRequest extends FormRequest
     {
         return [
             'parent_generation_id' => ['required', 'string'],
+            'parent_motion_id' => ['nullable', 'string'], // set on guided regenerate
             'model' => ['required', 'string', 'max:128'],
             'provider' => ['required', Rule::in(['google', 'kuaishou', 'openai'])],
             'preset' => ['nullable', 'string', 'max:64'],
-            'prompt' => ['nullable', 'string', 'max:1000'],
+            'prompt' => ['nullable', 'string', 'max:1000'], // already merged (base + steering) by web
             'duration' => ['required', 'integer', Rule::in([4, 8, 12, 15])],
             'ratio' => ['required', Rule::in(['16:9', '9:16', '1:1'])],
         ];
@@ -427,10 +437,12 @@ class KvMotionService
         ?string $prompt,
         int $duration,
         string $ratio,
+        ?string $parentMotionId = null,
     ): KvMotionGeneration {
         return KvMotionGeneration::create([
             'studio_file_id' => $file->id,
             'parent_generation_id' => $parent->id,
+            'parent_motion_id' => $parentMotionId,
             'created_by' => $userId,
             'model' => $model,
             'provider' => $provider,
@@ -629,6 +641,13 @@ git commit -m "feat(api): GenerateKvMotionJob dispatches to ai-service"
 
 ## Task 5: Controller + resource + routes (store/index/show/destroy)
 
+> **Guided regenerate is folded into `store`** — no separate route. The web client
+> prefills the panel from a prior row and merges the base prompt + steering text
+> into `prompt`, then POSTs `store` with `parent_motion_id` set to the source row
+> (lineage). The controller validates that `parent_motion_id` belongs to the file
+> and persists it; the merged prompt flows through unchanged. ai-service needs no
+> change — `build_motion_prompt` already combines preset + prompt.
+
 **Files:**
 - Create: `app/Http/Resources/Studio/KvMotionGenerationResource.php`
 - Create: `app/Http/Controllers/Api/Studio/KvMotionController.php`
@@ -653,6 +672,7 @@ class KvMotionGenerationResource extends JsonResource
             'id' => $this->id,
             'studio_file_id' => $this->studio_file_id,
             'parent_generation_id' => $this->parent_generation_id,
+            'parent_motion_id' => $this->parent_motion_id,
             'model' => $this->model,
             'provider' => $this->provider,
             'preset' => $this->preset,
@@ -721,6 +741,14 @@ class KvMotionController extends Controller
         $promptRaw = trim((string) ($validated['prompt'] ?? ''));
         $prompt = $promptRaw === '' ? null : $promptRaw;
 
+        // Guided regenerate: parent_motion_id, if present, must belong to this file.
+        $parentMotionId = $validated['parent_motion_id'] ?? null;
+        if ($parentMotionId !== null) {
+            KvMotionGeneration::where('studio_file_id', $file->id)
+                ->where('id', $parentMotionId)
+                ->firstOrFail();
+        }
+
         $row = $this->service->create(
             file: $file,
             parent: $parent,
@@ -731,6 +759,7 @@ class KvMotionController extends Controller
             prompt: $prompt,
             duration: (int) $validated['duration'],
             ratio: $validated['ratio'],
+            parentMotionId: $parentMotionId,
         );
 
         GenerateKvMotionJob::dispatch($row->id);

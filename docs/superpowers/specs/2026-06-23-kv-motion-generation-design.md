@@ -62,6 +62,13 @@ parallel video integration.
    or **delete**.
 5. **Secondary entry:** from Version History, selecting an older version → "Animate"
    → enters Motion mode with that version as the first frame.
+6. **Guided regenerate:** each result row has a "Regenerate" action. It prefills
+   the panel from that row (model, preset, prompt, duration, ratio) and exposes a
+   small "steering" input ("make the zoom slower", "add rain"). On submit, the
+   steering text is merged into the prompt and a NEW motion row is created with
+   `parent_motion_id` pointing at the source row (lineage). This stays
+   direct-call and deterministic — it mirrors the existing KV Resize
+   guided-regenerate (`additional_prompt`). No Agno / chat agent involved.
 
 ### Presets
 
@@ -171,6 +178,7 @@ New table `kv_motion_generations`:
 | id | pk | |
 | kv_file_id | fk → kv files | owning KV file |
 | source_generation_id | fk → kv generation | which version was animated |
+| parent_motion_id | fk → kv_motion_generations (nullable) | lineage for guided regenerate |
 | model | string | e.g. `veo-3.1-fast-generate-preview` |
 | provider | string | `google` \| `kuaishou` \| `openai` |
 | preset | string | preset key (nullable if prompt-only) |
