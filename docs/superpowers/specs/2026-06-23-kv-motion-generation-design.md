@@ -44,9 +44,10 @@ parallel video integration.
 2. Canvas swaps to Motion mode (same architecture as Resize). A floating panel
    (bottom-left, mirroring the Resize platform panel) shows:
    - **First-frame preview** — the active KV version.
-   - **Model picker** (small): **Veo 3.1 Fast** (fast/cheap, ≤8s, may include
-     audio) · **Kling Omni** (more control: last-frame support, duration ≤15s).
-     *Sora optional as a third option.*
+   - **Model picker** (3 models): **Veo 3.1 Fast** (default; fast/cheap, ≤8s, may
+     include audio) · **Kling Omni** (more control: last-frame support, duration
+     ≤15s) · **Sora** (first-frame only, no last-frame). Default selection on
+     entering Motion mode = **Veo 3.1 Fast**.
    - **Motion presets** (chips): Subtle Zoom · Parallax · Product Spin · Camera
      Pan · Cinematic Push-in.
    - **Optional prompt** for extra detail.
@@ -176,9 +177,11 @@ Mirrors how generations and resize results are stored today.
 - **web:** `bun test` for panel/hook logic (bunfig preloads jest-dom). The real
   gate is `bun run build`, not tsc.
 
-## Open Questions
+## Resolved Decisions
 
-- Sora as the third picker option in v1, or ship with just Veo 3.1 Fast + Kling
-  Omni and add Sora later?
-- Exact preset list — confirm the 5 proposed presets cover the common cases.
-- Default model when entering Motion mode (proposed: Veo 3.1 Fast).
+- **Model picker (v1): 3 models** — Veo 3.1 Fast (default), Kling Omni, Sora.
+  Sora is first-frame only (no last-frame); the last-frame capability is
+  Kling-only and is not surfaced via presets in v1, so this is not a constraint.
+- **Presets: the 5 proposed** (Subtle Zoom, Parallax, Product Spin, Camera Pan,
+  Cinematic Push-in) are sufficient for v1.
+- **Default model on entering Motion mode: Veo 3.1 Fast.**
