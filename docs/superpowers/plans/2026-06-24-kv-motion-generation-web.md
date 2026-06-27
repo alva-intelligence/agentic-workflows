@@ -10,6 +10,39 @@
 
 **Spec:** `docs/superpowers/specs/2026-06-23-kv-motion-generation-design.md`
 
+> ## ⚠️ Revision 2026-06-27 — registry-driven models + capabilities + audio
+>
+> The picker is **no longer a hardcoded 3-model constant**. It is driven by the
+> askFRND video-model registry (`getVideoModels()` → `GET /v1/threads/video-models`,
+> the same source the chat picker uses), filtered to I2V-capable models, with
+> per-model adaptive duration/ratio and an audio on/off toggle. web deltas:
+>
+> 1. **Task 1 (types)** — DROP the hardcoded `MOTION_MODELS`/`MOTION_DURATIONS`/
+>    `MOTION_RATIOS`. Add a `VideoCapabilities` type (mirrors the api
+>    `video_capabilities` block) and a `MotionModel = VideoModel & { video_capabilities }`
+>    type, plus pure helpers: `isImageToVideo(m)`, `clampDuration(caps, d)`,
+>    `resolveRatio(caps, kvRatio)`, `audioMode(caps)`. Keep `DEFAULT_MOTION_MODEL_ID
+>    = "veo-3.1-fast-generate-preview"`. Add `generateAudio: boolean` to `KvMotion`;
+>    widen `provider`/`ratio` to `string` (registry-driven, e.g. `bytedance`,
+>    `adaptive`). Presets stay a hardcoded constant (model-agnostic).
+> 2. **NEW Task** — fetch + filter models: reuse `getVideoModels()` (TanStack
+>    Query, same cache key the chat picker uses), filter
+>    `is_active && video_capabilities.image_to_video`. Default to Veo 3.1 Fast if
+>    present, else first entry.
+> 3. **Task 3 (api client)** — `createMotion` body adds `generate_audio`.
+> 4. **Task 5 (panel)** — model picker uses `ProviderLogo`; duration/ratio options
+>    come from the selected model's capabilities (adaptive); add an audio toggle
+>    shown only when `audioMode(caps) === "optional"` (locked-on for `always`,
+>    hidden for `none`). On model switch, clamp duration to nearest + resolve ratio
+>    to KV ratio (if supported) else model default, with a one-line hint.
+> 5. **Task 7 (wiring)** — derive `provider` from the selected registry model (not a
+>    `MOTION_MODELS.find`); hold `generateAudio` in panel state; pass the filtered
+>    model list + KV ratio into the panel.
+>
+> The `value` strings come from the registry at runtime, so the earlier "confirm
+> Sora/Kling ids against generate_video.py" caveat is moot — ids are whatever the
+> registry serves.
+
 > **REQUIRED SKILLS while implementing (web-scoped):** `frndos-components`
 > (use frndos UI components), `frndos-feature-flags` (flag naming + gating),
 > `frndos-analytics-events` (typed snake_case events), `tanstack-query-best-practices`.
@@ -56,19 +89,30 @@ Row shape: `{id, studio_file_id, parent_generation_id, model, provider, preset, 
 ```typescript
 // src/types/kv/motion.test.ts
 import { describe, expect, it } from "vitest";
-import { MOTION_MODELS, MOTION_PRESETS, MOTION_DURATIONS } from "./motion";
+import {
+  MOTION_PRESETS,
+  clampDuration,
+  resolveRatio,
+  isImageToVideo,
+  type VideoCapabilities,
+  type MotionModel,
+} from "./motion";
 
-describe("kv motion constants", () => {
-  it("exposes the three v1 models with provider + label", () => {
-    expect(MOTION_MODELS.map((m) => m.provider).sort()).toEqual([
-      "google",
-      "kuaishou",
-      "openai",
-    ]);
-    expect(MOTION_MODELS[0]).toHaveProperty("id");
-    expect(MOTION_MODELS[0]).toHaveProperty("label");
-  });
+const veoCaps: VideoCapabilities = {
+  image_to_video: true,
+  last_frame: true,
+  durations: [4, 8],
+  default_duration: 8,
+  ratios: ["16:9", "9:16", "1:1"],
+  default_ratio: "16:9",
+  resolutions: ["1080p", "720p"],
+  default_resolution: "1080p",
+  reference_video: false,
+  reference_audio: false,
+  audio: "always",
+};
 
+describe("kv motion helpers", () => {
   it("exposes the five presets", () => {
     expect(MOTION_PRESETS.map((p) => p.id)).toEqual([
       "subtle_zoom",
@@ -79,8 +123,23 @@ describe("kv motion constants", () => {
     ]);
   });
 
-  it("offers duration options", () => {
-    expect(MOTION_DURATIONS).toContain(8);
+  it("clamps an unsupported duration to the nearest option", () => {
+    expect(clampDuration(veoCaps, 12)).toBe(8); // Veo max is 8
+    expect(clampDuration(veoCaps, 4)).toBe(4);
+  });
+
+  it("keeps the KV ratio when supported, else falls back to model default", () => {
+    expect(resolveRatio(veoCaps, "9:16")).toBe("9:16");
+    expect(resolveRatio({ ...veoCaps, ratios: ["16:9", "9:16"] }, "1:1")).toBe("16:9");
+  });
+
+  it("filters out non-I2V / inactive models", () => {
+    const hunyuan = {
+      value: "hunyuan-video",
+      is_active: true,
+      video_capabilities: { ...veoCaps, image_to_video: false },
+    } as MotionModel;
+    expect(isImageToVideo(hunyuan)).toBe(false);
   });
 });
 ```
@@ -96,7 +155,9 @@ Expected: FAIL — module not found
 // src/types/kv/motion.ts
 export type KvMotionStatus = "pending" | "generating" | "done" | "failed";
 
-export type KvMotionProvider = "google" | "kuaishou" | "openai";
+// Registry-driven — providers/ratios come from the askFRND video-model registry
+// at runtime (e.g. "bytedance", "adaptive"), so these are plain strings.
+export type KvMotionProvider = string;
 
 export type KvMotion = {
   id: string;
@@ -108,7 +169,8 @@ export type KvMotion = {
   preset: string | null;
   prompt: string | null;
   duration: number;
-  ratio: "16:9" | "9:16" | "1:1";
+  ratio: string; // model-dependent: 16:9 | 9:16 | 1:1 | adaptive | …
+  generateAudio: boolean;
   status: KvMotionStatus;
   videoUrl: string | null;
   errorMessage: string | null;
@@ -116,32 +178,51 @@ export type KvMotion = {
   updatedAt: string;
 };
 
-export const MOTION_MODELS: Array<{
-  id: string;
-  provider: KvMotionProvider;
-  label: string;
-  hint: string;
-}> = [
-  {
-    id: "veo-3.1-fast-generate-preview",
-    provider: "google",
-    label: "Veo 3.1 Fast",
-    hint: "Fast & affordable · up to 8s · may include audio",
-  },
-  {
-    id: "kling-v3-omni-video",
-    provider: "kuaishou",
-    label: "Kling Omni",
-    hint: "More control · up to 15s",
-  },
-  {
-    id: "sora-20250101",
-    provider: "openai",
-    label: "Sora",
-    hint: "First-frame only",
-  },
-];
+// Mirrors the api `video_capabilities` block on each video model.
+export type AudioMode = "always" | "optional" | "none";
+export type VideoCapabilities = {
+  image_to_video: boolean;
+  last_frame: boolean;
+  durations: number[];
+  default_duration: number;
+  ratios: string[];
+  default_ratio: string | null;
+  resolutions: string[];
+  default_resolution: string;
+  reference_video: boolean;
+  reference_audio: boolean;
+  audio: AudioMode;
+};
 
+// A registry VideoModel that carries capabilities (KV Motion picker entry).
+export type MotionModel = {
+  value: string;
+  name: string;
+  model_provider: string;
+  is_active: boolean;
+  video_capabilities: VideoCapabilities;
+};
+
+export const isImageToVideo = (m: MotionModel): boolean =>
+  Boolean(m.is_active && m.video_capabilities?.image_to_video);
+
+export const clampDuration = (caps: VideoCapabilities, d: number): number =>
+  caps.durations.includes(d)
+    ? d
+    : caps.durations.reduce(
+        (best, opt) => (Math.abs(opt - d) < Math.abs(best - d) ? opt : best),
+        caps.durations[0] ?? caps.default_duration,
+      );
+
+// Prefer the KV's own ratio when the model supports it; else the model default.
+export const resolveRatio = (caps: VideoCapabilities, kvRatio: string): string =>
+  caps.ratios.includes(kvRatio)
+    ? kvRatio
+    : caps.default_ratio ?? caps.ratios[0] ?? kvRatio;
+
+export const audioMode = (caps: VideoCapabilities): AudioMode => caps.audio;
+
+// Presets stay hardcoded — they are model-agnostic prompt fragments.
 export const MOTION_PRESETS: Array<{ id: string; label: string }> = [
   { id: "subtle_zoom", label: "Subtle Zoom" },
   { id: "parallax", label: "Parallax" },
@@ -150,14 +231,12 @@ export const MOTION_PRESETS: Array<{ id: string; label: string }> = [
   { id: "cinematic_push_in", label: "Cinematic Push-in" },
 ];
 
-export const MOTION_DURATIONS = [4, 8] as const;
-
+// Pinned default; the picker falls back to the first I2V model if absent.
 export const DEFAULT_MOTION_MODEL_ID = "veo-3.1-fast-generate-preview";
 ```
 
-> NOTE: confirm the exact Sora/Kling model ids against
-> `ai-service/app/tools/generate_video.py` before shipping; the labels can stay
-> but the `id` strings must match what the tool accepts.
+> The model **list** is NOT hardcoded — it comes from the registry at runtime (see
+> the new fetch task). Only presets + the default-id hint live as constants here.
 
 - [ ] **Step 4: Add `"motion"` to the mode union** in `src/types/studio.ts` (~line 331)
 
@@ -328,6 +407,7 @@ type WireMotion = {
   prompt: string | null;
   duration: number;
   ratio: KvMotion["ratio"];
+  generate_audio: boolean;
   status: KvMotion["status"];
   video_url: string | null;
   error_message: string | null;
@@ -347,6 +427,7 @@ function toMotion(w: WireMotion): KvMotion {
     prompt: w.prompt,
     duration: w.duration,
     ratio: w.ratio,
+    generateAudio: w.generate_audio,
     status: w.status,
     videoUrl: w.video_url,
     errorMessage: w.error_message,
@@ -372,6 +453,7 @@ export async function createMotion(
     prompt: string | null;
     duration: number;
     ratio: KvMotion["ratio"];
+    generateAudio: boolean;
   },
 ): Promise<KvMotion> {
   const { data } = await axiosInstance.post(`v1/studio/files/${fileId}/motions`, {
@@ -383,6 +465,7 @@ export async function createMotion(
     prompt: body.prompt,
     duration: body.duration,
     ratio: body.ratio,
+    generate_audio: body.generateAudio,
   });
   return toMotion(unwrap(data));
 }
@@ -449,6 +532,7 @@ export function useKvMotion(fileId: string, parentGenerationId: string | null) {
       prompt: string | null;
       duration: number;
       ratio: KvMotion["ratio"];
+      generateAudio: boolean;
       parentMotionId?: string | null; // set on guided regenerate
     }) => {
       if (!parentGenerationId) throw new Error("No active generation to animate");
@@ -529,6 +613,7 @@ describe("useKvMotion", () => {
         prompt: null,
         duration: 8,
         ratio: "9:16",
+        generateAudio: true,
       }),
     ).rejects.toThrow("No active generation");
   });
@@ -556,6 +641,20 @@ git commit -m "feat(web): useKvMotion hook (create/list/delete/poll)"
 - Test: `src/components/studio/kv-generator/KvMotionPanel.test.tsx`
 
 Use **frndos components** (`Button`, `RadioButton`/chips, `Input`/textarea). Keep this presentational — it receives state + callbacks (the hook lives in the layout).
+
+> **⚠️ Superseded by the 2026-06-27 revision — adapt the code below.** The panel no
+> longer imports `MOTION_MODELS`/`MOTION_DURATIONS`. Instead it receives:
+> - `models: MotionModel[]` (already filtered to I2V by the layout) — render each
+>   with `ProviderLogo` (`model_provider`) + `name`; selecting one calls `onModelChange(value)`.
+> - `capabilities: VideoCapabilities` for the selected model — **duration options =
+>   `capabilities.durations`**, **ratio options = `capabilities.ratios`**.
+> - `generateAudio: boolean` + `onGenerateAudioChange` — render a frndos `Toggle`
+>   only when `audioMode(capabilities) === "optional"`; for `"always"` show a
+>   locked-on indicator; for `"none"` render nothing.
+> - Optional `hint?: string` (e.g. "Sora has no 1:1 → using 16:9") shown under the
+>   ratio control when the layout clamped a value.
+> The preset chips + result list below stay as-is. The test's "three models"
+> assertion becomes "renders the models it is given" (pass 2–3 fake `MotionModel`s).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -848,6 +947,31 @@ git commit -m "feat(web): KvMotionViewport first-frame preview"
 - Modify: `src/components/studio/kv-generator/KvCanvasTopNav.tsx`
 - Modify: `src/components/studio/kv-generator/KvGeneratorLayout.tsx`
 
+> **⚠️ Superseded by the 2026-06-27 revision — model list is registry-driven.** In
+> the layout, fetch + filter the models and drive the panel adaptively:
+> ```tsx
+> const { data: videoModelsResp } = useQuery({
+>   queryKey: ["video-models"],          // SAME key the chat picker uses (shared cache)
+>   queryFn: getVideoModels,
+>   staleTime: 1000 * 60 * 10,
+> });
+> const motionModels = ((videoModelsResp?.data ?? []) as MotionModel[]).filter(isImageToVideo);
+> const selectedModel =
+>   motionModels.find((m) => m.value === motionModelId) ??
+>   motionModels.find((m) => m.value === DEFAULT_MOTION_MODEL_ID) ??
+>   motionModels[0];
+> const caps = selectedModel?.video_capabilities;
+> // provider comes from the selected registry model — NOT MOTION_MODELS.find:
+> const provider = selectedModel?.model_provider ?? "google";
+> ```
+> On model switch, clamp duration (`clampDuration(caps, motionDuration)`) and
+> resolve ratio (`resolveRatio(caps, kvRatio)`), set a `hint` when a value changed,
+> and reset `motionGenerateAudio` to `true` when entering an `audio:"optional"`
+> model. Hold `motionGenerateAudio` in state and include it in the `create.mutate`
+> payload. Pass `models={motionModels}`, `capabilities={caps}`,
+> `generateAudio`/`onGenerateAudioChange`, and `hint` into `KvMotionPanel`. The
+> `DEFAULT_MOTION_MODEL_ID` import stays; the `MOTION_MODELS` import is removed.
+
 - [ ] **Step 1: Add the Motion tab to the top nav** (flag-gated)
 
 In `KvCanvasTopNav.tsx`, extend `CanvasMode` and `CANVAS_MODE_TABS` and conditionally include Motion. The component receives a new `motionEnabled` prop:
@@ -918,7 +1042,9 @@ const handleMotionRegenerate = useCallback((m: KvMotion) => {
 
 (Import `KvMotion` from `@/types/kv/motion`.)
 
-(Import `DEFAULT_MOTION_MODEL_ID` from `@/types/kv/motion`. Derive `provider` from the selected model via `MOTION_MODELS.find(m => m.id === motionModelId)`.)
+(Import `DEFAULT_MOTION_MODEL_ID` + helpers from `@/types/kv/motion`. Derive
+`provider` from the selected **registry** model — `selectedModel?.model_provider`
+— per the Task 7 revision note, not from a `MOTION_MODELS` constant.)
 
 - [ ] **Step 4: Render the Motion branch** (next to the existing `canvasMode === "resize"` block, ~line 1028)
 
@@ -940,8 +1066,7 @@ const handleMotionRegenerate = useCallback((m: KvMotion) => {
         ratio={motionRatio}
         onRatioChange={setMotionRatio}
         onGenerate={() => {
-          const provider =
-            MOTION_MODELS.find((m) => m.id === motionModelId)?.provider ?? "google";
+          // provider from the selected registry model (see Task 7 revision note)
           motion.create.mutate({
             model: motionModelId,
             provider,
@@ -949,6 +1074,7 @@ const handleMotionRegenerate = useCallback((m: KvMotion) => {
             prompt: motionPrompt.trim() ? motionPrompt.trim() : null,
             duration: motionDuration,
             ratio: motionRatio,
+            generateAudio: motionGenerateAudio,
             parentMotionId: motionParentId,
           });
           setMotionParentId(null); // lineage applies to this run only
@@ -994,7 +1120,9 @@ git commit -m "feat(web): wire Motion canvas mode + flag-gated top-nav tab"
 - [ ] `bun test src/components/studio/kv-generator/KvMotionPanel.test.tsx src/services/kv/motion-api.test.ts src/lib/studio/kv/useKvMotion.test.tsx src/types/kv/motion.test.ts` all green.
 - [ ] `bun run build` passes (the real gate).
 - [ ] Motion tab only appears when `show-kv-motion` is on (flag off by default → no tab).
-- [ ] Model ids in `MOTION_MODELS` match what `generate_video.py` accepts (Veo/Kling/Sora).
+- [ ] Model list comes from `getVideoModels()` filtered by `isImageToVideo` (no hardcoded list); text-only models (HunYuan) never appear.
+- [ ] Duration/ratio options come from the selected model's `video_capabilities`; switching model clamps the current values with a hint.
+- [ ] Audio toggle shows only for `audio:"optional"` models; locked-on for `"always"`, hidden for `"none"`.
 - [ ] Polling stops once all rows are `done`/`failed` (no infinite refetch).
 - [ ] Panel uses frndos components (`Button`, etc.) per the frndos-components skill; raw `<select>`/`<textarea>` swapped for frndos equivalents where they exist.
 - [ ] Analytics events fire on request/fail/download with snake_case names.

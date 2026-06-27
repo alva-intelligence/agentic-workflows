@@ -10,6 +10,31 @@
 
 **Spec:** `docs/superpowers/specs/2026-06-23-kv-motion-generation-design.md`
 
+> ## ⚠️ Revision 2026-06-27 — registry-driven models + capabilities + audio
+>
+> This plan was written against a hardcoded 3-model picker. The spec now drives
+> the picker from the **askFRND video-model registry** filtered to I2V-capable
+> models, with **per-model capabilities** and an **audio on/off toggle**. api deltas:
+>
+> 1. **NEW Task 0** — add a `video_capabilities` block to each **video-type** entry
+>    in `LLMHelper::MODELS` (additive; the `ThreadController@models` serializer
+>    passes it through unchanged → it appears in `GET /v1/threads/video-models`).
+>    This is the single source of truth the web picker reads. Verified: additive,
+>    no impact on the `type=chat`/image payloads or the web chat parser.
+> 2. **Task 2 (validation)** — `provider`/`duration`/`ratio` are **no longer fixed
+>    `Rule::in` lists**. Validate `model` against the I2V-capable set from
+>    `LLMHelper::getVideoModels()` and `duration`/`ratio` against the **selected
+>    model's** `video_capabilities`. Add `generate_audio` (boolean, default true).
+> 3. **Task 1 (migration/model/factory)** — add a `generate_audio` boolean column
+>    (default `true`), add it to `$fillable` + `'generate_audio' => 'boolean'` cast,
+>    and to the factory (`'generate_audio' => true`).
+> 4. **Task 4 (job)** — include `generate_audio` in the ai-service POST payload.
+> 5. **Resource** — expose `generate_audio`.
+>
+> `generate_video.py` stays the enforcing backstop; if the registry capability and
+> the tool disagree, the tool clamps. Coordinate the `LLMHelper` change with arhen
+> (api owner) since it touches the shared chat registry.
+
 > **DB-TEST CAUTION (read first):** Before running ANY DB-touching test, verify
 > `api/phpunit.xml` has the SQLite test-connection override **active** (not
 > commented) and `tests/Pest.php` isolation is intact. A previously-commented
@@ -43,6 +68,78 @@
 `{generation_id, source_image_url, model, provider, preset, prompt, duration, ratio}`.
 Callback from ai-service:
 `{generation_id, status, video_url?, error_message?, token_usage?, ai_service_run_id?, model?}`.
+
+---
+
+## Task 0: Add `video_capabilities` to the model registry
+
+**Files:**
+- Modify: `app/Helpers/LLMHelper.php` (`MODELS` constant — video entries only)
+
+> **Coordinate with arhen** (api owner) — this touches the shared chat registry.
+> It is purely **additive**: a new key on each `type === 'video'` entry. The
+> `ThreadController@models` serializer strips only `type` + `pricing` and passes
+> the rest through, so the block automatically appears in
+> `GET /v1/threads/video-models`. Chat (`type=chat`) and image payloads filter by
+> type and never include it; the web chat parses structurally (no zod) → inert.
+
+- [ ] **Step 1: Add a `video_capabilities` block to each video model.** Author the
+  values to MATCH the per-provider rules already enforced in
+  `ai-service/app/tools/generate_video.py`. Add a sync comment per entry. Example
+  for two entries (apply the analogous block to every video model):
+
+```php
+// 'veo-3.1-fast-generate-preview' => [ ... existing keys ...,
+//   keep in sync with generate_video.py "google" branch
+'video_capabilities' => [
+    'image_to_video' => true,
+    'last_frame' => true,
+    'durations' => [4, 8],
+    'default_duration' => 8,
+    'ratios' => ['16:9', '9:16', '1:1'],
+    'default_ratio' => '16:9',
+    'resolutions' => ['1080p', '720p'],
+    'default_resolution' => '1080p',
+    'reference_video' => false,
+    'reference_audio' => false,
+    'audio' => 'always',
+],
+
+// 'seedance-2.0' => [ ... existing keys ...,
+//   keep in sync with generate_video.py "bytedance" branch
+'video_capabilities' => [
+    'image_to_video' => true,
+    'last_frame' => true,
+    'durations' => [4, 8, 12, 15],
+    'default_duration' => 8,
+    'ratios' => ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9', '9:21', 'adaptive'],
+    'default_ratio' => 'adaptive',
+    'resolutions' => ['480p', '720p', '1080p', '4k'],
+    'default_resolution' => '1080p',
+    'reference_video' => true,
+    'reference_audio' => true,
+    'audio' => 'optional',
+],
+```
+
+  Capability matrix to apply (see the spec's "Model source & capabilities" table):
+  Veo fast/pro → `audio:always`, durations `[4,8]`, ratios 16:9/9:16/1:1;
+  Sora 2/2-pro → `last_frame:false`, `audio:none`, ratios 16:9/9:16 (no 1:1),
+  durations `[6]`; Kling v3/omni → `audio:optional`, durations `[4,5,8,12,15]`,
+  omni `reference_video:true`; Seedance → as above; HunYuan →
+  `image_to_video:false` (so the filter drops it — no other fields required).
+
+- [ ] **Step 2: Sanity-check the payload**
+
+Run: `php artisan tinker --execute="echo json_encode(App\Helpers\LLMHelper::getVideoModels()[0]['video_capabilities'] ?? 'MISSING');"`
+Expected: the capability block prints (not `MISSING`).
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add app/Helpers/LLMHelper.php
+git commit -m "feat(api): add video_capabilities to model registry (KV motion picker source)"
+```
 
 ---
 
@@ -95,8 +192,9 @@ return new class extends Migration
             $t->string('provider');            // google | kuaishou | openai
             $t->string('preset')->nullable();  // preset key (null if prompt-only)
             $t->text('prompt')->nullable();    // optional user steering
-            $t->unsignedSmallInteger('duration'); // seconds: 4 | 8 | 12 | 15
-            $t->string('ratio', 8);            // 16:9 | 9:16 | 1:1
+            $t->unsignedSmallInteger('duration'); // seconds: model-dependent (4..15)
+            $t->string('ratio', 16);           // model-dependent: 16:9|9:16|1:1|adaptive|…
+            $t->boolean('generate_audio')->default(true); // audio on/off (ignored by always/none models)
 
             $t->string('status', 16)->default('pending');
             $t->string('video_url')->nullable();
@@ -152,6 +250,7 @@ class KvMotionGeneration extends Model
         'prompt',
         'duration',
         'ratio',
+        'generate_audio',
         'status',
         'video_url',
         'error_message',
@@ -160,6 +259,7 @@ class KvMotionGeneration extends Model
 
     protected $casts = [
         'duration' => 'integer',
+        'generate_audio' => 'boolean',
         'status' => KvMotionGenerationStatus::class,
     ];
 
@@ -209,6 +309,7 @@ class KvMotionGenerationFactory extends Factory
             'prompt' => null,
             'duration' => 8,
             'ratio' => '9:16',
+            'generate_audio' => true,
             'status' => 'pending',
         ];
     }
@@ -306,15 +407,28 @@ class StoreKvMotionRequest extends FormRequest
 
     public function rules(): array
     {
+        // Registry-driven (single source of truth). Resolve the selected model's
+        // capability block once and validate against it — no hardcoded lists.
+        $i2vModels = collect(\App\Helpers\LLMHelper::getVideoModels())
+            ->filter(fn ($m) => data_get($m, 'video_capabilities.image_to_video') === true);
+
+        $selected = $i2vModels->firstWhere('value', $this->input('model'));
+        $allowedDurations = data_get($selected, 'video_capabilities.durations', []);
+        $allowedRatios = data_get($selected, 'video_capabilities.ratios', []);
+
         return [
             'parent_generation_id' => ['required', 'string'],
             'parent_motion_id' => ['nullable', 'string'], // set on guided regenerate
-            'model' => ['required', 'string', 'max:128'],
-            'provider' => ['required', Rule::in(['google', 'kuaishou', 'openai'])],
+            // Must be an I2V-capable model from the registry (excludes text-only).
+            'model' => ['required', 'string', Rule::in($i2vModels->pluck('value')->all())],
+            // Provider must match the selected model's registry provider.
+            'provider' => ['required', 'string', Rule::in($i2vModels->pluck('model_provider')->unique()->all())],
             'preset' => ['nullable', 'string', 'max:64'],
             'prompt' => ['nullable', 'string', 'max:1000'], // already merged (base + steering) by web
-            'duration' => ['required', 'integer', Rule::in([4, 8, 12, 15])],
-            'ratio' => ['required', Rule::in(['16:9', '9:16', '1:1'])],
+            // Duration/ratio bounded by the SELECTED model's capabilities.
+            'duration' => ['required', 'integer', Rule::in($allowedDurations ?: [4, 8])],
+            'ratio' => ['required', 'string', Rule::in($allowedRatios ?: ['16:9', '9:16', '1:1'])],
+            'generate_audio' => ['sometimes', 'boolean'],
         ];
     }
 }
@@ -606,6 +720,7 @@ class GenerateKvMotionJob implements ShouldQueue
                 'prompt' => $row->prompt,
                 'duration' => $row->duration,
                 'ratio' => $row->ratio,
+                'generate_audio' => $row->generate_audio,
             ]);
 
         if ($response->failed()) {
@@ -679,6 +794,7 @@ class KvMotionGenerationResource extends JsonResource
             'prompt' => $this->prompt,
             'duration' => $this->duration,
             'ratio' => $this->ratio,
+            'generate_audio' => $this->generate_audio,
             'status' => $this->status->value,
             'video_url' => $this->video_url,
             'error_message' => $this->error_message,

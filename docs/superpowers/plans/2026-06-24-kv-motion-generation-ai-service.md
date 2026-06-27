@@ -10,6 +10,27 @@
 
 **Spec:** `docs/superpowers/specs/2026-06-23-kv-motion-generation-design.md`
 
+> ## ⚠️ Revision 2026-06-27 — registry-driven models + audio passthrough
+>
+> The picker now spans all I2V-capable askFRND models (not just Veo/Kling/Sora),
+> and v1 adds an audio on/off toggle. ai-service deltas:
+>
+> 1. **NEW Task 0** — minimal change to `app/tools/generate_video.py`: read
+>    `generate_audio` from kwargs (default `True`) and use it in the **Kling** and
+>    **Seedance** input dicts instead of the current hardcode. No change to
+>    Veo/Sora/HunYuan branches. This is the ONLY change to the shared tool.
+> 2. **Task 2 (schema)** — `provider` widens to include `bytedance` (Seedance).
+>    `duration`/`ratio` are **no longer fixed `Literal` sets** (they are validated
+>    upstream by api against the registry, and `generate_video.py` clamps as the
+>    backstop) — accept `int` / `str` and let the tool enforce. Add
+>    `generate_audio: bool = True`. The two "reject bad duration/ratio" schema
+>    tests are replaced by "passes through; tool clamps" expectations.
+> 3. **Task 4 (service)** — pass `generate_audio=req.generate_audio` to
+>    `generate_video`.
+>
+> No new video integration — the tool is reused verbatim except the small audio
+> passthrough.
+
 **Contract (api ↔ ai-service):**
 
 Request — api → `POST {AI_URL}/ai/kv-motion/generate`:
@@ -22,7 +43,8 @@ Request — api → `POST {AI_URL}/ai/kv-motion/generate`:
   "preset": "subtle_zoom",
   "prompt": "optional user detail or null",
   "duration": 8,
-  "ratio": "9:16"
+  "ratio": "9:16",
+  "generate_audio": true
 }
 ```
 
@@ -58,6 +80,54 @@ Callback — ai-service → `POST {API_INTERNAL_URL}/api/v1/internal/kv-motion-g
 - Create: `tests/agents/kv_motion/test_api_client.py`
 - Create: `tests/agents/kv_motion/test_service.py`
 - Create: `tests/agents/kv_motion/test_router.py`
+
+---
+
+## Task 0: Thread `generate_audio` through `generate_video`
+
+**Files:**
+- Modify: `app/tools/generate_video.py` (Kling + Seedance branches only)
+
+> Shared tool — keep the change surgical. Today `generate_audio` is hardcoded:
+> Kling sets `"generate_audio": True` (~line 325); Seedance derives it
+> (`"generate_audio": "reference_audios" not in input` ~line 560); the Kling-omni
+> reference-video path forces it off (~line 437). v1 lets the caller override the
+> default while preserving today's behavior when unset.
+
+- [ ] **Step 1: Read `generate_audio` from kwargs once, near the top of the function**
+
+```python
+# default True preserves current behavior for all existing callers
+generate_audio = bool(kwargs.get("generate_audio", True))
+```
+
+- [ ] **Step 2: Use it in the Kling input dict** (replace the hardcoded `True`)
+
+```python
+"generate_audio": generate_audio,
+```
+Keep the existing rule that a Kling-omni `reference_video` forces audio off
+(reference-video path wins over the caller's preference).
+
+- [ ] **Step 3: Use it in the Seedance input dict** (combine with the existing
+  reference-audio rule — audio off when a reference audio is present OR the
+  caller asked for no audio)
+
+```python
+input["generate_audio"] = generate_audio and ("reference_audios" not in input)
+```
+
+- [ ] **Step 4: Verify nothing else regressed**
+
+Run: `pytest tests/ -k generate_video -v` (or the existing video-tool tests)
+Expected: still green — default `True` keeps prior behavior; chat callers unaffected.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add app/tools/generate_video.py
+git commit -m "feat(ai): honor caller generate_audio in Kling/Seedance (KV motion audio toggle)"
+```
 
 ---
 
@@ -227,28 +297,31 @@ def test_valid_request_parses():
     assert req.ratio == "9:16"
 
 
-def test_rejects_bad_ratio():
-    with pytest.raises(ValidationError):
-        MotionGenerateRequest(
-            generation_id="01HX",
-            source_image_url="https://cdn/x.png",
-            model="veo-3.1-fast-generate-preview",
-            provider="google",
-            duration=8,
-            ratio="4:5",
-        )
+def test_accepts_model_specific_ratio_and_duration():
+    # Registry-driven: api validates against capabilities; the schema is permissive
+    # and generate_video.py clamps. A Seedance-only ratio/duration must parse.
+    req = MotionGenerateRequest(
+        generation_id="01HX",
+        source_image_url="https://cdn/x.png",
+        model="seedance-2.0",
+        provider="bytedance",
+        duration=15,
+        ratio="21:9",
+    )
+    assert req.duration == 15
+    assert req.ratio == "21:9"
 
 
-def test_rejects_bad_duration():
-    with pytest.raises(ValidationError):
-        MotionGenerateRequest(
-            generation_id="01HX",
-            source_image_url="https://cdn/x.png",
-            model="veo-3.1-fast-generate-preview",
-            provider="google",
-            duration=7,
-            ratio="16:9",
-        )
+def test_generate_audio_defaults_true():
+    req = MotionGenerateRequest(
+        generation_id="01HX",
+        source_image_url="https://cdn/x.png",
+        model="kling-v3-omni-video",
+        provider="kuaishou",
+        duration=8,
+        ratio="9:16",
+    )
+    assert req.generate_audio is True
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -260,7 +333,7 @@ Expected: FAIL — module not found
 
 ```python
 # app/agents/kv_motion/request_schema.py
-from typing import Literal, Optional
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -268,11 +341,15 @@ class MotionGenerateRequest(BaseModel):
     generation_id: str
     source_image_url: str
     model: str
-    provider: Literal["google", "kuaishou", "openai"]
+    # Registry-driven: api already validated model/provider/duration/ratio against
+    # the selected model's video_capabilities. generate_video.py is the final
+    # clamp/backstop, so keep these permissive here (no fixed Literal sets).
+    provider: str  # google | kuaishou | openai | bytedance | …
     preset: Optional[str] = None
     prompt: Optional[str] = None
-    duration: Literal[4, 8, 12, 15] = 8
-    ratio: Literal["16:9", "9:16", "1:1"] = "9:16"
+    duration: int = 8
+    ratio: str = "9:16"
+    generate_audio: bool = True
     negative_prompt: str = ""
 ```
 
@@ -522,6 +599,7 @@ def process_motion_generation(req: MotionGenerateRequest) -> None:
             negative_prompt=req.negative_prompt,
             video_model=req.model,
             video_model_provider=req.provider,
+            generate_audio=req.generate_audio,
         )
 
         error_message = result.get("error_message")
