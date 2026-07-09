@@ -24,17 +24,24 @@ click-to-filter analytics vs. one `jsonb` column for ad-hoc SQL audit.
 become **top-level** event properties via `ph_ai_kwargs`, `ai_clients.py:266-268`).
 But today:
 
-- Only the **Veo** (`google`) and **Sora** (`openai`) branches of `generate_video`
-  call `capture_ai_generation`. The **Replicate** branches — **Seedance**
-  (`bytedance`), **Kling** (`kuaishou`), **Hunyuan** (`tencent`) — call it **not at
-  all**, so most video generations are **absent from PostHog entirely**.
-- None of the video generations attach the dimensions, so there's nothing to segment
-  on beyond `$ai_model` / `$ai_provider`.
+- **Replicate** models (**Seedance**/`bytedance`, **Kling**/`kuaishou`,
+  **Hunyuan**/`tencent`) are **already captured** at the shared chokepoint
+  `replicate_client.py::run_with_retry` (`provider="replicate"`,
+  `span_name="replicate_run"`, success + error paths). **Veo** (`google`) and
+  **Sora** (`openai`) are captured by their own branch-level
+  `capture_ai_generation` calls in `generate_video`.
+- But **none attach the video dimensions**, so there's nothing to segment on beyond
+  `$ai_model` / `$ai_provider`. That gap is what this closes.
+- **Do not add new captures.** The tracing house rule (`.claude/skills/ai-tracing`)
+  is *one chokepoint per provider — never sprinkle captures at each call site*.
+  Adding captures in the Replicate branches would double-count.
 
 ## Decisions (locked in brainstorming)
 
-- **Scope:** all video models. Add `capture_ai_generation` to the 3 Replicate branches
-  (fixing the absence) AND attach dimension props to all 5 branches.
+- **Scope:** all video models, by **enriching the existing captures** (no new
+  captures): the `run_with_retry` chokepoint (Seedance/Kling/Hunyuan) gets a new
+  `extra_properties` param that its `capture_ai_generation` calls forward; the Veo/Sora
+  branch captures get the props attached directly.
 - **Dimensions only, no cost.** `total_cost_usd` is not sent (video shows $0 in
   PostHog). Authoritative cost stays in the DB `video_params`. No rate tables in
   ai-service.
@@ -83,47 +90,59 @@ def _video_trace_props(resolution=None, video_in=False, mode=None, audio=False, 
 
 (Null-valued keys are dropped downstream by `ph_ai_kwargs`, so passing `None` is safe.)
 
-**Per branch** — each already computes these dims for `token_usage`, so it's the same
-values:
+Each branch already computes these dims for `token_usage`, so it's the same values.
 
-- **Replicate branches** (`bytedance`, `kuaishou`, `tencent`): **add** a
-  `capture_ai_generation(model=..., provider=..., span_name="generate_video",
-  start_time=start, **_video_trace_props(...))` call after the generation completes,
-  including a `start = time.time()` timer at the branch top (mirroring how `google` /
-  `openai` already do it). Map dims:
-  - bytedance/Seedance: `resolution=seedance_resolution`, `video_in="reference_videos"
-    in input`, `duration=length`.
-  - kuaishou/Kling: `mode=mode`, `audio=bool(input.get("generate_audio"))`,
-    `duration=length`.
-  - tencent/Hunyuan: `duration=length` (fixed model, no resolution/mode/audio levers).
-- **Existing captures** (`google`/Veo, `openai`/Sora): **add** `**_video_trace_props(
-  resolution=resolution, duration=int(duration))` to the current
-  `capture_ai_generation(...)` calls.
+**Replicate models (Seedance/Kling/Hunyuan) — enrich the chokepoint, don't add a
+capture.** `run_with_retry` in `app/utils/replicate_client.py` gains an optional
+`extra_properties: dict | None = None` param, forwarded to all three of its
+`capture_ai_generation` calls (success + both error paths) via
+`**(extra_properties or {})`. The Replicate branches then pass the props into the
+`replicate_run(...)` call they already make:
+- bytedance/Seedance: `extra_properties=_video_trace_props(resolution=seedance_resolution, video_in="reference_videos" in input, duration=length)`.
+- kuaishou/Kling: `extra_properties=_video_trace_props(mode=mode, audio=bool(input.get("generate_audio")), duration=length)`.
+- tencent/Hunyuan: `extra_properties=_video_trace_props(duration=int(duration))` (fixed model, no resolution/mode/audio levers).
 
-**Error-path captures:** where a branch has a capture in a failure path and the dims are
-already in scope, attach the props there too (harmless — the parameters are known
-regardless of success). Where dims aren't yet computed at the failure point, leave that
-capture unchanged.
+No new capture, no `start` timer in the branch — the chokepoint already captures and
+times the run (spanning retries). These events keep `provider="replicate"` and
+`$ai_model = "<owner>/<model>:<version>"` (existing convention); the `video_*` props are
+the new segmentation keys.
+
+**Veo/Sora — enrich the existing branch captures directly.** The `google` (Veo) and
+`openai` (Sora) branches have their own `capture_ai_generation` (not via
+`run_with_retry`). Add `**_video_trace_props(resolution=..., duration=int(duration))` to
+their **success-path** capture. For Sora, compute `sora_resolution` before the capture.
+
+**Error-path captures** (`google` `GeminiServerError`, `openai` `APIStatusError`, and
+the Replicate chokepoint's error paths): the Replicate error captures receive the props
+automatically (same `extra_properties` forwarding). The Veo/Sora branch error captures
+are left unchanged (they still fire; dims omitted — intentional).
 
 ## Testing
 
 Unit tests (ai-service, mock the PostHog capture — no real network):
 
-- Patch `capture_ai_generation` (or `get_posthog`) and drive each provider branch of
-  `generate_video` (replicate_run / genai / openai + `upload_file_to_s3` + `open`
-  mocked, as in the existing `test_generate_video_*_billing.py`). Assert:
-  - **Replicate branches now call `capture_ai_generation`** (regression against the
-    current absence) with `provider` correct.
-  - The `video_*` props are passed: Seedance → `video_resolution` + `video_in`;
-    Kling → `video_mode` + `video_audio`; all → `video_duration_seconds`.
 - `_video_trace_props` pure test: correct keys, bool coercion, `None` passthrough.
+- **`run_with_retry` forwards `extra_properties`** — patch
+  `replicate_client.capture_ai_generation`, call `run_with_retry(model_ref, input,
+  extra_properties={...})` (mock the replicate client), assert the props reach the
+  success capture; and on an error path.
+- **Replicate branches pass the props through `replicate_run`** — patch
+  `replicate_run`/`upload_file_to_s3`/`open` and drive `generate_video` for Seedance +
+  Kling (as in `test_generate_video_*_billing.py`); assert the `replicate_run` call
+  received `extra_properties` with the right `video_*` values (Seedance →
+  `video_resolution` + `video_in`; Kling → `video_mode` + `video_audio`).
+- Veo/Sora branch captures: SDK-chain mocking is disproportionate — verify by
+  reading + `py_compile` (consistent with the pricing work).
 
 ## Files touched (ai-service only)
 
-- `app/tools/generate_video.py` — `_video_trace_props` helper; add
-  `capture_ai_generation` to the 3 Replicate branches (+ `start` timers); add props to
-  the `google`/`openai` captures.
-- `tests/tools/test_generate_video_*_posthog.py` (new) — per-branch prop assertions.
+- `app/utils/replicate_client.py` — add `extra_properties` param to `run_with_retry`,
+  forward to its 3 `capture_ai_generation` calls.
+- `app/tools/generate_video.py` — `_video_trace_props` helper; pass
+  `extra_properties=_video_trace_props(...)` into the `replicate_run(...)` call in the 3
+  Replicate branches; add props to the `google`/`openai` branch captures.
+- `tests/tools/test_video_trace_props.py`, `tests/tools/test_replicate_client_trace.py`,
+  `tests/tools/test_generate_video_posthog.py` (new).
 
 ## Out of scope (YAGNI)
 
