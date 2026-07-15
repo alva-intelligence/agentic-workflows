@@ -115,27 +115,52 @@ git commit -m "feat(web): add optional fontFamily to text overlay payload + Bran
 ### Task 2: Built-in font registry + default family
 
 **Files:**
+- Create: `web/src/components/studio/kv-generator/fonts/fontDefaults.ts` (pure — no `next/font`; the default family other modules import)
 - Create: `web/src/components/studio/kv-generator/fonts/builtinFonts.ts`
 - Modify: `web/src/app/(canvas)/brands/[id]/studio/kv-generator/layout.tsx` (or the nearest KV route layout that wraps the canvas) — add the built-in font `.variable` classes so the fonts are actually loaded by the browser.
 - Test: `web/src/components/studio/kv-generator/fonts/builtinFonts.test.ts`
 
 **Interfaces:**
 - Consumes: the `next/font` exports in `web/src/fonts/fonts.ts` (`neueMontreal`, `spaceGrotesk`, `archivo`, `funnel`, `generalSans`, `geist`).
-- Produces: `DEFAULT_FONT_FAMILY = "Geist"`; `BUILTIN_FONTS: Array<{ family: string; label: string }>`; `builtinFamilyClassNames(): string` returning the space-joined `.variable` classNames for the layout.
+- Produces: `DEFAULT_FONT_FAMILY = "Geist"` (from `fontDefaults.ts`, re-exported by `builtinFonts.ts`); `BUILTIN_FONTS: Array<{ family: string; label: string }>`; `builtinFamilyClassNames(): string` returning the space-joined `.variable` classNames for the layout. The Geist built-in's `family` is the literal `"Geist"` (== `DEFAULT_FONT_FAMILY`).
 
 - [ ] **Step 1: Write the failing test**
 
+IMPORTANT — `next/font` is a build-time transform: importing `@/fonts/fonts`
+throws under bare `bun test` ("Missing 'default' export in module
+'next/font/local'"). So the pure default lives in its own module
+(`fontDefaults.ts`, no `next/font` import) and any test that must import the
+`next/font`-backed registry MUST `mock.module("@/fonts/fonts", ...)` before a
+dynamic import. `resolveFamily` (Task 6) and the canvases import the default
+from `fontDefaults`, NOT from `builtinFonts`, so they stay testable without the mock.
+
 ```ts
-import { describe, it, expect } from "bun:test";
-import { BUILTIN_FONTS, DEFAULT_FONT_FAMILY } from "./builtinFonts";
+// builtinFonts.test.ts
+import { describe, it, expect, mock } from "bun:test";
+
+// next/font is a build-time transform — stub it so this test can load the
+// registry under bun test. Must run before the dynamic import below.
+mock.module("@/fonts/fonts", () => ({
+  geist: { style: { fontFamily: "__geist_hash" }, variable: "font-geist" },
+  neueMontreal: { style: { fontFamily: "__nm_hash" }, variable: "font-nm" },
+  spaceGrotesk: { style: { fontFamily: "__sg_hash" }, variable: "font-sg" },
+  archivo: { style: { fontFamily: "__ar_hash" }, variable: "font-ar" },
+  funnel: { style: { fontFamily: "__fn_hash" }, variable: "font-fn" },
+  generalSans: { style: { fontFamily: "__gs_hash" }, variable: "font-gs" },
+}));
+
+const { BUILTIN_FONTS } = await import("./builtinFonts");
+const { DEFAULT_FONT_FAMILY } = await import("./fontDefaults");
 
 describe("builtin fonts", () => {
-  it("defaults to Geist", () => {
+  it("defaults to Geist and includes it as a built-in", () => {
     expect(DEFAULT_FONT_FAMILY).toBe("Geist");
+    // The Geist entry uses the literal "Geist" family (proven to render on
+    // canvas today), so it equals the default regardless of next/font hashing.
     expect(BUILTIN_FONTS.some((f) => f.family === DEFAULT_FONT_FAMILY)).toBe(true);
   });
 
-  it("exposes a label for each family", () => {
+  it("exposes a non-empty label + family for each built-in", () => {
     for (const f of BUILTIN_FONTS) {
       expect(f.label.length).toBeGreaterThan(0);
       expect(f.family.length).toBeGreaterThan(0);
@@ -149,7 +174,21 @@ describe("builtin fonts", () => {
 Run: `cd web && bun test src/components/studio/kv-generator/fonts/builtinFonts.test.ts`
 Expected: FAIL ("Cannot find module './builtinFonts'").
 
-- [ ] **Step 3: Write the registry**
+- [ ] **Step 3a: Write the pure default module**
+
+Create `web/src/components/studio/kv-generator/fonts/fontDefaults.ts` (NO `next/font` import — safe to import from canvases and `resolveFamily`):
+
+```ts
+/** The family used when a text overlay has no explicit fontFamily.
+ *  Matches the literal value both canvases hard-coded before this feature —
+ *  known to render on the KV canvas today. Kept free of any next/font import
+ *  so canvas + resolveFamily code stays unit-testable. */
+export const DEFAULT_FONT_FAMILY = "Geist";
+```
+
+- [ ] **Step 3b: Write the registry**
+
+Create `web/src/components/studio/kv-generator/fonts/builtinFonts.ts`:
 
 ```ts
 import {
@@ -160,16 +199,18 @@ import {
   generalSans,
   geist,
 } from "@/fonts/fonts";
+import { DEFAULT_FONT_FAMILY } from "./fontDefaults";
 
-/** The family used when a text overlay has no explicit fontFamily.
- *  Matches the value both canvases hard-coded before this feature. */
-export const DEFAULT_FONT_FAMILY = "Geist";
+export { DEFAULT_FONT_FAMILY };
 
 /** Built-in fonts offered in the picker. `family` is the CSS family string
  *  the canvas + picker preview render with; it must be a font the browser has
- *  actually loaded (see builtinFamilyClassNames, applied on the KV layout). */
+ *  actually loaded (see builtinFamilyClassNames, applied on the KV layout).
+ *  The Geist entry uses the literal "Geist" (== DEFAULT_FONT_FAMILY, proven to
+ *  render today); the others use their next/font hashed family, loaded via the
+ *  layout variables below. */
 export const BUILTIN_FONTS: Array<{ family: string; label: string }> = [
-  { family: geist.style.fontFamily, label: "Geist" },
+  { family: DEFAULT_FONT_FAMILY, label: "Geist" },
   { family: neueMontreal.style.fontFamily, label: "Neue Montreal" },
   { family: spaceGrotesk.style.fontFamily, label: "Space Grotesk" },
   { family: archivo.style.fontFamily, label: "Archivo" },
@@ -193,7 +234,7 @@ export function builtinFamilyClassNames(): string {
 }
 ```
 
-Note: `DEFAULT_FONT_FAMILY` stays the literal `"Geist"` for backward-compatible rendering. The first `BUILTIN_FONTS` entry uses `geist.style.fontFamily` so the picker previews and canvas resolve the same loaded face; if `geist.style.fontFamily` differs from the literal, keep the label "Geist" and the family from the export — both resolve to the loaded Geist face.
+Note: the non-Geist built-ins render via their next/font hashed family names, which resolve only once the fonts are loaded (Step 4). Confirm they actually render on canvas during Task 8 manual e2e; if a hashed name doesn't resolve, that font needs explicit `FontFace` loading like the custom ones.
 
 - [ ] **Step 4: Ensure the fonts load — edit the KV layout**
 
@@ -210,10 +251,16 @@ import { builtinFamilyClassNames } from "@/components/studio/kv-generator/fonts/
 Run: `cd web && bun test src/components/studio/kv-generator/fonts/builtinFonts.test.ts`
 Expected: PASS.
 
+- [ ] **Step 5b: Verify the registry compiles with real next/font**
+
+`bun test` uses the mock, so also confirm the real module type-checks/builds:
+Run: `cd web && bun run build` (or, faster, `bunx tsc --noEmit` if the project supports it)
+Expected: no type errors from the new font modules. (If `bun run build` is too slow/flaky in the worktree, a `tsc --noEmit` scoped check is acceptable — note which you ran in the report.)
+
 - [ ] **Step 6: Commit**
 
 ```bash
-git add web/src/components/studio/kv-generator/fonts/builtinFonts.ts web/src/components/studio/kv-generator/fonts/builtinFonts.test.ts web/src/app/\(canvas\)/brands/\[id\]/studio/kv-generator/layout.tsx
+git add web/src/components/studio/kv-generator/fonts/fontDefaults.ts web/src/components/studio/kv-generator/fonts/builtinFonts.ts web/src/components/studio/kv-generator/fonts/builtinFonts.test.ts web/src/app/\(canvas\)/brands/\[id\]/studio/kv-generator/layout.tsx
 git commit -m "feat(web): add built-in font registry for KV canvas"
 ```
 
@@ -518,7 +565,7 @@ git commit -m "feat(web): await fonts ready before flattening KV overlays"
 - Test: `web/src/components/studio/kv-generator/fonts/resolveFamily.test.ts` + `resolveFamily.ts`
 
 **Interfaces:**
-- Consumes: `DEFAULT_FONT_FAMILY` (Task 2), `registerBrandFonts` (Task 3).
+- Consumes: `DEFAULT_FONT_FAMILY` from `./fontDefaults` (Task 2 — the pure module, NOT `builtinFonts`, so this stays importable under `bun test` without the `@/fonts/fonts` mock), `registerBrandFonts` (Task 3).
 - Produces: `resolveOverlayFamily(payload): string` — returns `payload.fontFamily ?? DEFAULT_FONT_FAMILY` for text payloads, `DEFAULT_FONT_FAMILY` otherwise. Both canvases use it.
 
 - [ ] **Step 1: Write the failing test**
@@ -546,7 +593,7 @@ Expected: FAIL ("Cannot find module './resolveFamily'").
 
 ```ts
 import type { StudioOverlay } from "@/types/studio";
-import { DEFAULT_FONT_FAMILY } from "./builtinFonts";
+import { DEFAULT_FONT_FAMILY } from "./fontDefaults";
 
 export function resolveOverlayFamily(payload: StudioOverlay["payload"]): string {
   if (payload.type === "text" && payload.fontFamily) {
@@ -621,12 +668,29 @@ In `web/src/lib/featureFlags/constants.ts`, add inside `MAJOR_FEATURE_FLAGS`:
 
 - [ ] **Step 2: Write the failing test**
 
+Mock rules (bun): all `mock.module` calls must run BEFORE the component is
+loaded, so import `KvTextFontToolbar` via a post-mock dynamic `await import`
+(NOT a static top import). `@/fonts/fonts` must be mocked (the toolbar imports
+`BUILTIN_FONTS` → `@/fonts/fonts`, which throws under bun test). The component
+calls `useQueryClient()`, so wrap the render in a real `QueryClientProvider`.
+The test asserts "Geist" is visible — the toolbar's trigger must display the
+current family's label (default "Geist" when `currentFamily` is undefined), so
+this passes without opening the menu.
+
 ```tsx
 import { describe, it, expect, mock } from "bun:test";
 import { render, screen } from "@testing-library/react";
-import { KvTextFontToolbar } from "./KvTextFontToolbar";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-// Stub the flag + query hooks to isolate the component.
+// next/font throws under bun test — stub the fonts module the registry reads.
+mock.module("@/fonts/fonts", () => ({
+  geist: { style: { fontFamily: "__g" }, variable: "v-g" },
+  neueMontreal: { style: { fontFamily: "__nm" }, variable: "v-nm" },
+  spaceGrotesk: { style: { fontFamily: "__sg" }, variable: "v-sg" },
+  archivo: { style: { fontFamily: "__ar" }, variable: "v-ar" },
+  funnel: { style: { fontFamily: "__fn" }, variable: "v-fn" },
+  generalSans: { style: { fontFamily: "__gs" }, variable: "v-gs" },
+}));
 mock.module("@/lib/featureFlags", () => ({
   useMajorFeatureFlag: () => true,
   MAJOR_FEATURE_FLAGS: { KV_CUSTOM_FONTS: "show-kv-custom-fonts" },
@@ -636,10 +700,16 @@ mock.module("@/hooks/useBrandFonts", () => ({
   brandFontsQueryKey: (b: string) => ["brand-fonts", b],
 }));
 
+// Load the component AFTER the mocks are registered.
+const { KvTextFontToolbar } = await import("./KvTextFontToolbar");
+
 describe("KvTextFontToolbar", () => {
-  it("renders built-in fonts including Geist", () => {
+  it("renders the current font label (Geist) when enabled", () => {
+    const qc = new QueryClient();
     render(
-      <KvTextFontToolbar brandId="b1" currentFamily={undefined} onSelectFamily={() => {}} />,
+      <QueryClientProvider client={qc}>
+        <KvTextFontToolbar brandId="b1" currentFamily={undefined} onSelectFamily={() => {}} />
+      </QueryClientProvider>,
     );
     expect(screen.getByText("Geist")).toBeInTheDocument();
   });
@@ -658,6 +728,7 @@ Build with existing frndOS v2 components (dropdown/menu, button) — check `frnd
 - Renders a dropdown with two groups: **Brand fonts** (`useBrandFonts(brandId).data`, each row `style={{ fontFamily: f.font_family }}` preview + a delete affordance calling `deleteBrandFont` then invalidating `brandFontsQueryKey(brandId)`) and **Built-in** (`BUILTIN_FONTS`, each row `style={{ fontFamily: family }}`).
 - An **Upload font** item: hidden `<input type="file" accept=".ttf,.otf">`; on change validates ≤ 5 MB, calls `uploadBrandFont(brandId, file.name.replace(/\.(ttf|otf)$/i, ""), file)`, then `registerBrandFonts([created])`, invalidates the query, and calls `onSelectFamily(created.font_family)`. Show an inline error on 422 / oversize. Include one line of copy: "Only upload fonts you have the rights to use."
 - Selecting a built-in whose label is "Geist" ⇒ `onSelectFamily(undefined)`; any other ⇒ `onSelectFamily(family)`.
+- The dropdown **trigger** shows the current family's display label so it's visible without opening the menu: resolve `currentFamily` to a label — a brand font's `name` (match `brandFonts` by `font_family`), else a built-in's `label` (match `BUILTIN_FONTS` by `family`), else `"Geist"` (the default when `currentFamily` is undefined or unmatched).
 
 ```tsx
 "use client";
