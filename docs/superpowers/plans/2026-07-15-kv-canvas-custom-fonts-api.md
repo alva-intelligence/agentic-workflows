@@ -189,7 +189,7 @@ git commit -m "feat(api): add brand_fonts table and BrandFont model"
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `UploadBrandFontRequest` with `rules()` validating `name` (required, string, max:100) and `file` (required, file, `mimes:ttf,otf`, `max:5120`) plus a `withValidator` magic-byte check that rejects files whose header is not a known font signature. Adds a public `resolvedFormat(): string` returning `ttf`|`otf` from the uploaded extension.
+- Produces: `UploadBrandFontRequest` with `rules()` validating `name` (required, string, max:100) and `file` (required, file, `extensions:ttf,otf`, `max:5120`) plus a `withValidator` magic-byte check that rejects files whose header is not a known font signature. Adds a public `resolvedFormat(): string` returning `ttf`|`otf` from the uploaded extension. (Uses `extensions`, not `mimes` — see the rule comment for why.)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -279,7 +279,13 @@ class UploadBrandFontRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'min:1', 'max:100'],
-            'file' => ['required', 'file', 'mimes:ttf,otf', 'max:5120'],
+            // Use `extensions` (validates the client-original extension), NOT
+            // `mimes` — Laravel's `mimes` content-sniffs the MIME, and real
+            // OTF/TTF files sniff as font/sfnt / application/vnd.ms-opentype,
+            // which don't map back to ttf/otf, so `mimes:ttf,otf` wrongly
+            // rejects valid fonts. The magic-byte check below is the real
+            // content guard against a spoofed extension.
+            'file' => ['required', 'file', 'extensions:ttf,otf', 'max:5120'],
         ];
     }
 
