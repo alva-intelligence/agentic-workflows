@@ -852,11 +852,11 @@ git commit -m "feat(web): add KV text font toolbar with picker, upload, and dele
 ### Task 8: Analytics + manual verification
 
 **Files:**
-- Modify: `KvTextFontToolbar.tsx` — add PostHog events per `frndos-analytics-events` (snake_case): `kv_font_selected` (`{ source: "builtin" | "custom" }`), `kv_font_uploaded` (`{ format, file_size }`), `kv_font_deleted`.
+- Modify: `KvTextFontToolbar.tsx` — add PostHog events per `frndos-analytics-events`, via the existing `src/lib/analytics/kv-generator-events.ts` typed `safeCapture` wrapper. Match the module's `kv_generator.<action>` dot-namespaced convention (e.g. `kv_generator.overlay_added`, `kv_generator.file_deleted`): `kv_generator.font_selected` (`{ source: "builtin" | "custom" }`), `kv_generator.font_uploaded` (`{ format, file_size }`), `kv_generator.font_deleted`.
 
 - [ ] **Step 1: Add typed events**
 
-Follow the `frndos-analytics-events` skill: use the typed capture wrapper, fire `kv_font_selected` in `onSelectFamily`, `kv_font_uploaded` after a successful upload, `kv_font_deleted` after delete.
+Follow the `frndos-analytics-events` skill: add `trackKvFont*` helpers to `src/lib/analytics/kv-generator-events.ts` (alongside the existing `kv_generator.*` events), and fire `kv_generator.font_selected` on user selection, `kv_generator.font_uploaded` after a successful upload, `kv_generator.font_deleted` after delete.
 
 - [ ] **Step 2: Manual e2e (record in the track file)**
 
