@@ -117,12 +117,18 @@ git commit -m "feat(web): add optional fontFamily to text overlay payload + Bran
 **Files:**
 - Create: `web/src/components/studio/kv-generator/fonts/fontDefaults.ts` (pure — no `next/font`; the default family other modules import)
 - Create: `web/src/components/studio/kv-generator/fonts/builtinFonts.ts`
-- Modify: `web/src/app/(canvas)/brands/[id]/studio/kv-generator/layout.tsx` (or the nearest KV route layout that wraps the canvas) — add the built-in font `.variable` classes so the fonts are actually loaded by the browser.
 - Test: `web/src/components/studio/kv-generator/fonts/builtinFonts.test.ts`
 
+**No layout change needed:** the root `web/src/app/layout.tsx` already mounts all
+six font `.variable` classes (`spaceGrotesk neueMontreal archivo funnel
+generalSans geist`) on `<body>` app-wide, so every built-in font is already
+loaded for the KV canvas route. Do NOT add a font-loading wrapper to the KV
+layout — a plain `<div>` around the full-screen canvas route risks breaking its
+layout. Just confirm the root `<body>` classes are present.
+
 **Interfaces:**
-- Consumes: the `next/font` exports in `web/src/fonts/fonts.ts` (`neueMontreal`, `spaceGrotesk`, `archivo`, `funnel`, `generalSans`, `geist`).
-- Produces: `DEFAULT_FONT_FAMILY = "Geist"` (from `fontDefaults.ts`, re-exported by `builtinFonts.ts`); `BUILTIN_FONTS: Array<{ family: string; label: string }>`; `builtinFamilyClassNames(): string` returning the space-joined `.variable` classNames for the layout. The Geist built-in's `family` is the literal `"Geist"` (== `DEFAULT_FONT_FAMILY`).
+- Consumes: the `next/font` exports in `web/src/fonts/fonts.ts` (`neueMontreal`, `spaceGrotesk`, `archivo`, `funnel`, `generalSans` — the five non-Geist built-ins whose hashed families are read).
+- Produces: `DEFAULT_FONT_FAMILY = "Geist"` (from `fontDefaults.ts`, re-exported by `builtinFonts.ts`); `BUILTIN_FONTS: Array<{ family: string; label: string }>`. The Geist built-in's `family` is the literal `"Geist"` (== `DEFAULT_FONT_FAMILY`); the other five use their `next/font` `.style.fontFamily`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -197,18 +203,16 @@ import {
   archivo,
   funnel,
   generalSans,
-  geist,
 } from "@/fonts/fonts";
 import { DEFAULT_FONT_FAMILY } from "./fontDefaults";
 
 export { DEFAULT_FONT_FAMILY };
 
-/** Built-in fonts offered in the picker. `family` is the CSS family string
- *  the canvas + picker preview render with; it must be a font the browser has
- *  actually loaded (see builtinFamilyClassNames, applied on the KV layout).
- *  The Geist entry uses the literal "Geist" (== DEFAULT_FONT_FAMILY, proven to
- *  render today); the others use their next/font hashed family, loaded via the
- *  layout variables below. */
+/** Built-in fonts offered in the picker. `family` is the CSS family string the
+ *  canvas + picker preview render with — all six are already loaded app-wide by
+ *  the root layout's `<body>` font variables. The Geist entry uses the literal
+ *  "Geist" (== DEFAULT_FONT_FAMILY, proven to render today); the others use
+ *  their next/font hashed family. */
 export const BUILTIN_FONTS: Array<{ family: string; label: string }> = [
   { family: DEFAULT_FONT_FAMILY, label: "Geist" },
   { family: neueMontreal.style.fontFamily, label: "Neue Montreal" },
@@ -217,34 +221,13 @@ export const BUILTIN_FONTS: Array<{ family: string; label: string }> = [
   { family: funnel.style.fontFamily, label: "Funnel Sans" },
   { family: generalSans.style.fontFamily, label: "General Sans" },
 ];
-
-/** Space-joined `.variable` classNames so the KV layout can mount them and
- *  force the browser to load every built-in face for canvas use. */
-export function builtinFamilyClassNames(): string {
-  return [
-    geist.variable,
-    neueMontreal.variable,
-    spaceGrotesk.variable,
-    archivo.variable,
-    funnel.variable,
-    generalSans.variable,
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
 ```
 
-Note: the non-Geist built-ins render via their next/font hashed family names, which resolve only once the fonts are loaded (Step 4). Confirm they actually render on canvas during Task 8 manual e2e; if a hashed name doesn't resolve, that font needs explicit `FontFace` loading like the custom ones.
+Note: the non-Geist built-ins render via their next/font hashed family names, which resolve because the root layout already loads them. Confirm they actually render on canvas during Task 8 manual e2e; if a hashed name doesn't resolve, that font needs explicit `FontFace` loading like the custom ones.
 
-- [ ] **Step 4: Ensure the fonts load — edit the KV layout**
+- [ ] **Step 4: Confirm the fonts are loaded (no code change)**
 
-In the KV route layout that wraps the canvas, add `builtinFamilyClassNames()` to the wrapper element's `className` (alongside existing classes) so Next.js actually fetches each local font:
-
-```tsx
-import { builtinFamilyClassNames } from "@/components/studio/kv-generator/fonts/builtinFonts";
-// ...
-<div className={`${existingClasses} ${builtinFamilyClassNames()}`}>{children}</div>
-```
+Open `web/src/app/layout.tsx` and confirm the `<body>` className still includes all six font `.variable` values (`spaceGrotesk neueMontreal archivo funnel generalSans geist`). It does today — so no layout edit is needed. If any were removed, add the missing ones back to the root `<body>` (not to the KV layout).
 
 - [ ] **Step 5: Run test to verify it passes**
 
@@ -260,7 +243,7 @@ Expected: no type errors from the new font modules. (If `bun run build` is too s
 - [ ] **Step 6: Commit**
 
 ```bash
-git add web/src/components/studio/kv-generator/fonts/fontDefaults.ts web/src/components/studio/kv-generator/fonts/builtinFonts.ts web/src/components/studio/kv-generator/fonts/builtinFonts.test.ts web/src/app/\(canvas\)/brands/\[id\]/studio/kv-generator/layout.tsx
+git add web/src/components/studio/kv-generator/fonts/fontDefaults.ts web/src/components/studio/kv-generator/fonts/builtinFonts.ts web/src/components/studio/kv-generator/fonts/builtinFonts.test.ts
 git commit -m "feat(web): add built-in font registry for KV canvas"
 ```
 
