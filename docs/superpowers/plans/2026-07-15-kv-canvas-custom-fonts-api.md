@@ -266,6 +266,7 @@ namespace App\Http\Requests\Studio;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 
 class UploadBrandFontRequest extends FormRequest
 {
@@ -292,8 +293,13 @@ class UploadBrandFontRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $v) {
-            $file = $this->file('file');
-            if (! $file || ! $file->isValid()) {
+            // Read the file from the validator's data — FormRequest::validationData()
+            // is all(), which includes uploaded files — so this check runs both in
+            // production AND when the validator is built directly in a unit test.
+            // (Reading $this->file('file') would be null in the isolated unit test,
+            // silently no-op'ing the check.)
+            $file = $v->getData()['file'] ?? null;
+            if (! $file instanceof UploadedFile || ! $file->isValid()) {
                 return;
             }
             $header = (string) file_get_contents($file->getRealPath(), false, null, 0, 4);
