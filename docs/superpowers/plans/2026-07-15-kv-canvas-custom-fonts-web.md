@@ -379,27 +379,37 @@ git commit -m "feat(web): add idempotent FontFace loader for brand fonts"
 ### Task 4: `useBrandFonts` query + font service (list/upload/delete)
 
 **Files:**
-- Create: `web/src/services/kv/brandFonts.ts`
+- Modify: `web/src/services/kv/api.ts` — add the three font service functions next to the existing overlay-preset functions (around line 528). This is the established location: `api.ts` holds ALL KV service functions and already has the shared `axiosInstance` import and the `unwrap()` helper.
 - Create: `web/src/hooks/useBrandFonts.ts`
 - Test: `web/src/hooks/useBrandFonts.test.ts`
 
-**Interfaces:**
-- Consumes: `BrandFont` (Task 1). Reuse the project's existing api client (match the import already used in `web/src/services/kv/*`).
-- Produces:
-  - `listBrandFonts(brandId: string): Promise<BrandFont[]>` → `GET brands/{brandId}/fonts`.
-  - `uploadBrandFont(brandId: string, name: string, file: File): Promise<BrandFont>` → `POST brands/{brandId}/fonts` (multipart `name`,`file`).
-  - `deleteBrandFont(fontId: string): Promise<void>` → `DELETE fonts/{fontId}`.
-  - `useBrandFonts(brandId: string | null)` → TanStack Query; key `["brand-fonts", brandId]`, `enabled: !!brandId`.
+**Conventions to match (verified in the codebase — use these EXACT patterns):**
+- HTTP client: `import axiosInstance from "@/services/axios";` (NOT `@/lib/api`).
+- Response unwrap: the local `unwrap<T>(response)` helper in `api.ts` extracts the `{ data }` envelope. Use it: `const { data } = await axiosInstance.get(url); return unwrap<BrandFont[]>(data);`.
+- URL prefix: `v1/studio/...` — mirroring the sibling overlay-presets calls (`v1/studio/brands/${brandId}/overlay-presets`, `v1/studio/overlay-presets/${id}`).
+- Multipart POST: `new FormData()` + `axiosInstance.post(url, formData, { headers: { "Content-Type": "multipart/form-data" } })`.
+- `BrandFont` is already snake_case matching the api response, so NO wire→model mapper is needed (unlike siblings that map WireX→X) — `unwrap<BrandFont[]>` / `unwrap<BrandFont>` directly.
+- Query key convention (sibling `useBrandOverlayPresets` uses `["studio", "brand-overlay-presets", brandId]`): use `["studio", "brand-fonts", brandId]`.
 
-- [ ] **Step 1: Write the failing test (service URL shape)**
+**Interfaces:**
+- Consumes: `BrandFont` (Task 1), `axiosInstance`, `unwrap` (both already in `api.ts`).
+- Produces (exported from `api.ts`):
+  - `listBrandFonts(brandId: string): Promise<BrandFont[]>` → `GET v1/studio/brands/{brandId}/fonts`.
+  - `uploadBrandFont(brandId: string, name: string, file: File): Promise<BrandFont>` → `POST v1/studio/brands/{brandId}/fonts` (multipart `name`,`file`).
+  - `deleteBrandFont(fontId: string): Promise<void>` → `DELETE v1/studio/fonts/{fontId}`.
+  - From `useBrandFonts.ts`: `brandFontsQueryKey(brandId)` → `["studio", "brand-fonts", brandId]`; `useBrandFonts(brandId: string | null)` TanStack Query, `enabled: !!brandId`.
+
+- [ ] **Step 1: Write the failing test (query-key shape)**
+
+The test targets only the pure `brandFontsQueryKey` so it needs no api client. If importing `useBrandFonts.ts` transitively loads the axios client and that breaks under bun test, `mock.module("@/services/kv/api", () => ({ listBrandFonts: async () => [] }))` before a dynamic import — but try the plain static import first; it likely works.
 
 ```ts
 import { describe, it, expect } from "bun:test";
 import { brandFontsQueryKey } from "./useBrandFonts";
 
 describe("useBrandFonts", () => {
-  it("builds a stable query key", () => {
-    expect(brandFontsQueryKey("b1")).toEqual(["brand-fonts", "b1"]);
+  it("builds a stable, studio-scoped query key", () => {
+    expect(brandFontsQueryKey("b1")).toEqual(["studio", "brand-fonts", "b1"]);
   });
 });
 ```
@@ -409,40 +419,49 @@ describe("useBrandFonts", () => {
 Run: `cd web && bun test src/hooks/useBrandFonts.test.ts`
 Expected: FAIL ("Cannot find module './useBrandFonts'").
 
-- [ ] **Step 3: Write the service**
+- [ ] **Step 3: Add the service functions to `api.ts`**
 
-Open an existing file in `web/src/services/kv/` first to copy the exact api-client import and response-unwrap convention (e.g. `{ data }` envelope). Then:
+First open `web/src/services/kv/api.ts` and read the overlay-preset functions (~line 520-550) + the `unwrap` helper (~line 55) to copy the exact style. Then add near them:
 
 ```ts
-import { api } from "@/lib/api"; // match the client used by sibling services in this dir
-import type { BrandFont } from "@/types/studio";
-
-export function listBrandFonts(brandId: string): Promise<BrandFont[]> {
-  return api.get(`brands/${brandId}/fonts`).then((r) => r.data.data as BrandFont[]);
+export async function listBrandFonts(brandId: string): Promise<BrandFont[]> {
+  const { data } = await axiosInstance.get(
+    `v1/studio/brands/${brandId}/fonts`,
+  );
+  return unwrap<BrandFont[]>(data);
 }
 
-export function uploadBrandFont(brandId: string, name: string, file: File): Promise<BrandFont> {
-  const form = new FormData();
-  form.append("name", name);
-  form.append("file", file);
-  return api
-    .post(`brands/${brandId}/fonts`, form)
-    .then((r) => r.data.data as BrandFont);
+export async function uploadBrandFont(
+  brandId: string,
+  name: string,
+  file: File,
+): Promise<BrandFont> {
+  const formData = new FormData();
+  formData.append("name", name);
+  formData.append("file", file);
+  const { data } = await axiosInstance.post(
+    `v1/studio/brands/${brandId}/fonts`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return unwrap<BrandFont>(data);
 }
 
-export function deleteBrandFont(fontId: string): Promise<void> {
-  return api.delete(`fonts/${fontId}`).then(() => undefined);
+export async function deleteBrandFont(fontId: string): Promise<void> {
+  await axiosInstance.delete(`v1/studio/fonts/${fontId}`);
 }
 ```
+
+Add `BrandFont` to the `@/types/studio` import already present in `api.ts` (extend the existing import list rather than adding a second import statement).
 
 - [ ] **Step 4: Write the hook**
 
 ```ts
 import { useQuery } from "@tanstack/react-query";
-import { listBrandFonts } from "@/services/kv/brandFonts";
+import { listBrandFonts } from "@/services/kv/api";
 
 export function brandFontsQueryKey(brandId: string) {
-  return ["brand-fonts", brandId] as const;
+  return ["studio", "brand-fonts", brandId] as const;
 }
 
 export function useBrandFonts(brandId: string | null) {
@@ -458,12 +477,12 @@ export function useBrandFonts(brandId: string | null) {
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `cd web && bun test src/hooks/useBrandFonts.test.ts`
-Expected: PASS.
+Expected: PASS. Then `bunx tsc --noEmit -p tsconfig.json` to confirm the `api.ts` additions type-check (compare against pre-existing repo errors — no NEW errors from the font functions).
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add web/src/services/kv/brandFonts.ts web/src/hooks/useBrandFonts.ts web/src/hooks/useBrandFonts.test.ts
+git add web/src/services/kv/api.ts web/src/hooks/useBrandFonts.ts web/src/hooks/useBrandFonts.test.ts
 git commit -m "feat(web): add brand fonts service + query hook"
 ```
 
@@ -680,7 +699,12 @@ mock.module("@/lib/featureFlags", () => ({
 }));
 mock.module("@/hooks/useBrandFonts", () => ({
   useBrandFonts: () => ({ data: [] }),
-  brandFontsQueryKey: (b: string) => ["brand-fonts", b],
+  brandFontsQueryKey: (b: string) => ["studio", "brand-fonts", b],
+}));
+// The toolbar imports upload/delete from the heavy kv api module — stub it.
+mock.module("@/services/kv/api", () => ({
+  uploadBrandFont: async () => ({}),
+  deleteBrandFont: async () => undefined,
 }));
 
 // Load the component AFTER the mocks are registered.
@@ -720,7 +744,7 @@ import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMajorFeatureFlag, MAJOR_FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useBrandFonts, brandFontsQueryKey } from "@/hooks/useBrandFonts";
-import { uploadBrandFont, deleteBrandFont } from "@/services/kv/brandFonts";
+import { uploadBrandFont, deleteBrandFont } from "@/services/kv/api";
 import { registerBrandFonts } from "./fonts/fontLoader";
 import { BUILTIN_FONTS, DEFAULT_FONT_FAMILY } from "./fonts/builtinFonts";
 
