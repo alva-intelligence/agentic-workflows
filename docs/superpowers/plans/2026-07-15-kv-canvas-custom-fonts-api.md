@@ -15,6 +15,7 @@
 - Upload limits: **TTF + OTF only**, **max 5 MB (5120 KB)**.
 - `workspace_id` is auto-filled by the `HasWorkspaceScope` trait — do NOT set it manually in `create()`.
 - Known suite limitation: the api Feature suite fails on a fresh migrate (workspaces backfill + SoftDeletes). Prefer Unit-level tests for validation/model; only write a Feature test if the suite is confirmed runnable in the environment.
+- Test base class: these Unit tests use Laravel facades (`Storage::fake`, `Validator`, `UploadedFile::fake`), so they MUST extend `Tests\TestCase` (boots the app). They do NOT use `RefreshDatabase` and touch NO database — `phpunit.xml` already isolates to in-memory sqlite, so running them is DB-safe. Run ONLY the named test file per task; never `php artisan migrate` or the Feature suite.
 
 ---
 
@@ -37,7 +38,7 @@ namespace Tests\Unit\Models;
 
 use App\Models\BrandFont;
 use Illuminate\Support\Facades\Storage;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase; // boots the app so Storage::fake works; NO RefreshDatabase (no DB touched)
 
 class BrandFontTest extends TestCase
 {
@@ -200,7 +201,7 @@ namespace Tests\Unit\Requests;
 use App\Http\Requests\Studio\UploadBrandFontRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase; // boots the app so Validator/UploadedFile facades work; NO RefreshDatabase
 
 class UploadBrandFontRequestTest extends TestCase
 {
@@ -342,7 +343,7 @@ use App\Http\Resources\Studio\BrandFontResource;
 use App\Models\BrandFont;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase; // boots the app so Storage::fake works; NO RefreshDatabase (no DB touched)
 
 class BrandFontResourceTest extends TestCase
 {
