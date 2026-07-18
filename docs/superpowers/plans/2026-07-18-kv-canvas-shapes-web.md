@@ -583,6 +583,37 @@ git commit -m "feat(web): shape placement handler + pending shape kind"
 
 **Interfaces:**
 - Consumes: `regularPolygonPoints`, `trianglePoints`, `strokePropsFor`, `konvaShapeFill` (Task 3).
+- Produces: `ShapeKonvaNode` — a react-konva component (`overlays/ShapeKonvaNode.tsx`) that renders a shape overlay's node from `{ payload: ShapePayload; width: number; height: number }` (pw/ph in px, local top-left origin). Used by the KvKonvaCanvas render ternary in THIS task and reused by the resize/tile paths in Task 12. Extracting it here keeps a single Konva shape renderer (DRY) instead of inlining the kind-switch at each call site.
+
+- [ ] **Step 0: Extract ShapeKonvaNode (reusable renderer)**
+
+Create `src/components/studio/kv-generator/overlays/ShapeKonvaNode.tsx` with the kind-switch below (moved out of the inline ternary so Task 12's resize/tile paths reuse it). It renders at local coords `[0,0,pw,ph]` — callers position/rotate via the enclosing Konva `Group` exactly as they do for text/image today:
+
+```tsx
+import { Rect, Ellipse, Line } from "react-konva";
+import type { ShapePayload } from "@/types/studio";
+import { regularPolygonPoints, trianglePoints, strokePropsFor, konvaShapeFill } from "./shapeGeometry";
+
+export function ShapeKonvaNode({ payload, width: pw, height: ph }: { payload: ShapePayload; width: number; height: number }) {
+  const fill = konvaShapeFill(payload, pw, ph);
+  const strokeProps = strokePropsFor(payload, pw, ph);
+  switch (payload.kind) {
+    case "rectangle":
+      return <Rect width={pw} height={ph} cornerRadius={(payload.corner_radius ?? 0) * Math.min(pw, ph)} {...fill} {...strokeProps} strokeScaleEnabled={false} />;
+    case "ellipse":
+      return <Ellipse x={pw / 2} y={ph / 2} radiusX={pw / 2} radiusY={ph / 2} {...fill} {...strokeProps} strokeScaleEnabled={false} />;
+    case "triangle":
+      return <Line points={trianglePoints(pw, ph)} closed {...fill} {...strokeProps} strokeScaleEnabled={false} />;
+    case "polygon":
+      return <Line points={regularPolygonPoints(payload.sides ?? 6, pw, ph)} closed {...fill} {...strokeProps} strokeScaleEnabled={false} />;
+    case "line":
+      return <Line points={[0, ph / 2, pw, ph / 2]} stroke={payload.stroke?.color ?? payload.color} strokeWidth={(payload.stroke?.width ?? 0.008) * pw} strokeScaleEnabled={false} />;
+    default:
+      return null;
+  }
+}
+```
+Add a unit test `overlays/ShapeKonvaNode.test.tsx` asserting each kind renders the expected konva node type (mirror the render/query harness used by `KvKonvaCanvas.overlays.test.tsx`).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -606,32 +637,19 @@ it("renders a rectangle shape overlay", () => {
 Run: `bun test src/components/studio/kv-generator/KvKonvaCanvas.overlays.test.tsx`
 Expected: FAIL — shape renders as neither Text nor Image (or type error on the new payload).
 
-- [ ] **Step 3: Add the shape branch to the render ternary**
+- [ ] **Step 3: Add the shape branch to the render ternary (via ShapeKonvaNode)**
 
-At the render switch (~1747), the current `overlay.type === "text" ? <Text/> : <OverlayKonvaImage/>` binary becomes a three-way. Extract a shape node using the geometry helpers and the de-normalized `pw`/`ph` (from ~1673-1676):
+At the render switch (~1747), the current `overlay.type === "text" ? <Text/> : <OverlayKonvaImage/>` binary becomes a three-way. Use the `ShapeKonvaNode` from Step 0 with the de-normalized `pw`/`ph` (from ~1673-1676), so the kind-switch is not inlined here:
 
 ```tsx
-import { Rect, Ellipse, Line } from "react-konva";
-import { regularPolygonPoints, trianglePoints, strokePropsFor, konvaShapeFill } from "./overlays/shapeGeometry";
+import { ShapeKonvaNode } from "./overlays/ShapeKonvaNode";
 
-// inside the render switch, when overlay.type === "shape" && overlay.payload.type === "shape":
-const sp = overlay.payload;
-const fill = konvaShapeFill(sp, pw, ph);
-const strokeProps = strokePropsFor(sp, pw, ph);
-switch (sp.kind) {
-  case "rectangle":
-    return <Rect width={pw} height={ph} cornerRadius={(sp.corner_radius ?? 0) * Math.min(pw, ph)} {...fill} {...strokeProps} strokeScaleEnabled={false} />;
-  case "ellipse":
-    return <Ellipse x={pw / 2} y={ph / 2} radiusX={pw / 2} radiusY={ph / 2} {...fill} {...strokeProps} strokeScaleEnabled={false} />;
-  case "triangle":
-    return <Line points={trianglePoints(pw, ph)} closed {...fill} {...strokeProps} strokeScaleEnabled={false} />;
-  case "polygon":
-    return <Line points={regularPolygonPoints(sp.sides ?? 6, pw, ph)} closed {...fill} {...strokeProps} strokeScaleEnabled={false} />;
-  case "line":
-    return <Line points={[0, ph / 2, pw, ph / 2]} stroke={sp.stroke?.color ?? sp.color} strokeWidth={(sp.stroke?.width ?? 0.008) * pw} strokeScaleEnabled={false} />;
-}
+// in the render switch: keep the text branch first; add, before the image fallback:
+overlay.type === "shape" && overlay.payload.type === "shape" ? (
+  <ShapeKonvaNode payload={overlay.payload} width={pw} height={ph} />
+) : /* …existing image fallback… */
 ```
-(Keep the existing text branch first; add the shape branch before the image fallback, guarded on `overlay.type === "shape"`.)
+The enclosing Konva `Group` (center-origin, `rotation={overlay.rotation}`, positioned via `px/py`) already wraps this exactly as for text/image, so `ShapeKonvaNode` only draws in local `pw×ph` space.
 
 - [ ] **Step 4: Extend click-to-place + cursor gate**
 
@@ -899,6 +917,56 @@ With the API worktree running, confirm a placed shape survives a PATCH → reloa
 
 ```bash
 git add -A && git commit -m "fix(web): shape overlay verify fixes" || echo "nothing to commit"
+```
+
+---
+
+### Task 12: Resize/tile shape render + type-safety
+
+> **Execute after Task 10, before Task 11 (final verify).** Added mid-execution: Task 1's union widening (`payload` now includes `ShapePayload`) broke exhaustiveness in the resize/tile Konva render paths, which assumed `payload` is `text | image`. Shapes must render there too (parity with text/image on resized exports + tiles), and the image-assuming branches must be made type-safe.
+
+**Files:**
+- Modify: `src/components/studio/kv-generator/KvResizeCanvas.tsx` (overlay bake loop ~639 text branch, ~677 `else` that calls `loadImage(ov.payload.asset_url)`)
+- Modify: `src/components/studio/kv-generator/KvResizeTileStage.tsx` (~108 text branch; image filters ~46/175/185)
+- Modify: `src/components/studio/kv-generator/KvTileOverlayEditor.tsx` (~265 text branch; image filters ~483/493)
+- Test: extend `src/components/studio/kv-generator/KvResizeTileStage.test.tsx` (and/or `KvTileOverlayEditor.test.tsx`) with a shape-overlay render case
+
+**Interfaces:**
+- Consumes: `ShapeKonvaNode` (Task 7), `regularPolygonPoints`/`trianglePoints`/`strokePropsFor`/`konvaShapeFill` (Task 3). These paths use raw `Konva.*` imperative nodes (not react-konva) in some spots — where imperative (`new Konva.Rect(...)`), build the node with the same geometry helpers; where declarative (react-konva JSX), use `ShapeKonvaNode`.
+
+- [ ] **Step 1: Make the image-assuming branches type-safe (RED → GREEN on build)**
+
+In each file, the overlay loop currently does `if (payload.type === "text") {…} else {…image…}`. Change the `else` to an explicit `else if (ov.payload.type === "image") {…}` so a shape overlay no longer falls into the image path (which reads `ov.payload.asset_url` — absent on shapes). Confirm the specific break at `KvResizeCanvas.tsx:677` (`loadImage(ov.payload.asset_url)`) is now guarded.
+
+- [ ] **Step 2: Add the shape branch to each render path**
+
+Add `else if (ov.payload.type === "shape") { … }` rendering the shape. For imperative Konva loops (e.g. `KvResizeCanvas` bake, which does `overlayLayer.add(new Konva.Text(...))` / `new Konva.Image(...)`), construct the shape node imperatively with the geometry helpers at the tile's de-normalized `ow×oh` and add it to `overlayLayer` at the same center-origin position/rotation the text/image branches use (`x: cx, y: cy, offsetX: ow/2, offsetY: oh/2, rotation: ov.rotation`). Fill via `konvaShapeFill(payload, ow, oh)` spread onto the node config; stroke via `strokePropsFor`. Kinds:
+- rectangle → `new Konva.Rect({ width: ow, height: oh, cornerRadius: (payload.corner_radius ?? 0) * Math.min(ow, oh), ...fill, ...stroke, strokeScaleEnabled: false })`
+- ellipse → `new Konva.Ellipse({ radiusX: ow/2, radiusY: oh/2, ...fill, ...stroke })`
+- triangle → `new Konva.Line({ points: trianglePoints(ow, oh), closed: true, ...fill, ...stroke })`
+- polygon → `new Konva.Line({ points: regularPolygonPoints(payload.sides ?? 6, ow, oh), closed: true, ...fill, ...stroke })`
+- line → `new Konva.Line({ points: [0, oh/2, ow, oh/2], stroke: payload.stroke?.color ?? payload.color, strokeWidth: (payload.stroke?.width ?? 0.008) * ow })`
+
+For declarative react-konva paths, render `<ShapeKonvaNode payload={ov.payload} width={ow} height={oh} />` inside the same positioning group used for text/image.
+
+Note: `konvaShapeFill` returns react-konva-style fill prop names (`fill` / `fillLinearGradient*` / `fillRadialGradient*`); these are the SAME prop names Konva's imperative node configs accept, so the spread works in both styles.
+
+- [ ] **Step 3: Handle image-only filters**
+
+The `.filter((o) => o.payload.type === "image")` calls (KvResizeTileStage ~46/175/185, KvTileOverlayEditor ~483/493) are image-preload/asset passes — leave them image-only (shapes have no asset to preload). Confirm shapes are not accidentally required to have `asset_url` anywhere.
+
+- [ ] **Step 4: Test + build**
+
+Run: `bun test src/components/studio/kv-generator/KvResizeTileStage.test.tsx src/components/studio/kv-generator/KvTileOverlayEditor.test.tsx`
+Expected: PASS (new shape case + existing).
+Run: `bun run build`
+Expected: succeeds — the union-exhaustiveness errors at the three resize/tile files are resolved.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add -A
+git commit -m "feat(web): render shapes in resize/tile paths (+ type-safe image guards)"
 ```
 
 ---
