@@ -38,6 +38,9 @@ current infrastructure rather than a parallel subsystem.
 - Star primitive (can ride the polygon control later).
 - Freehand / brush drawing.
 - Shape shadows, blur, or per-shape blend modes.
+- Multi-stop gradients (3+ colors) and per-stop opacity — shapes reuse the existing 2-color
+  (from/to) text-overlay gradient model; a richer gradient model would apply to text and
+  shapes together in a later pass.
 
 ## Architecture
 
@@ -55,24 +58,24 @@ Only the discriminant and payload are new. The 30-overlay cap is unchanged.
 
 ### Data model
 
+**Reuse decision (updated after codebase mapping):** `develop` already ships a complete
+solid + linear/radial gradient fill system for **text** overlays — the payload carries
+`color` plus an optional `gradient: { type?: "linear" | "radial"; from: string; to: string;
+angle: number }`, with shared resolvers (`konvaTextFill`, `applyTextFill`, `hasTextGradient`,
+`gradientLineCoords` in `overlays/resolveTextFill.ts`), a reusable hex picker (`ColorField`),
+a fill editor (`TextTypographyControls`), and a validation trait
+(`HasTextOverlayPayloadRules`). Shapes **mirror this exact fill model** rather than inventing
+a second one. This means a **fixed 2-color gradient** (from/to), hex-only colors, and no
+per-stop opacity in v1 — a deliberate DRY trade documented in Non-Goals.
+
 ```ts
 type ShapeKind = "rectangle" | "ellipse" | "triangle" | "polygon" | "line";
 
-type GradientStop = {
-  offset: number; // 0..1
-  color: string;  // #RRGGBB
-  opacity: number; // 0..1
-};
-
-type ShapeFill =
-  | { mode: "solid";  color: string; opacity: number }
-  | { mode: "linear"; angle: number; stops: GradientStop[] } // angle in degrees
-  | { mode: "radial"; stops: GradientStop[] };
-
+// Mirrors the text payload's fill fields exactly (color + optional gradient),
+// so shapes reuse resolveTextFill.ts / ColorField / the validation trait.
 type ShapeStroke = {
-  enabled: boolean;
-  color: string; // #RRGGBB
-  width: number; // normalized: fraction of overlay width
+  color: string;  // #RRGGBB
+  width: number;  // normalized: fraction of overlay width; 0 or absent = no stroke
 };
 
 // StudioOverlay.type gains "shape".
@@ -80,23 +83,29 @@ type ShapeStroke = {
 type ShapePayload = {
   type: "shape";
   kind: ShapeKind;
-  fill: ShapeFill;
-  stroke: ShapeStroke;
+  color: string; // solid fill (and gradient base), #RRGGBB
+  gradient?: { type?: "linear" | "radial"; from: string; to: string; angle: number };
+  stroke?: ShapeStroke;
   corner_radius?: number; // rectangle only, 0..1 (fraction of min(w,h))
-  sides?: number;         // polygon only, integer >= 3
+  sides?: number;         // polygon only, integer >= 3 (default 6)
 };
 ```
 
 Notes:
 
+- **Fill** resolves the same way as text: if `gradient` is present it renders the
+  linear/radial gradient; otherwise the solid `color`. The existing `konvaTextFill` /
+  `applyTextFill` resolvers are generalized to accept `{ color, gradient }` so both text and
+  shapes share one fill path.
 - **Stroke width is stored normalized** (fraction of overlay width) and multiplied by the
   render scale at draw time, with `strokeUniform` (Fabric) so it does not distort under
   non-uniform resize, and an equivalent scale on Konva. This keeps stroke thickness stable
-  between the display canvas and the native-resolution PNG export.
-- **`line`** uses `stroke` as its visible color/thickness; `fill` is ignored for lines. The
-  editing UI hides fill controls when `kind === "line"` and forces `stroke.enabled = true`.
-- Colors remain 6-digit hex (`#RRGGBB`) to match existing overlay color validation; opacity
-  is a separate `0..1` field on solids and per gradient stop.
+  between the display canvas and the native-resolution PNG export. `stroke` omitted (or
+  `width === 0`) = no border.
+- **`line`** has no interior: it renders as a stroked segment using `stroke` (falling back to
+  `color` at a default width if `stroke` is absent). The editing UI hides fill controls and
+  shows only stroke controls when `kind === "line"`.
+- Colors remain 6-digit hex (`#RRGGBB`) to match existing overlay color validation.
 
 ### Rendering — Fabric (edit) + Konva (export parity)
 
@@ -136,17 +145,26 @@ helpers so a change to fill semantics updates both engines at once.
 
 ### Editing controls — Transform / Layers panels
 
-When a shape overlay is selected, the Transform panel shows a shape section:
+The per-type editor branch lives in the **parent** components (`KvGeneratorLayout.tsx` and
+`KvResizeCanvas.tsx`), which already stack a text-only `TextTypographyControls` above the
+shared geometry `KvTransformPanel`. A new `ShapeStyleControls` slots in the same way, gated on
+`payload.type === "shape"`, mirroring `TextTypographyControls`:
 
-- **Fill mode** selector: solid / linear / radial.
-- **Color-stop editor**: add/remove stops, per-stop color + opacity. Solid shows a single
-  color + opacity.
-- **Linear angle** slider (0–360°), shown only for linear mode.
-- **Stroke**: enable toggle, color, width.
-- **Kind-specific**: corner-radius slider (rectangle), sides stepper 3–12 (polygon).
+- **Fill**: Solid / Gradient segmented toggle → for Gradient, a Linear / Radial sub-toggle,
+  `From` / `To` `ColorField`s, and an **Angle** input (linear only); for Solid, one
+  `ColorField`. This is the same control cluster `TextTypographyControls` renders, so it is
+  factored into a shared fill-editor and reused.
+- **Stroke**: enable toggle → color (`ColorField`) + width input. Off = no `stroke`.
+- **Kind-specific**: corner-radius input (rectangle), sides stepper 3–12 (polygon).
+- For `kind === "line"`, fill controls are hidden; only stroke controls show.
 
-The Layers panel lists shape overlays with a per-kind icon, alongside text/image entries,
-using the existing layer-row pattern (select, reorder, visibility, delete).
+`KvTransformPanel` (geometry) is type-agnostic and reused as-is; only its
+`trackKvOverlayTransformed` `overlay_type` cast widens to include `"shape"`.
+
+The Layers panel (`KvLayersPanel`) lists shape overlays alongside text/image using the
+existing layer-row pattern (select, reorder, delete). Its `LayerIcon` and `labelForOverlay`
+gain a `shape` branch (per-kind icon + `"Shape"` / kind label). There is no per-layer
+visibility toggle in the current panel and none is added.
 
 ### Persistence + API
 
@@ -175,9 +193,12 @@ using the existing layer-row pattern (select, reorder, visibility, delete).
 ## Error Handling / Edge Cases
 
 - Invalid payloads are rejected by request validation (422) before persistence, matching the
-  existing overlay contract.
-- Gradient with `< 2` stops falls back to solid rendering of the first stop; a shape with an
-  empty `stops` array is invalid (validation requires ≥ 2 for gradient modes).
+  existing overlay contract. **Critical:** the request layer's `validated()` strips any
+  payload sub-key without an explicit rule, so every shape field (`kind`, `color`,
+  `gradient.*`, `stroke.*`, `corner_radius`, `sides`) MUST be whitelisted or it is silently
+  dropped on save.
+- Fill resolution: `gradient` present → gradient render; absent → solid `color` (identical to
+  the text fill path). No empty-stops case exists in the 2-color model.
 - Degenerate marquee (near-zero drag) is discarded (no overlay created) with a minimum size
   threshold.
 - Stroke width scaling uses `strokeUniform` so thickness stays visually correct after
@@ -187,19 +208,27 @@ using the existing layer-row pattern (select, reorder, visibility, delete).
 
 ## Testing
 
-Web (`bun test`):
+Web (`bun test` — bunfig preloads jest-dom; do NOT use `bunx vitest`):
 
-- `ShapePayload` round-trip serialize/deserialize.
-- `shapeToFabric` / `shapeToKonva` mapping for each kind × each fill mode (solid/linear/
-  radial) + stroke on/off.
-- Line ignores fill; polygon respects `sides`; rectangle respects `corner_radius`.
-- Drag-to-draw: marquee → overlay geometry; degenerate drag discarded.
+- Shape geometry helpers: regular-polygon point generation for a given `sides`; triangle
+  points; fill resolution (solid vs gradient) via the shared resolver for shapes.
+- `shapeToFabric` / `shapeToKonva` mapping for each kind × solid + linear + radial fill +
+  stroke on/off.
+- Line renders as a stroked segment (no fill); polygon respects `sides`; rectangle respects
+  `corner_radius`.
+- Drag-to-draw: marquee → normalized overlay geometry; degenerate drag discarded.
+- `ShapeStyleControls`: solid/gradient toggle drives `onPatch`; stroke toggle adds/removes
+  `stroke`; sides/corner-radius inputs patch payload (mirror `KvTransformPanel.test.tsx`
+  render + `objectContaining` assertion style).
 
-API (Pest Unit):
+API (Pest **Unit**, no DB — mirror `tests/Unit/Requests/OverlayGradientValidationTest.php`,
+NOT a Feature test; the Feature suite fails on fresh migrate):
 
-- `UpdateStudioFileOverlaysRequest` accepts valid shape payloads (each kind + fill mode) and
-  rejects invalid ones (bad enum, missing stops, out-of-range corner_radius/sides, bad hex).
-- `StoreBrandOverlayPresetRequest` accepts a preset containing shapes.
+- `UpdateStudioFileOverlaysRequest` accepts valid shape payloads (each kind, solid + gradient
+  fill, with/without stroke) and asserts `validated()` **preserves** all shape payload keys.
+- Rejects invalid payloads: bad `kind`, bad hex `color`, out-of-range `corner_radius` /
+  `sides`, malformed `stroke`, out-of-range gradient `angle`.
+- `StoreBrandOverlayPresetRequest` accepts a preset containing a shape overlay.
 
 ## Service Breakdown
 
