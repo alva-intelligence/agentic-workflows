@@ -1372,3 +1372,54 @@ git push -u origin feature/daffa/vc-kv-color-picker
 ```
 
 Open a PR targeting `develop` titled `feat(web): KV canvas color picker + eyedropper`, linking the spec at `docs/superpowers/specs/2026-07-20-kv-color-picker-eyedropper-design.md`. Note in the body that the shapes and custom-fonts branches can adopt `ColorPicker` for `fill`, `stroke`, and gradient stops once they land.
+
+---
+
+## AMENDMENT — 2026-07-20, after Task 5
+
+**The premise of Tasks 6 and 7 was wrong.** The spec and plan were written against a survey of the `feature/novi/vc-kv-editing-board-history` checkout, not `develop`. On `develop`:
+
+- Commit `762a2c60` (2026-07-15, *"consolidate text fill (solid/gradient) into typography panel; remove floating color chips"*) removed **every** mount site of `OverlayColorChip`. It is orphaned dead code, and `KvTileOverlayEditor.tsx` carries a comment stating color editing moved to the properties panel.
+- The live control is `src/components/studio/kv-generator/overlays/ColorField.tsx` — a swatch plus an inline popover already offering the eight presets (from the shared `overlays/overlayColors.ts`) **and** a hex input.
+- `ColorField` is consumed by both `FillControls.tsx` (text fill) and `ShapeStyleControls.tsx` (shape fill and stroke), so a single integration covers font *and* shape color — what the original request asked for.
+
+`develop` therefore already has presets and hex. What it lacks is exactly the two things this feature exists to add: the saturation/hue picker area and the eyedropper.
+
+Tasks 1, 2 and 4 (`hexColor`, `recentColors`, `EyeDropperButton`) are unaffected and directly reusable. Task 5's `ColorPicker` was built as a canvas-anchored floating swatch with a `document.body` portal — a shape that no longer exists — but its popover *body* is precisely what `ColorField`'s popover needs.
+
+**Decision (Daffa):** extract the panel, drop the shell. Tasks 6 and 7 below replace the original Task 6; the original Task 7 becomes Task 8 unchanged.
+
+### Task 6 (replaces original Task 6): extract ColorPickerPanel, prune the homeless shell
+
+**Files:**
+- Create: `src/components/frndos/v2/ColorPickerPanel.tsx` + colocated test
+- Delete: `src/components/frndos/v2/ColorPicker.tsx`, `ColorPicker.test.tsx`, `colorPickerPlacement.ts`, `colorPickerPlacement.test.ts`
+- Modify: `src/components/frndos/v2/index.ts`
+
+`ColorPickerPanel` is the popover body lifted verbatim from `ColorPicker`: the presets row, the recents row (omitted when empty), the `HexColorPicker` area, and the footer with `HexColorInput` plus `EyeDropperButton`. It renders a plain `<div>` with no positioning, no portal, and no open/close state — the host owns all of that.
+
+Props: `{ value, onChange, presets?, recents?, className? }`. It keeps `ColorPicker`'s internal `SwatchRow` helper and its `sampling` state (the eyedropper still hides the panel while the native picker is open, via `EyeDropperButton`'s `onOpenChange`). `DEFAULT_COLOR_PRESETS` moves here.
+
+The swatch button, portal, placement, `openRef`/`onCommit` machinery, and outside-click/Escape handling are all deleted — `ColorField` already implements the equivalents.
+
+`colorPickerPlacement` goes with them: with no portal there is nothing to place. Its tests were green and its math correct; it is removed because it has no consumer, not because it was wrong.
+
+### Task 7 (replaces original Task 7): wire ColorPickerPanel into ColorField
+
+**Files:**
+- Modify: `src/components/studio/kv-generator/overlays/ColorField.tsx`
+- Modify/create: `ColorField.test.tsx`
+
+`ColorField` keeps its shell — the swatch trigger, the inline absolutely-positioned popover, the outside-click and `Escape` handling, the `label` prop. Inside the popover, its hand-rolled presets grid and hex `<input>` are replaced by `<ColorPickerPanel>`, which supplies presets, recents, the picker area, hex input and eyedropper.
+
+`ColorField` owns the recents list, exactly as the original plan had the KV wrapper own it: `readRecentColors()` on first open, `addRecentColor` + `writeRecentColors` on close. Because `ColorField` unmounts and remounts as panels change, the commit must happen on close **and** on unmount.
+
+Presets continue to come from `overlays/overlayColors.ts` (`OVERLAY_PRESET_COLORS`), not from `DEFAULT_COLOR_PRESETS` — the KV surface keeps its own palette source, and the two lists are identical today.
+
+Behavior to preserve: clicking a preset currently closes the popover immediately. Dragging the picker must NOT close it. Keep the preset-closes behavior as-is.
+
+`OverlayColorChip.tsx` is left untouched — it is pre-existing dead code on `develop` and its removal is not this feature's business.
+
+### Task 8
+
+The original Task 7 (full verification), unchanged except that the manual e2e checklist now exercises the properties-panel `ColorField` for both a text overlay (via `FillControls`) and a shape overlay (via `ShapeStyleControls`), rather than a floating canvas chip.

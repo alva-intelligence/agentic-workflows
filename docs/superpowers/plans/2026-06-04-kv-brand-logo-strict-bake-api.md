@@ -163,8 +163,11 @@ In `api/app/Services/ChatService.php`, immediately after `buildBrandVisuals()` (
             return null;
         }
 
+        // PNG/JPEG/WebP only — matches ai-service BrandLogoAsset. GIF is
+        // excluded: Pillow composites the first frame only, and logos are
+        // never animated GIFs.
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes) ?: '';
-        if (! in_array($mime, ['image/png', 'image/jpeg', 'image/webp', 'image/gif'], true)) {
+        if (! in_array($mime, ['image/png', 'image/jpeg', 'image/webp'], true)) {
             Log::warning('KV brand logo MIME not allowed for strict bake', [
                 'brand_id' => $brand->id,
                 'mime' => $mime,
