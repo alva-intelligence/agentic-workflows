@@ -21,7 +21,10 @@ background, and materializes the result as a base board + image overlays on a KV
 - **Interaction:** one-shot auto-decompose (single async job). Click-to-grab
   point-prompting is explicitly out of scope.
 - **Credits:** metered like kv-resize via the usage callback; charged **only on
-  success**. New operation type `kv_magic_layer`.
+  success**. New operation types `kv_magic_layer` (inpaint) and
+  `kv_magic_layer_vision` (detect). The Replicate segmentation stage has no
+  token usage, so v1 stores it in the job's `usage_entries` for audit without
+  charging; flat per-run pricing is a deliberate follow-up.
 - **Engine (Approach A):** detect with a vision LLM → segment with SAM2 (Replicate)
   → inpaint with the already-wired `gpt-image-2` `/v1/images/edits` mask path.
   - Rejected: all-in-one Grounded-SAM (less control over "what counts as a subject",
