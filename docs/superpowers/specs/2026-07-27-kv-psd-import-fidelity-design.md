@@ -85,11 +85,22 @@ web/src/lib/studio/kv/psd/
   types.ts       draft types
 ```
 
-Each is a pure function over ag-psd structures and a canvas — unit-testable without a browser.
+Each is a pure function over ag-psd structures — unit-testable without a browser.
 `KvGeneratorLayout` keeps calling `importPsd()` with essentially the same signature.
 
-**Key seam:** `bake.ts` returns a `HTMLCanvasElement`; `index.ts` encodes it to a blob. Tests assert
-pixels via `getImageData` rather than decoding PNGs.
+**Key seam: parse with `useImageData: true`.** ag-psd then returns raw `PixelData`
+(`{ width, height, data: Uint8ClampedArray }`) instead of canvases, for layers *and* masks. That
+makes mask/clipping/effect compositing **pure array math with no DOM**, which matters concretely:
+jsdom has no working 2D canvas context, and the existing tests only pass because they stub
+`initializeCanvas` (`importPsd.test.ts:220`) — canvases in tests hold no real pixels, so
+`getImageData` assertions would be impossible. Raw buffers are directly assertable.
+
+It also avoids a real correctness hazard: ag-psd documents `useImageData` as the way to avoid
+"canvas premultiplied alpha corrupting image data", which is exactly the kind of corruption that
+would silently degrade a masked layer's edges.
+
+`bake.ts` therefore takes and returns `PixelData`. Only `index.ts` touches a canvas, to encode the
+final PNG.
 
 ### Mask baking
 
@@ -97,12 +108,12 @@ pixels via `getImageData` rather than decoding PNGs.
 plus `defaultColor` (the value covering everything outside the mask rect: `0` hidden, `255` visible)
 and `disabled`.
 
-1. Allocate a canvas at the layer's bounds; draw `layer.canvas`.
-2. Build an alpha canvas the same size, filled with `defaultColor`, then draw `mask.canvas` at
-   `(mask.left − layer.left, mask.top − layer.top)`.
-3. **Convert luminance to alpha** — the mask is grayscale; read `ImageData`, set `a = r`, write back.
-   This step is the one that is easy to get subtly wrong.
-4. Composite the layer against it with `destination-in`.
+Operating on raw `PixelData`, for each pixel of the layer:
+
+1. Find the corresponding mask pixel at `(x + layer.left − mask.left, y + layer.top − mask.top)`.
+2. Outside the mask's bounds, use `defaultColor` instead of sampling.
+3. **Take the mask's luminance as alpha** — the mask is grayscale, so its red channel is the value.
+4. Multiply it into the layer's alpha: `a = a * maskValue / 255`.
 
 Skip entirely when `mask.disabled`. `realMask` (vector masks) receives the same treatment when
 present. This is the fix for the black band.
@@ -110,8 +121,9 @@ present. This is the fix for the black band.
 ### Clipping masks
 
 `layer.clipping === true` means "clip to the alpha of the nearest non-clipping layer below me,
-within the same group"; a run of consecutive clipping layers all clip to the same base. Bake with
-`destination-in` against the base's alpha.
+within the same group"; a run of consecutive clipping layers all clip to the same base. Bake by
+multiplying the base's alpha into the clipped layer's alpha, sampled at the offset between their
+bounds — the same array operation as the mask, with the base's alpha channel as the mask value.
 
 Both layers remain **separate overlays** — the clipped one is simply cropped, so it stays
 individually selectable and movable.
@@ -355,6 +367,10 @@ future move to real nodes is a renderer-only change with no data migration.
 **Unit (`bun test`).** Existing PSD tests synthesize files in-process with `writePsd` +
 `initializeCanvas` (`importPsd.test.ts:237`); ag-psd can also write masks, clipping flags, blend
 modes and effects, so every new behaviour is testable without fixture binaries.
+
+Because `bake.ts` operates on raw `PixelData`, its tests need **no canvas and no DOM** — they build
+`Uint8ClampedArray` buffers directly and assert on the output array. This is the main reason for the
+`useImageData` decision: under the current jsdom setup, canvas-based bake logic would be untestable.
 
 - `blend.ts` — exhaustive over the `BlendMode` union, so a future ag-psd upgrade that adds a mode
   fails the test rather than silently falling back to normal.
