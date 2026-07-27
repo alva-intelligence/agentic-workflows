@@ -1259,7 +1259,9 @@ git commit -m "feat(web): render overlay blend modes in Fabric and Konva"
 - Test: `src/components/studio/kv-generator/makeBlankBase.test.ts`
 
 **Interfaces:**
-- Produces: `makeBlankBaseAt(width: number, height: number, opts?: { fileName?: string }): Promise<File>`, alongside the existing ratio-based `makeBlankBase`.
+- Produces: `blankBaseDimensions(width: number, height: number): { w: number; h: number }` (pure, capped at 4096, aspect preserved) and `makeBlankBaseAt(width: number, height: number, opts?: { fileName?: string }): Promise<File>`, alongside the existing ratio-based `makeBlankBase`.
+
+**Why the dimension maths is a separate exported function:** jsdom implements neither `getContext("2d")` nor `toBlob` — `toBlob` never invokes its callback, so a test awaiting `makeBlankBaseAt` would hang rather than fail. Only the pure part is tested; `makeBlankBaseAt` itself is verified in the manual pass, exactly like the existing untested `makeBlankBase`.
 
 Two behaviour changes: an empty-canvas drop no longer uploads the flattened composite as the base (it becomes a blank board at the PSD's own size), and a board drop maps layers through a uniform fit rect instead of stretching them.
 
@@ -1268,24 +1270,31 @@ Two behaviour changes: an empty-canvas drop no longer uploads the flattened comp
 Create `src/components/studio/kv-generator/makeBlankBase.test.ts`:
 
 ```ts
-import { describe, expect, it } from "vitest";
-import { makeBlankBaseAt } from "./makeBlankBase";
+import { describe, expect, it } from "bun:test";
+import { blankBaseDimensions } from "./makeBlankBase";
 
-describe("makeBlankBaseAt", () => {
-  it("produces a PNG File named after the caller", async () => {
-    const file = await makeBlankBaseAt(1080, 1351, { fileName: "kv.png" });
-    expect(file.name).toBe("kv.png");
-    expect(file.type).toBe("image/png");
+describe("blankBaseDimensions", () => {
+  it("passes through a size already under the ceiling", () => {
+    expect(blankBaseDimensions(1080, 1351)).toEqual({ w: 1080, h: 1351 });
   });
 
-  it("caps oversized PSDs to the 4096 ceiling, preserving aspect", async () => {
-    const file = await makeBlankBaseAt(8192, 4096);
-    // Name encodes the dimensions actually used, so the cap is observable
-    // without a real canvas (jsdom has no 2D context).
-    expect(file.name).toContain("4096x2048");
+  it("caps the long edge at 4096, preserving aspect", () => {
+    expect(blankBaseDimensions(8192, 4096)).toEqual({ w: 4096, h: 2048 });
+  });
+
+  it("caps on height when the PSD is portrait", () => {
+    expect(blankBaseDimensions(4096, 8192)).toEqual({ w: 2048, h: 4096 });
+  });
+
+  it("never returns a zero dimension", () => {
+    const d = blankBaseDimensions(10000, 1);
+    expect(d.w).toBeGreaterThan(0);
+    expect(d.h).toBeGreaterThan(0);
   });
 });
 ```
+
+Note the `bun:test` import: files under `src/components/` follow their siblings (`KvPsdImportOverlay.test.tsx`), while `src/lib/` tests import from `vitest`.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
@@ -1293,7 +1302,7 @@ describe("makeBlankBaseAt", () => {
 cd web && bun test src/components/studio/kv-generator/makeBlankBase.test.ts
 ```
 
-Expected: FAIL — `makeBlankBaseAt` is not exported.
+Expected: FAIL — `blankBaseDimensions` is not exported.
 
 - [ ] **Step 3: Add `makeBlankBaseAt`**
 
@@ -1303,6 +1312,22 @@ Append to `makeBlankBase.ts`:
 /** Ceiling for a generated base board — matches the cap PSD composites already
  *  use. Anything larger only bloats the upload. */
 const MAX_BASE_DIM = 4096;
+
+/** Pixel size a blank base board should use for a PSD of the given size:
+ *  aspect preserved, long edge capped at MAX_BASE_DIM. Pure and exported so
+ *  it can be tested — jsdom implements neither getContext("2d") nor toBlob,
+ *  so makeBlankBaseAt itself is not unit-testable. */
+export function blankBaseDimensions(
+  width: number,
+  height: number
+): { w: number; h: number } {
+  const maxDim = Math.max(width, height);
+  const scale = maxDim > MAX_BASE_DIM ? MAX_BASE_DIM / maxDim : 1;
+  return {
+    w: Math.max(1, Math.round(width * scale)),
+    h: Math.max(1, Math.round(height * scale)),
+  };
+}
 
 /**
  * A solid-white PNG at explicit pixel dimensions (aspect preserved, capped at
@@ -1315,10 +1340,7 @@ export async function makeBlankBaseAt(
   height: number,
   opts?: { fileName?: string }
 ): Promise<File> {
-  const maxDim = Math.max(width, height);
-  const scale = maxDim > MAX_BASE_DIM ? MAX_BASE_DIM / maxDim : 1;
-  const w = Math.max(1, Math.round(width * scale));
-  const h = Math.max(1, Math.round(height * scale));
+  const { w, h } = blankBaseDimensions(width, height);
 
   const canvas = document.createElement("canvas");
   canvas.width = w;
