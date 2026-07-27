@@ -89,15 +89,23 @@ Each is a pure function over ag-psd structures — unit-testable without a brows
 `KvGeneratorLayout` keeps calling `importPsd()` with essentially the same signature.
 
 **Key seam: parse with `useImageData: true`.** ag-psd then returns raw `PixelData`
-(`{ width, height, data: Uint8ClampedArray }`) instead of canvases, for layers *and* masks. That
-makes mask/clipping/effect compositing **pure array math with no DOM**, which matters concretely:
-jsdom has no working 2D canvas context, and the existing tests only pass because they stub
-`initializeCanvas` (`importPsd.test.ts:220`) — canvases in tests hold no real pixels, so
-`getImageData` assertions would be impossible. Raw buffers are directly assertable.
+(`{ width, height, data: Uint8ClampedArray }`) instead of canvases, for layers *and* masks, making
+mask/clipping/effect compositing **pure array math with no DOM**.
 
-It also avoids a real correctness hazard: ag-psd documents `useImageData` as the way to avoid
-"canvas premultiplied alpha corrupting image data", which is exactly the kind of corruption that
-would silently degrade a masked layer's edges.
+The reason is correctness, not testability: ag-psd documents `useImageData` as the way to avoid
+"canvas premultiplied alpha corrupting image data" — exactly the corruption that would silently
+degrade a masked layer's soft edges. Pure buffers are also simpler and faster to assert on than
+canvases.
+
+**Correction to an earlier draft of this spec:** it claimed jsdom here has no working 2D canvas
+context, citing the `initializeCanvas` stub in `importPsd.test.ts:220`. That was wrong — probed
+2026-07-27, `getContext("2d")` returns a real context and `getImageData` round-trips actual pixels
+under `bun test`. That stub patches ag-psd's *internal* factory (used by `writePsd` for fixtures),
+not DOM canvas, and its accompanying comment is stale. Canvas-based bake logic would have been
+testable; `useImageData` is still the better choice, on the premultiplied-alpha grounds above.
+
+The one real canvas caveat in tests: `canvas.toBlob()` returns a Blob from jsdom's window realm,
+which fails `instanceof Blob` against the test file's global `Blob`.
 
 `bake.ts` therefore takes and returns `PixelData`. Only `index.ts` touches a canvas, to encode the
 final PNG.
@@ -369,8 +377,9 @@ future move to real nodes is a renderer-only change with no data migration.
 modes and effects, so every new behaviour is testable without fixture binaries.
 
 Because `bake.ts` operates on raw `PixelData`, its tests need **no canvas and no DOM** — they build
-`Uint8ClampedArray` buffers directly and assert on the output array. This is the main reason for the
-`useImageData` decision: under the current jsdom setup, canvas-based bake logic would be untestable.
+`Uint8ClampedArray` buffers directly and assert on the output array. (Canvas-based tests would also
+work here — see the corrected note above — but raw buffers are simpler and avoid the premultiplied
+-alpha hazard `useImageData` exists to dodge.)
 
 - `blend.ts` — exhaustive over the `BlendMode` union, so a future ag-psd upgrade that adds a mode
   fails the test rather than silently falling back to normal.
