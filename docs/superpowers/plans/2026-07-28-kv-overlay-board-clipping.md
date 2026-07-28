@@ -14,7 +14,13 @@
 - **The real build gate is `bun run build`.**
 - **Clipping is VISUAL ONLY.** Overlay geometry must not change. The server accepts `x`/`y` from `-5..5` and sizes up to `5`, PSD import deliberately preserves layers that bleed past the artboard, and a user must still be able to drag a clipped layer back into view. Never clamp or rewrite stored coordinates.
 - **The camera is a `setViewportTransform`** (`KvFabricCanvas.tsx:1010`), so Fabric objects hold world coordinates and pan/zoom is applied by the transform. A clip rect expressed in the same world space as the object's `left`/`top` therefore follows the camera for free — do NOT add per-frame camera syncing.
-- **Branch:** `feature/daffa/vc-kv-psd-import-fidelity` is pushed and in sync. Create a NEW branch off the latest `origin/develop` for this work: `feature/daffa/vc-kv-overlay-board-clipping`.
+- **Branch:** `feature/daffa/vc-kv-overlay-board-clipping`, already created and **branched off `feature/daffa/vc-kv-psd-import-fidelity`** — NOT off `develop`.
+
+  This work depends on two things that live on the PSD branch and have not merged to `develop` yet:
+  1. `renderBoardStage` renders base + overlays on a **single Konva Layer**. On `develop` they are still two Layers. Task 2's "do not restructure the layers" instruction only makes sense against the merged version.
+  2. Task 1 keys the seven overlay-assignment sites off `globalCompositeOperation: resolveBlendMode(...)`, which only exists on the PSD branch.
+
+  Consequence: this branch's PR must merge **after** the PSD import PR, or be folded into it.
 
 ---
 
