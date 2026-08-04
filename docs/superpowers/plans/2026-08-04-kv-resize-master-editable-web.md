@@ -375,7 +375,11 @@ Expected: no new type errors on those two files; 244+ pass / 0 fail.
 cd web
 for f in src/components/studio/kv-generator/KvGeneratorLayout.tsx src/components/studio/kv-generator/KvResizeCanvas.tsx; do
   cur=$(bunx eslint "$f" 2>&1 | grep -cE ' error | warning ')
-  git show HEAD:"$f" > /tmp/base.tsx; base=$(bunx eslint /tmp/base.tsx 2>&1 | grep -cE ' error | warning ')
+  # NOTE: the baseline copy must live INSIDE web/ — eslint ignores paths
+  # outside its project root and silently reports nothing for /tmp files.
+  git show HEAD:"$f" > src/__lint_baseline.tsx
+  base=$(bunx eslint src/__lint_baseline.tsx 2>&1 | grep -cE ' error | warning ')
+  rm -f src/__lint_baseline.tsx
   echo "$f now=$cur head=$base"
 done
 ```
