@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Tests run with `bun test` from `web/`, NOT `bunx vitest`. Test files are colocated as `*.test.ts` / `*.test.tsx`.
-- Component tests under `src/components/studio/kv-generator/` currently fail on a pre-existing `@testing-library`/bun issue (`screen` requires a global document). Do NOT add component tests; put logic in pure modules and unit-test those. Baseline before this work: **398 pass / 121 fail** in that directory — do not increase the failure count.
+- Component tests under `src/components/studio/kv-generator/` currently fail on a pre-existing `@testing-library`/bun issue (`screen` requires a global document). Do NOT add component tests; put logic in pure modules and unit-test those. Baseline on this branch: **397 pass / 122 fail** in that directory — do not increase the failure count. (Verified at the branch base; an earlier 398/121 figure predated the rebase onto origin/develop and is stale.)
 - `bunx tsc --noEmit -p tsconfig.json` reports many pre-existing errors across unrelated files. Only assert that **files touched by this plan** contribute no new errors.
 - Lint: this repo's prettier config disagrees with much committed formatting. Compare each touched file against its baseline (`git show HEAD:<path>` into a temp file, lint both) and do not increase its error count. Never bulk-reformat a file you are editing.
 - `docUpdateOverlay` accepts a patch over EXACTLY these fields: `x`, `y`, `width`, `height`, `rotation`, `z`, `board_generation_id`, `payload`. Never emit `id`, `type`, or `updated_at` in a patch.
@@ -489,7 +489,7 @@ cd web && bunx tsc --noEmit -p tsconfig.json 2>&1 | grep -E 'KvResizeOriginalRow
 cd web && bun test src/components/studio/kv-generator/ 2>&1 | tail -4
 ```
 
-Expected: no new type errors; failure count still **121** (the pre-existing RTL baseline), pass count ≥ 398.
+Expected: no new type errors; failure count still **122** (the pre-existing RTL baseline), pass count ≥ 397.
 
 - [ ] **Step 5: Commit**
 
@@ -587,7 +587,7 @@ cd web && bunx tsc --noEmit -p tsconfig.json 2>&1 | grep KvResizeCanvas
 cd web && bun test src/components/studio/kv-generator/ 2>&1 | tail -4
 ```
 
-Expected: no new type errors; 121 failures, unchanged.
+Expected: no new type errors; 122 failures, unchanged.
 
 - [ ] **Step 6: Commit**
 
@@ -762,7 +762,7 @@ cd web && bunx tsc --noEmit -p tsconfig.json 2>&1 | grep -E 'KvResizeCanvas|KvRe
 cd web && bun test src/components/studio/kv-generator/ 2>&1 | tail -4
 ```
 
-Expected: no new type errors; 121 failures, unchanged.
+Expected: no new type errors; 122 failures, unchanged.
 
 - [ ] **Step 5: Commit**
 
