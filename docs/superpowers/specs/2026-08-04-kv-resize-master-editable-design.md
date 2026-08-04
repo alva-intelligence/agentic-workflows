@@ -144,10 +144,42 @@ so the mixed population is visible rather than silent.
 
 ## What comes free
 
-Undo (doc undo already covers overlays — "boards AND overlays are both
-doc-authoritative", `KvGeneratorLayout.tsx:662`), persistence via the existing
-debounced autosave, live collaborator broadcast, and the cascade to inheriting
-tiles.
+Persistence via the existing debounced autosave, live collaborator broadcast,
+and the cascade to inheriting tiles.
+
+### Undo does NOT come free
+
+The doc undo manager does cover overlays — `Y.UndoManager([boards, overlays])`
+on one timeline (`KvGeneratorLayout.tsx:662`) — but Cmd+Z on the Resize tab does
+not reach it:
+
+```js
+const api = canvasModeRef.current === "resize"
+  ? resizeUndoApiRef.current   // per-tile REST history
+  : docUndoApiRef.current;     // doc timeline
+```
+
+Left alone, a master edit would land on the doc timeline while Cmd+Z reverted
+the user's last *tile* action instead — silently undoing something unrelated.
+That is worse than having no undo at all.
+
+Routing to the doc unconditionally on Resize is not an option either: tile
+snapshots are REST state, not doc state, so the doc undo manager cannot revert
+them and every tile edit would become un-undoable.
+
+**Decision — route by what was last touched.** The Resize surface tracks whether
+its most recent edit was on the master or on a tile, and Cmd+Z dispatches to the
+doc undo API or the tile history accordingly. Cmd+Z therefore always undoes the
+action just performed.
+
+This reintroduces a per-domain routing ref of the kind M3 Stage 5 retired, but
+along a different axis: that one split doc domains (boards vs overlays), which
+genuinely belong on one timeline. This one splits two different *storage*
+backends (Yjs doc vs per-tile REST), which cannot share a timeline.
+
+The marker is set wherever the edit is committed — the master commit handler and
+`commitTileOverlays` — not inferred from selection, so it stays correct when a
+gesture and the selection disagree.
 
 ## Testing
 
@@ -163,9 +195,13 @@ Component coverage stays thin — every component test under
 `src/components/studio/kv-generator/` currently fails on a pre-existing
 `@testing-library`/bun issue unrelated to this work.
 
+Undo routing is asserted at the unit level where possible (the domain marker is
+set by both commit paths) and verified manually otherwise.
+
 Manual verification: move an overlay on the master and confirm every
 un-edited tile follows; confirm a hand-edited tile does not; confirm Cmd+Z
-undoes the master edit; open Craft and confirm the overlay moved there too;
+undoes the master edit and not the previous tile edit, then edit a tile and
+confirm Cmd+Z undoes THAT and not the master; open Craft and confirm the overlay moved there too;
 run Push to all tiles and confirm every tile re-derives.
 
 ## Risks
@@ -173,8 +209,9 @@ run Push to all tiles and confirm every tile re-derives.
 - **Delete cascades.** Deleting on the master removes the overlay from the Craft
   KV and from every inheriting tile at once. It looks identical to deleting on a
   tile but is far broader. Accepted as a consequence of full parity, and it
-  takes **no extra confirmation**: the deletion is a doc op, so Cmd+Z restores
-  it along with every tile that re-derived. Push to all tiles *does* confirm,
+  takes **no extra confirmation** — but only because the undo routing above
+  makes Cmd+Z restore it along with every tile that re-derived. If that routing
+  is dropped, this decision must be revisited. Push to all tiles *does* confirm,
   because clearing snapshots discards per-tile work that undo does not recover.
 - **Two homes for authoring.** Adding text on the master and adding it in Craft
   are now the same operation in two places, and can drift.
