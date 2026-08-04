@@ -85,11 +85,6 @@ applyClickSelection(current: string[], id: string, additive: boolean): string[]
 
 /** Eligible overlays on a tile: not locked, not hidden. */
 selectableOverlayIds(overlays: StudioOverlay[]): string[]
-
-/** Same delta applied to every member of a group drag. */
-translateOverlays(
-  overlays: StudioOverlay[], ids: string[], dx: number, dy: number,
-): StudioOverlay[]
 ```
 
 `applyClickSelection` never admits an id twice, and toggling the last selected
@@ -107,10 +102,20 @@ selection and cannot be dragged as part of a group.
 `transformer.nodes(selectedIds.map(...).filter(Boolean))`. Konva draws one
 bounding box across the selection and handles group scale/rotate itself.
 
-**Group drag.** Konva does not move siblings. On `dragmove` of a selected node,
-its delta since `dragstart` is applied to the other selected nodes for the live
-preview; on `dragend` every member is committed through a single
-`commitTileOverlays` call, so a group move is one undo entry.
+**Group drag.** *(Corrected during implementation.)* The design originally
+assumed Konva does not move siblings and planned hand-written delta
+propagation. Wrong: `Transformer._proxyDrag` calls `startDrag` on every
+attached node, so each member becomes a real Konva drag and follows the
+pointer natively — and, crucially, **each member fires its own `dragend` on
+mouseup**. The implementation therefore does no repositioning of its own.
+It keeps a per-gesture guard (opened on the first `dragstart`, closed by the
+first `dragend`): the first `dragend` reads every selected node's live
+position and folds them into a single `commitTileOverlays` call — one undo
+entry — while the remaining `dragend`s of the same gesture are swallowed.
+Without the guard, each extra `dragend` recomputed a single-node commit over
+the stale props array and snapped the other members back to their pre-drag
+positions. A planned `translateOverlays` helper became unnecessary and was
+removed.
 
 **Transform commit.** `onTransformEnd` iterates the bound nodes instead of the
 single node, converting each back to normalized coords, and commits once.
@@ -172,9 +177,6 @@ hidden layer present and confirm neither is selected.
 
 ## Risks
 
-- **Group drag is the only genuinely new math.** Delta propagation must use the
-  node's own dragstart origin, not the pointer, or members drift apart on fast
-  drags.
 - **Undo granularity.** Every group operation must land as exactly one
   `commitTileOverlays` call; committing per member would make one drag take N
   undos to reverse.
