@@ -68,7 +68,7 @@ export type KvMotionSnapshot = {
   target?: {
     platform_id: PlatformId | "native";
     label: string;                  // "Instagram Landscape"
-    source: "resize" | "master";    // which constructor built the base
+    source: "resize" | "master" | "native"; // which constructor built the base
   };
 };
 ```
