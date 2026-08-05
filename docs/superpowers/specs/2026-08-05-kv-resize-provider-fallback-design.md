@@ -122,7 +122,10 @@ downstream Gemini error.
 
 ### 4. Configuration
 
-`KV_RESIZE_IMAGE_PROVIDER` in `app/utils/config.py`:
+`KV_RESIZE_AI_PROVIDER` in `app/utils/config.py`. One switch governs both KV
+Resize OpenAI call sites — the `gpt-image-2` image edit and the `gpt-4o-mini`
+vision prepass — since `credit_balance_exhausted` is org-wide and hits both
+under one credit balance:
 
 | Value | Behavior |
 |-------|----------|
