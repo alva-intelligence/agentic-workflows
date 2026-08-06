@@ -227,6 +227,70 @@ rejecting a stored derivative. `updated_at` moves for reasons other than layer
 edits, and 14 rows is a small sample; the conclusion is directionally supported,
 not proven.
 
+## Phase 2 — revised after Phase 1 shipped (2026-08-06)
+
+**The on-demand compositor in §3 is not being built. Phases 2 and 3 above are
+superseded by this section.** Three findings changed the picture:
+
+**ZIP download already works.** `grep download-zip` over `web/src` returns
+nothing — the server endpoint is never called. The UI's "Download all" is
+`KvResizeCanvas.downloadAll()`, which flattens each tile in the browser and zips
+with JSZip. Phase 1 already made that path work for a null base, so the file
+delivery this spec set out to restore was restored as a side effect. The server
+`downloadZip` endpoint remains, unused by web and still filtering on
+`whereNotNull('image_url')`; it is left alone.
+
+**Motion is no longer image-to-video.** It was revamped to deterministic
+client-side overlay animation (`motion-projects` + Mediabunny encode in the
+browser). `KvMotionProject` copies overlays at creation, so a layer-composed KV
+animates correctly. The legacy `files/{file}/motions` route and
+`GenerateKvMotionJob` still exist in api but web no longer calls them.
+
+**A server-side compositor is more expensive than this spec assumed.**
+`stamp_logo` is anchor-and-scale based, so it offers no reusable normalised
+coordinate mapping. Across all of ai-service: `ImageChops` has zero matches,
+`.rotate(` has zero matches. Blend modes, rotation and opacity would all be
+written from scratch. Worse, `fontFamily` on a text overlay is a brand-font id
+(`bf_<ulid>`) or a next/font family string and `fontSize` is a fraction of board
+height — so faithful compositing means porting the brand-font system to Python.
+That is a fifth overlay renderer, and four have already drifted.
+
+### Decision: gate, do not composite
+
+Two consumers still hand a blank canvas to a model: Chat/Craft
+(`ThreadController.php:752`) and Upscale (master and tile). For a layer-composed
+KV both are **disabled** rather than repaired. Chat stays available as chat —
+the user can ask and discuss — but produces no new image.
+
+This reuses machinery that already exists. `metadata.craft_supported = false`
+already means "this base cannot be crafted", already drives
+`isUploadedBaseUnsupported()` in `craftBaseRatio.ts`, and already yields
+`craftStatus: "disabled"` plus an inline explanation and a hidden "Start
+Crafting" pill.
+
+Three parts:
+
+1. **Mark.** A layer-composed import sets `craft_supported = false`, plus a
+   companion `craft_blocked_reason` (`"extreme_ratio"` | `"layer_composed"`).
+   The reason field is not optional politeness: without it a PSD user is told
+   their aspect ratio is too extreme, which is false and unactionable.
+2. **Enforce server-side.** Today `craft_supported` gates the web UI only — the
+   api comment says so outright. A request that slips past the UI still reaches
+   the model with a blank canvas, which is the bug itself. api must refuse an
+   image-generating turn, and refuse upscale, when the base generation is
+   layer-composed.
+3. **Explain in web.** Reuse the existing disabled path; only the copy changes,
+   keyed off the reason.
+
+### Deliberately not solved
+
+Making Craft work on a layer-composed KV. It is achievable — flatten in the
+browser, send the composite, let the model return a new version — but the result
+is a single flat image, so the user's layers stop being editable. That is
+inherent to sending a composite to an image model, not a detail of the
+implementation. Rejected for now as a bigger product decision; revisit only with
+a design that edits one layer at a time.
+
 ## Related defects (out of scope, tracked separately)
 
 **No same-size short-circuit.** A 1080×1920 → 1080×1920 AI resize is not a
