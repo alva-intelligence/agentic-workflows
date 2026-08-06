@@ -111,7 +111,7 @@ compositor, so the two can never disagree about what a KV is.
 When the parent generation is layer-composed, `ProcessKvResizeExportJob` does
 not call ai-service. The export row is completed directly with:
 
-- `overlays` — the projected layer set for the target dimensions
+- `overlays` — `NULL`
 - `image_url` — `NULL` (assembled on demand; see §3)
 - `model` — `null`, and no credit charge
 
@@ -126,11 +126,23 @@ full source canvas. If no layer satisfies both, no cover-scaling happens and
 every layer is projected normally — a KV with no true background is a valid
 input, not an error.
 
-The projected set is stored as the tile's overlay snapshot, which
-`resolveTileOverlays` (`overlayAspect.ts:441`) already prefers over projecting
-from the master. Per-tile edits therefore work with no further change, and the
-existing same-aspect fast path (`overlayAspect.ts:466`) keeps an identical-size
-resize pixel-exact.
+**Projection is not persisted, and not computed on the server.** The layout
+logic lives in web TypeScript, while the resize job runs in PHP — so the job
+must not attempt to produce a projected layer set. It does not need to:
+`resolveTileOverlays` (`overlayAspect.ts:441`) already projects the master's
+overlays onto a tile at render time whenever that tile has no snapshot of its
+own. A tile created with `overlays = NULL` therefore renders correctly with no
+server-side projection code at all.
+
+A snapshot is written only when the user actually edits layers on that tile,
+through the PATCH endpoint that already exists
+(`KvResizeExportController.php:183`). From then on `resolveTileOverlays` prefers
+the snapshot, so the user's per-tile edits survive. Storing a projection
+up-front would be worse than useless: it would freeze the layout and stop the
+tile re-projecting if the master changes.
+
+The existing same-aspect fast path (`overlayAspect.ts:466`) keeps an
+identical-size resize pixel-exact.
 
 Credit gating: the `check.credits:1` middleware on the route stays, but no
 charge is written for a layer-composed resize, because no model runs.
