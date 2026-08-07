@@ -79,7 +79,7 @@ is not infinitely better — 0.00 would mean "did nothing but resample".
 | `clarity-upscaler` | Deleted — no configuration of it can meet the requirement |
 | User-facing sizes | `2K` / `4K`, replacing `1.5×` / `2×` |
 | "2K"/"4K" means | **Long edge** = 2048 / 4096, aspect preserved |
-| Cost guardrail | None — priced into credits instead |
+| Cost guardrail | Confirmation dialog on 4K only |
 | Credit metering | New `chargeUpscale()`, priced on output megapixels |
 
 ### Engine parameters
@@ -242,8 +242,42 @@ the TS side carries a comment naming the Python function as source of truth,
 and its tests pin the exact credit values above so a divergence fails loudly
 rather than silently mispricing the UI.
 
-A PostHog event fires on target selection, per the standing rule that
-analytics ship with the feature.
+#### 4K confirmation
+
+4K costs ~4× a 2K export and ~16× an image generation, reached by one click in
+a download dropdown. It gets a confirmation step; 2K does not — friction on
+every export would cost more than it saves at 20 credits.
+
+The dialog uses the existing `BaseModal` frndos component and states the
+target, the output dimensions, the credit estimate, and the current balance:
+
+```
+Upscale to 4K?
+
+  Output      4096 × 3277
+  Cost        ~83 credits
+  Balance     1,240 credits
+
+  [ Cancel ]  [ Upscale ]
+```
+
+`Cancel` takes initial focus. There is no "don't ask again" — an opt-out on a
+guardrail this new would hide the signal we are adding it to collect.
+
+The dialog also **blocks** rather than warns when the workspace cannot afford
+it. `useEffectiveCredits()` exposes `canSpend(cost)`; when it returns false the
+confirm button is disabled with an insufficient-credit message. Without this,
+a doomed job still runs and we still pay Replicate for output nobody is
+billed for.
+
+Rows that render **Free** skip the dialog entirely — nothing is being spent.
+
+#### Analytics
+
+PostHog events fire on target selection, and on the 4K dialog being shown,
+confirmed, and cancelled. The confirm/cancel split is the measurement that
+tells you whether this guardrail is doing anything or is pure friction; without
+it there is no way to revisit the decision with evidence.
 
 ## Testing
 
@@ -263,6 +297,9 @@ All logic is pure and testable without live calls:
 - `estimateUpscaleCredits` returns 20/21 and 79/83 for the real source sizes
   in the table above, and `null` (→ "Free") when no run is needed. These
   values are pinned so a Python-side change that isn't mirrored fails here.
+- the 4K dialog appears for 4K, not for 2K, and not for a Free row
+- confirming starts the job; cancelling starts nothing
+- the confirm button is disabled when `canSpend(estimate)` is false
 
 Fidelity itself is not unit-testable. The evidence table above is the
 regression baseline; re-run the bake-off if the engine or `creativity`
