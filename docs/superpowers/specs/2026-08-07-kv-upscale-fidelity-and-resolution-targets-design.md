@@ -149,9 +149,15 @@ video ~69. A 4K upscale therefore becomes the most expensive single operation
 in the KV studio. That is accepted — it reflects real cost, and the multiplier
 is env-tunable if it proves too steep.
 
-**The rate is keyed on target, not engine.** If the primary fails over to
-Real-ESRGAN the user is billed the same; they should not pay differently for
-our outage, and the fallback is rare enough that the rounding favours us.
+**Billing measures the output the engine actually produced**, not the target
+or the plan's projection. Superseded the original "keyed on target, not
+engine" rule during PR #167 review: the plan projects clarity-pro's
+enum-overshot size and is fixed before either engine runs, so billing from it
+charged a fallback for a run that never happened — 25.2 MP (84 credits)
+against real-esrgan's actual ~13.2 MP (44 credits) on a 1114×1412 source at
+4K. Measuring the decoded output keeps the original intent (users never pay
+more because our primary failed) while being accurate rather than flat: a
+fallback now bills less.
 
 Both `kv_generation_upscale` and `kv_resize_tile_upscale` cost types are
 wired. The existing `batch_identifier` idempotency guard is reused unchanged.
