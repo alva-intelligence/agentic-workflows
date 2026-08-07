@@ -142,7 +142,7 @@ the standing 1 credit = $0.01.
 | Target | Output | Cost | ×1.1 | Credits |
 |---|---|---|---|---|
 | 2K | ~6 MP | $0.18 | $0.198 | **20** |
-| 4K | ~25 MP | $0.75 | $0.825 | **83** |
+| 4K | ~24–25 MP | $0.72–0.75 | $0.79–0.83 | **79–84** |
 
 For context, staging averages: image generation ~5 credits, resize export ~8,
 video ~69. A 4K upscale therefore becomes the most expensive single operation
@@ -153,7 +153,7 @@ is env-tunable if it proves too steep.
 Real-ESRGAN the user is billed the same; they should not pay differently for
 our outage, and the fallback is rare enough that the rounding favours us.
 
-Both `kv_generation_upscale` and `kv_resize_export_upscale` cost types are
+Both `kv_generation_upscale` and `kv_resize_tile_upscale` cost types are
 wired. The existing `batch_identifier` idempotency guard is reused unchanged.
 
 ## Design
@@ -220,7 +220,7 @@ which the user should see *before* clicking:
 
 ```
 2K · 2048×1638   ~20 credits
-4K · 4096×3277   ~83 credits
+4K · 4096×3277   ~84 credits
 ```
 
 When the source long edge already meets the target, no Replicate run happens,
@@ -234,7 +234,9 @@ selection: pick the smallest `scale_factor` reaching the target, multiply
 source megapixels by `sf²`, apply `$0.03/MP × 1.1`, divide by `$0.01`.
 
 Across real KV sizes (992–1536 px long edge) this lands at 20–21 credits for
-2K and 79–83 for 4K, which is why fixed `~` labels are honest.
+2K and 79–84 for 4K. The UI computes per KV, so each row shows its own
+exact figure; the `~` reflects that the model's output is estimated, not that
+the number is a guess.
 
 **Drift risk is real and mitigated deliberately.** The selection logic now
 exists in Python and TypeScript. It lives in exactly one file per language,
@@ -255,7 +257,7 @@ target, the output dimensions, the credit estimate, and the current balance:
 Upscale to 4K?
 
   Output      4096 × 3277
-  Cost        ~83 credits
+  Cost        ~84 credits
   Balance     1,240 credits
 
   [ Cancel ]  [ Upscale ]
@@ -294,7 +296,7 @@ All logic is pure and testable without live calls:
   guard, and the `batch_identifier` idempotency guard
 - a completed upscale writes exactly one `cost_history` row (the current
   bug is that it writes none)
-- `estimateUpscaleCredits` returns 20/21 and 79/83 for the real source sizes
+- `estimateUpscaleCredits` returns 20/21 and 79/80/84 for the real source sizes
   in the table above, and `null` (→ "Free") when no run is needed. These
   values are pinned so a Python-side change that isn't mirrored fails here.
 - the 4K dialog appears for 4K, not for 2K, and not for a Free row
