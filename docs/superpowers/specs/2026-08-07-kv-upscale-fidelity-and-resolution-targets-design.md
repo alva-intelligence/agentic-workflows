@@ -79,7 +79,8 @@ is not infinitely better — 0.00 would mean "did nothing but resample".
 | `clarity-upscaler` | Deleted — no configuration of it can meet the requirement |
 | User-facing sizes | `2K` / `4K`, replacing `1.5×` / `2×` |
 | "2K"/"4K" means | **Long edge** = 2048 / 4096, aspect preserved |
-| Cost guardrail | None for v1 |
+| Cost guardrail | None — priced into credits instead |
+| Credit metering | New `chargeUpscale()`, priced on output megapixels |
 
 ### Engine parameters
 
@@ -110,6 +111,50 @@ deliberately: the current cheap result is unusable.
 
 The per-`(parent, target)` cache means each KV is upscaled at most once per
 size, so repeat downloads stay free.
+
+### Credit metering
+
+**Upscale is unmetered today.** The wiring looks present —
+`KvGenerationUpscaleInternalController` injects `KvCreditMeteringService` and
+calls `charge(costType: 'kv_generation_upscale', …)` — but it is guarded on
+`! empty($validated['token_usage'])`, and ai-service's `post_completed()`
+never sends that key. Staging: **10 completed upscales, 0 cost-history rows**,
+while `kv_image_generation` has 256 and `kv_resize_export` 187.
+
+The cause is structural. `charge()` prices from token counts via
+`PricingHelper::calculateDetailedCostsAndCreditsAgno`. Replicate bills
+compute-seconds or output megapixels, so there is no token count to send and
+the existing path cannot express the cost.
+
+Motion already solved this shape: `chargeVideo()` prices from duration +
+dimensions and persists `video_params`. Upscale gets the same treatment
+against its own cost driver.
+
+**`chargeUpscale(user, workspace, costType, toolName, batchId, model,
+outputMegapixels, target)`** — no new plumbing needed, because
+`post_completed()` already sends `width` and `height`, and
+`width × height` *is* the billable unit.
+
+Rate: `$0.03` per output megapixel × `credits.upscale_multiplier`
+(env-configurable, default `1.1`, mirroring `credits.video_multiplier`), at
+the standing 1 credit = $0.01.
+
+| Target | Output | Cost | ×1.1 | Credits |
+|---|---|---|---|---|
+| 2K | ~6 MP | $0.18 | $0.198 | **20** |
+| 4K | ~25 MP | $0.75 | $0.825 | **83** |
+
+For context, staging averages: image generation ~5 credits, resize export ~8,
+video ~69. A 4K upscale therefore becomes the most expensive single operation
+in the KV studio. That is accepted — it reflects real cost, and the multiplier
+is env-tunable if it proves too steep.
+
+**The rate is keyed on target, not engine.** If the primary fails over to
+Real-ESRGAN the user is billed the same; they should not pay differently for
+our outage, and the fallback is rare enough that the rounding favours us.
+
+Both `kv_generation_upscale` and `kv_resize_export_upscale` cost types are
+wired. The existing `batch_identifier` idempotency guard is reused unchanged.
 
 ## Design
 
@@ -143,6 +188,9 @@ triggers (rate limit, transient 5xx/timeout, 404/401/403) are unchanged.
 Request schemas in `kv_upscale` and `kv_resize_tile_upscale` change
 `factor: float` → `target: Literal["2k", "4k"]`. Output filenames go from
 `{upscale_id}-{factor}x.png` to `{upscale_id}-{target}.png`.
+
+`post_completed()` gains `target` so the api can price without re-deriving it.
+`width`/`height` are already sent and become the billable unit.
 
 ### api
 
@@ -183,6 +231,10 @@ All logic is pure and testable without live calls:
 - downscale lands the exact target long edge, aspect preserved
 - fallback receives the correct arbitrary ratio
 - `face_enhance` is never enabled
+- `chargeUpscale()` credit maths at both targets, the zero/negative-megapixel
+  guard, and the `batch_identifier` idempotency guard
+- a completed upscale writes exactly one `cost_history` row (the current
+  bug is that it writes none)
 
 Fidelity itself is not unit-testable. The evidence table above is the
 regression baseline; re-run the bake-off if the engine or `creativity`
