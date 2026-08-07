@@ -214,8 +214,33 @@ Request validation and the API resource swap `factor` → `target`.
 `UPSCALE_TARGETS`. Both `KvDownloadDropdown` and `KvTileDownloadDropdown`
 consume the shared type, so both surfaces change together.
 
-Rows render the target plus its computed dimensions (`4K · 3277×4096`) —
-long-edge sizing is not self-evident on a portrait KV.
+Rows render the target, its computed dimensions, and a credit estimate —
+long-edge sizing is not self-evident on a portrait KV, and 4K costs ~4× 2K,
+which the user should see *before* clicking:
+
+```
+2K · 2048×1638   ~20 credits
+4K · 4096×3277   ~83 credits
+```
+
+When the source long edge already meets the target, no Replicate run happens,
+so the row reads **Free** instead of an estimate. This is real: it steers
+users toward variants that cost nothing.
+
+The estimate is computed client-side — `kv_generations` has no `width`/
+`height` columns, so only the browser knows the source dimensions.
+`estimateUpscaleCredits(sourceW, sourceH, target)` mirrors the ai-service
+selection: pick the smallest `scale_factor` reaching the target, multiply
+source megapixels by `sf²`, apply `$0.03/MP × 1.1`, divide by `$0.01`.
+
+Across real KV sizes (992–1536 px long edge) this lands at 20–21 credits for
+2K and 79–83 for 4K, which is why fixed `~` labels are honest.
+
+**Drift risk is real and mitigated deliberately.** The selection logic now
+exists in Python and TypeScript. It lives in exactly one file per language,
+the TS side carries a comment naming the Python function as source of truth,
+and its tests pin the exact credit values above so a divergence fails loudly
+rather than silently mispricing the UI.
 
 A PostHog event fires on target selection, per the standing rule that
 analytics ship with the feature.
@@ -235,6 +260,9 @@ All logic is pure and testable without live calls:
   guard, and the `batch_identifier` idempotency guard
 - a completed upscale writes exactly one `cost_history` row (the current
   bug is that it writes none)
+- `estimateUpscaleCredits` returns 20/21 and 79/83 for the real source sizes
+  in the table above, and `null` (→ "Free") when no run is needed. These
+  values are pinned so a Python-side change that isn't mirrored fails here.
 
 Fidelity itself is not unit-testable. The evidence table above is the
 regression baseline; re-run the bake-off if the engine or `creativity`
