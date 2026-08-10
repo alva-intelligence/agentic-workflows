@@ -15,7 +15,7 @@
 - Tests run with `bun test` from `web/` (bunfig preloads jest-dom). Do **not** use `bunx vitest`.
 - The real gate is `bun run build` — `bun run build` does not type-check on its own, so also run `bunx tsc --noEmit` before the final commit of each task.
 - Test files are colocated next to the module they test (`foo.ts` → `foo.test.ts`).
-- Downloaded output must be byte-identical before and after this plan, with the single exception recorded in Task 6/7 (legacy text fallback on the two Craft canvases).
+- Downloaded output must be byte-identical before and after this plan, with the two exceptions recorded below (the legacy text fallback in Tasks 6/7, and the degenerate text cases in Task 2). Both are stated up front so an implementer never "fixes" a diff by adjusting a test.
 - Follow the surrounding comment style: these files carry long explanatory comments stating *why* a rule exists. Preserve those comments when you move the code they describe — move the comment with it.
 - Do not change any overlay's persisted shape (`StudioOverlay`). This plan touches rendering only.
 
@@ -32,6 +32,26 @@ Text overlays with no explicit `payload.fontSize` (created before custom fonts l
 | `KvKonvaCanvas.tsx:1876` (Craft fallback) | `0.8 ×` box height |
 
 **Decision: full box height wins**, because downloads are artifacts that already exist in the wild and must not change. The visible consequence is that legacy text on the two Craft canvases gets ~25% larger, matching what those files already download as. This is called out in Tasks 6 and 7.
+
+## Second, degenerate change (Task 2) — read before implementing
+
+Unifying the formula also settles two edge cases the renderers currently answer
+differently. Both are invisible in practice, but they are stated here so nobody
+later mistakes them for a bug introduced by mistake:
+
+1. **Sub-pixel font sizes are clamped to 1px.** `KvFabricCanvas` already clamps
+   with `Math.max(1, …)`; the export path and both Resize surfaces do not. The
+   shared module clamps. This only bites when the computed size is under one
+   pixel — text that is not legible in any path.
+2. **A text overlay with `height === 0` and an explicit `fontSize` now
+   renders.** The old expression `fontSize * (oh / (ov.height || 1))` collapses
+   to `0` for a zero-height box, so such text drew at 0px. The shared module
+   multiplies by board height directly, so it draws at its stated size. A
+   zero-height text box is a corrupt overlay either way; drawing it is the more
+   useful failure.
+
+Neither affects a normally-authored overlay. If a download diff shows up
+anywhere else, stop — that is a real regression, not one of these.
 
 ---
 
