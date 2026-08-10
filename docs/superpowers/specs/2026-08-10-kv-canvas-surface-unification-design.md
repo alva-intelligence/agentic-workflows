@@ -134,6 +134,30 @@ results:
 
 Craft's view keeps free two-axis pan and zoom.
 
+## The blocker nobody had named — found reviewing step 2a
+
+Every board the Craft canvas draws gets a Y.Doc board map attached to it
+(`ensureBoardMap`), and `useKvBoardMaterialization` observes that map and
+PATCHes it into the file's persisted `canvas_state.artboards`. Feeding a Resize
+export tile through the same canvas would therefore mint a **phantom artboard
+keyed by the export id and persist it into the Craft canvas state**.
+
+This is not a typing problem, and `KvSurface` does nothing about it. Before a
+Resize tile can be drawn by this canvas, **board-doc participation has to become
+a property of the view, not of every surface** — the Craft view opts its boards
+into the Yjs artboard document; the Resize view does not. Whatever shape step 2b
+takes, this is the load-bearing part, and it should be designed before the
+layout seam rather than discovered during it.
+
+Related, smaller, and on the same list: `isConceptPreview` lives on `KvBoard`
+rather than the surface, roughly eight helper signatures inside the canvas are
+still typed `KvBoard` (mechanical retypes — `ensureBoardMap` for instance reads
+only `id`/`center`/`name`/`version_ids`, all of which the surface carries), and
+`onSelectBoard` feeds `setViewingGenerationId`, which genuinely wants a
+*generation* id. That last one is the single place where `board.id ===
+generation.id` is load-bearing on a consumer's semantics rather than on an
+internal comparison, so it needs a real decision, not a rename.
+
 ## What gets deleted
 
 - `KvResizeTileStage.tsx`
