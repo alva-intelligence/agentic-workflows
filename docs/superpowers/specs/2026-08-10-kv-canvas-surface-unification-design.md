@@ -159,6 +159,15 @@ tests live. Fabric is effectively un-assertable in jsdom (no canvas context), so
 testing the renderer directly is not an option — the pure module is the seam
 that makes this testable at all.
 
+**Found while planning step 1:** the five renderers already disagree. Text
+overlays with no explicit `payload.fontSize` (created before custom fonts
+landed) render at the full box height in `renderBoardStage`,
+`KvResizeTileStage`, and `KvTileOverlayEditor`, but at `0.8 ×` box height in
+`KvFabricCanvas:1537` and `KvKonvaCanvas:1876` — so legacy text draws ~20%
+small on both Craft canvases and then exports bigger. Resolution: full box
+height wins, because downloads are artifacts already in the wild. The two Craft
+canvases change. This is exactly the failure mode this spec exists to end.
+
 Parity cases that must be covered:
 
 - a rotated overlay (pivot must be the visual center)
@@ -172,12 +181,14 @@ Parity cases that must be covered:
 
 Each step is reviewable on its own, and the old path survives until the last one.
 
-1. **Extract** the board model and geometry into a pure module; add the
-   display↔flatten parity tests. No behavior change — this step should be
-   provably inert.
-2. **Generalize** `KvFabricCanvas` into the engine plus a layout strategy, and
-   move Craft onto it. Craft must behave identically; this is the step where
-   regressions would hit the surface people use most.
+1. **Extract** the overlay geometry into a pure module and switch all five
+   renderers onto it, so the formula exists once. Inert apart from one agreed
+   fix (see below). Plan: `docs/superpowers/plans/2026-08-10-kv-canvas-geometry-extraction-web.md`.
+2. **Generalize** the board model and `KvFabricCanvas` into the engine plus a
+   layout strategy, and move Craft onto it. The board model belongs here rather
+   than in step 1 because generalizing it only pays off once an engine consumes
+   it. Craft must behave identically; this is the step where regressions would
+   hit the surface people use most.
 3. **Build** the Resize view on the same engine, with per-board chrome
    positioned in world space.
 4. **Delete** the old Resize stages and the Konva fallback.
