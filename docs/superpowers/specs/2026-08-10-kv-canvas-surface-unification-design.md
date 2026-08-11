@@ -144,10 +144,17 @@ keyed by the export id and persist it into the Craft canvas state**.
 
 This is not a typing problem, and `KvSurface` does nothing about it. Before a
 Resize tile can be drawn by this canvas, **board-doc participation has to become
-a property of the view, not of every surface** — the Craft view opts its boards
-into the Yjs artboard document; the Resize view does not. Whatever shape step 2b
-takes, this is the load-bearing part, and it should be designed before the
-layout seam rather than discovered during it.
+an explicit property of the surface** rather than something the canvas infers
+from context.
+
+**Settled 2026-08-11** — see `2026-08-11-kv-board-doc-participation-design.md`.
+A surface declares `docBoardId` (the doc board key it owns, or null) and
+`layout` (`doc` or `view`); where its overlays go is derived from the first.
+Note the decision is per-surface, not per-view: the Resize **master row** is
+doc-backed for overlays but view-positioned, which rules out any single
+"is collaborative" flag. That spec also names a second hazard this section
+missed — the binding writes a dragged board's centre into the doc, so a Resize
+column layout would have overwritten Craft's artboard centres.
 
 Related, smaller, and on the same list: `isConceptPreview` lives on `KvBoard`
 rather than the surface, roughly eight helper signatures inside the canvas are
