@@ -92,6 +92,22 @@ nothing can move them, and nothing would be written if it did.
 Nothing else about the doc changes. Overlay ops, presence, undo, and the
 materialization guard added on 2026-08-10 all stay as they are.
 
+**Two ungated paths the Resize view must simply not wire** (found in the final
+review, deliberately left alone): `docMoveBoard`, reached from the board context
+menu's "Reset position", and `docSetMasterBoard`, which writes
+`meta.masterGenerationId` with no existence check. Both are prop-level, so they
+are safe by convention rather than by construction — neither is reachable today,
+and gating them is not this spec's job. Step 3 must not pass
+`onResetBoardPosition` or `onSetMaster` to a view whose surfaces are
+`layout: "view"`.
+
+**One invariant the model does not enforce:** the predicate is handed the
+*resolved doc key*, while the canvas's surface map is keyed by *surface id*.
+Those are the same value for every Craft board, and the lookup now mirrors the
+binding's own resolution order (direct id → `docBoardId` → `version_ids`) so a
+divergence resolves rather than falling through the permissive default. Whoever
+adds a producer where the two genuinely differ should re-read that lookup first.
+
 ## Testing
 
 Every part of this is testable without a canvas, which is the point — the Fabric
