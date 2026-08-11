@@ -17,7 +17,8 @@
 - Canonical id form is **`custom-{width}x{height}`**, e.g. `custom-1080x1350`. No leading zeros, lowercase `x`.
 - The custom control renders **only** when the parent generation is layer-composed.
 - **No refusal may be silent.** Bounds are reported inline, server 422s raise a toast, a duplicate size is acknowledged, and an oversized flatten throws rather than writing a blank file.
-- Tests run with **`bun test`** (bunfig preloads jest-dom), *not* `bunx vitest`. The real gate is `bun run build` — `bun test` does not type-check.
+- Tests run with **`bun test`** (bunfig preloads jest-dom), *not* `bunx vitest`.
+- **There is no type gate.** `next.config.js:154` sets `typescript: { ignoreBuildErrors: true }`, so `bun run build` skips type-checking entirely — a passing build is never type verification. There is no `typecheck` script. `bunx tsc --noEmit` is the only type signal and carries a ~777-error pre-existing repo-wide baseline, so it is unusable as a pass/fail gate. The workable method: capture `bunx tsc --noEmit` output, then require zero *new* errors in the files your change touches — ideally diffed against the same command run on a clean baseline checkout. Still run `bun run build`: it catches broken imports and module moves.
 - RTL's `screen` is broken under bun in this repo. Use `within(document.body)` for queries.
 - UI chrome copy is English, matching the panel's existing "Start Resizing". Blocked-reason copy is Indonesian, matching `craftBlockedMessage`.
 
@@ -277,8 +278,8 @@ export const GROUP_LABEL: Record<PresetGroup, string> = {
 Run: `bun test src/lib/studio/kv/customSize.test.ts`
 Expected: PASS.
 
-Run: `bun run build`
-Expected: PASS. If it fails, the likely site is `KvResizePanel.tsx:99`, where `useState<Record<PlatformGroup, boolean>>` is now missing a `custom` key — change that annotation to `Record<PresetGroup, boolean>` and its import accordingly. Also check `KvResizePanel.tsx:187` (`group: PlatformGroup`) and `motion/motionSizeOptions.ts:39`; the latter assigns an explicit three-element array literal to `PlatformGroup[]`, which stays valid under the widened union.
+Run: `bunx tsc --noEmit` and compare against a baseline (see Global Constraints — the build does NOT type-check).
+Expected: no NEW errors in files this task touched. If a new one appears, the likely site is `KvResizePanel.tsx:99`, where `useState<Record<PlatformGroup, boolean>>` is now missing a `custom` key — change that annotation to `Record<PresetGroup, boolean>` and its import accordingly. Also check `KvResizePanel.tsx:187` (`group: PlatformGroup`) and `motion/motionSizeOptions.ts:39`; the latter assigns an explicit three-element array literal to `PlatformGroup[]`, which stays valid under the widened union.
 
 - [ ] **Step 6: Commit**
 
@@ -914,7 +915,7 @@ Destructure both in the component signature, then render the section immediately
         </div>
 ```
 
-Add the import and, if `bun run build` flags it, change the `openGroups` annotation to `Record<PresetGroup, boolean>` as noted in Task 1.
+Add the import and, if `bunx tsc --noEmit` flags it, change the `openGroups` annotation to `Record<PresetGroup, boolean>` as noted in Task 1.
 
 - [ ] **Step 6: Wire it in the layout**
 
@@ -937,8 +938,8 @@ A custom size is just another `PlatformId` in the selection set, so the queued-c
 
 - [ ] **Step 7: Verify the type gate and commit**
 
-Run: `bun run build`
-Expected: PASS.
+Run: `bunx tsc --noEmit` and check for NEW errors in the files you touched (the build does not type-check — see Global Constraints). Then `bun run build` to catch broken imports.
+Expected: no new type errors attributable to this task; build exits 0.
 
 ```bash
 git add src/components/studio/kv-generator/KvCustomSizeRow.tsx src/components/studio/kv-generator/KvCustomSizeRow.test.tsx src/components/studio/kv-generator/KvResizePanel.tsx src/components/studio/kv-generator/KvGeneratorLayout.tsx
@@ -1005,8 +1006,8 @@ At the `trackKvResizeSucceeded` call in the completion-tracking effect, add:
 
 - [ ] **Step 3: Verify the type gate**
 
-Run: `bun run build`
-Expected: PASS. A missing property at either call site is exactly what this step is checking for.
+Run: `bunx tsc --noEmit` and check for NEW errors in the files you touched (the build does not type-check — see Global Constraints).
+Expected: no new type errors. A missing property at either call site is exactly what this step is checking for — and note it will NOT surface in `bun run build`.
 
 - [ ] **Step 4: Commit**
 
@@ -1030,10 +1031,10 @@ Expected: green, or reds that reproduce on `develop`. Do not "fix" a red without
 - [ ] **Step 2: The real gate**
 
 ```bash
-bun run build
+bunx tsc --noEmit
 ```
 
-Expected: PASS. `bun test` does not type-check, so this is what proves the widened `PlatformId` did not break a consumer.
+Expected: no NEW errors in files this branch touched, compared against the same command on a clean baseline. This — not `bun run build` — is what proves the widened `PlatformId` did not break a consumer. Also run `bun run build` for import/module breakage.
 
 - [ ] **Step 3: Lint**
 
