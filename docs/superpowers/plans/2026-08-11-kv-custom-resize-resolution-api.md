@@ -351,7 +351,7 @@ it('creates a custom-size export for a layer-composed parent', function () {
         'custom_sizes' => [['width' => 1240, 'height' => 1750]],
     ]);
 
-    $res->assertCreated();
+    $res->assertStatus(202); // store() returns 202 Accepted, not 201
     expect($res->json('data.0.platform_id'))->toBe('custom-1240x1750');
     expect($res->json('data.0.width'))->toBe(1240);
     expect($res->json('data.0.height'))->toBe(1750);
@@ -390,7 +390,7 @@ it('still accepts a presets-only request', function () {
     $this->postJson("/api/v1/studio/files/{$this->file->id}/resize-exports", [
         'parent_generation_id' => $this->generation->id,
         'platform_ids' => ['instagram-post'],
-    ])->assertCreated();
+    ])->assertStatus(202);
 });
 ```
 
@@ -416,9 +416,16 @@ Replace the `$validated = $request->validate([...]);` block (lines 89–95) with
         $validated = $request->validate([
             'parent_generation_id' => 'required|string',
             // Relaxed from `required` because a request may now legitimately
-            // carry only custom sizes. The "at least one target" rule moved up
-            // to the pair — see the required_without_all below.
-            'platform_ids' => 'sometimes|array|required_without_all:custom_sizes',
+            // carry only custom sizes. The "at least one target" rule moves to
+            // the pair via required_without_all.
+            //
+            // Do NOT add `sometimes` here. Validator::passesOptionalCheck()
+            // is keyed on the attribute, not the rule: when `sometimes` is
+            // present and the field is absent, isValidatable() skips EVERY
+            // rule for that field — including implicit ones like
+            // required_without_all. A request naming neither field would then
+            // pass instead of 422ing.
+            'platform_ids' => 'array|required_without_all:custom_sizes',
             'platform_ids.*' => ['required', 'string', 'in:'.implode(',', $registryIds)],
             'custom_sizes' => 'sometimes|array|max:20',
             'custom_sizes.*.width' => "required|integer|min:{$min}|max:{$max}",
