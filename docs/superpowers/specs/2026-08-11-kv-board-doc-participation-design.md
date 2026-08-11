@@ -64,6 +64,11 @@ layout: "doc" | "view"      // who decides where it sits
 `null` → REST, keyed by the surface's own id. A third field would let the two
 drift apart, and there is no case that needs them to.
 
+The same `docBoardId` deliberately appears in two views at once: a Craft board
+and Resize's master row are the *same* board, so an overlay edited on either
+lands in the same place. They differ only in `layout`. That is the whole reason
+`layout` is a separate field rather than something read off the view.
+
 Filled in for the three surfaces that exist:
 
 | Surface | `docBoardId` | `layout` | Overlays (derived) |
