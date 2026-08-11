@@ -188,7 +188,49 @@ server's `downloadZip` endpoint builds `{platform_id}-{width}x{height}.png`
 endpoint is never called by web and deliberately left it alone. This spec does
 the same rather than touch dead code.
 
-### 7. Analytics
+### 7. Every refusal is visible
+
+No refusal in this feature may be silent. Four paths can refuse, and three of
+them are silent as the code stands today.
+
+**Bounds, before the request.** The Add action validates 64–8192 inline and
+names the offending axis. A dimension out of range never becomes a request, and
+Add is never a no-op that leaves the user guessing.
+
+**Server 422 — the gate, the bounds, the empty request.** This is a real gap:
+`useResizeExports.create.onError` (`useResizeExports.ts:138`) fires
+`trackKvResizeFailed` and nothing else. The failure reaches PostHog and never
+reaches the user. `KvResizeCanvas` already holds the channel —
+`useToastStore` with `showToast(title, body, "error")` (`:174`, `:797`) — so the
+fix is to surface the server's message there, not to invent a mechanism. The
+gate's 422 in particular must explain *why* custom sizes are unavailable for
+this KV, in the same spirit as `craft_blocked_reason`: a user told only
+"invalid request" cannot act on it.
+
+**Duplicate size.** `firstOrCreate` returns the existing row when a size is
+re-requested, so adding 1080×1350 twice currently looks like nothing happened.
+That is a silent no-op, not an error: acknowledge it ("already added") and focus
+the existing tile rather than failing.
+
+**Oversized flatten — the one this feature makes reachable.**
+`flattenStageToBlob` (`overlays/exportFlatten.ts:29`) calls `stage.toDataURL()`,
+then `fetch(dataUrl)`, then `.blob()`. When a canvas exceeds the browser's
+limits `toDataURL` returns the string `"data:,"` instead of throwing; `fetch`
+resolves that to an **empty blob** with no exception. The `try/catch` at
+`KvResizeCanvas.tsx:795` therefore cannot fire, and the user receives a 0-byte
+or blank PNG reported as a successful download.
+
+Today this is unreachable — the largest preset is `custom-tall` at 1280×3840,
+4.9M pixels, inside every browser's ceiling. At 8192 per side it becomes
+reachable. So the guard belongs in this spec: `flattenStageToBlob` must reject
+an empty or non-PNG blob by throwing, which routes it into the existing
+`showToast("Download failed", …)` path. The toast should say the size is too
+large for this browser, since that is the actionable fact.
+
+This last one is the reason the bounds are validated on the server too. A cap
+the client alone enforces protects nothing once a request is replayed.
+
+### 8. Analytics
 
 `kv_resize_requested` and `kv_resize_succeeded` already carry `platform_id` as a
 string, so custom ids flow through unchanged. Add a `custom_size` boolean to
@@ -208,6 +250,11 @@ Unit, no network:
 7. `platformById` — synthesizes for a custom id, still resolves presets.
 8. Panel — the custom row is hidden for an AI-generated KV and shown for a
    layer-composed one.
+9. Refusals surface — a 422 from `create` produces a toast, not only a
+   `trackKvResizeFailed` call.
+10. Empty blob — `flattenStageToBlob` throws on a zero-byte result rather than
+    returning it, so the download path reports failure instead of writing a
+    blank file.
 
 Manual: import a PSD, add a custom size, confirm the tile renders on canvas and
 downloads with real artwork; then one flatten check at 8192 in Safari.
@@ -215,11 +262,14 @@ downloads with real artwork; then one flatten check at 8192 in Safari.
 ## Risks and limits
 
 **Safari canvas area.** Safari's canvas limits are stricter than Chrome's, so an
-8192 tile may flatten correctly in Chrome and fail in Safari. The failure mode
-matters: `toBlob` returning null yields a missing file, but a silently blank
-bitmap yields the exact bug class this area was just fixed for. One manual check
-before ship, and the download path should treat a null blob as an error rather
-than skipping the file quietly.
+8192 tile may flatten correctly in Chrome and fail in Safari. With the §7 guard
+in place the consequence is a clear error rather than a blank file, which makes
+this a usability limit instead of a correctness bug — but it does mean the
+effective ceiling is browser-dependent, and a Safari user can be refused a size
+a Chrome user gets. One manual check before ship to learn where that line
+actually falls; if it proves low enough to matter, the honest fix is to detect
+the limit and cap the inputs per browser rather than to advertise 8192
+everywhere.
 
 **Blank-base false positives.** Inherited from the existing classifier, not
 introduced here. A KV whose base is legitimately near-uniform — a solid colour
