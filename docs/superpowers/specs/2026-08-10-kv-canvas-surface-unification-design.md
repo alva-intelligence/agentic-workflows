@@ -220,6 +220,20 @@ Each step is reviewable on its own, and the old path survives until the last one
    than in step 1 because generalizing it only pays off once an engine consumes
    it. Craft must behave identically; this is the step where regressions would
    hit the surface people use most.
+2b. **Absorbed into step 3** (2026-08-12). This was to be "the layout seam — a
+   view supplies its own board positions". On inspection the seam already
+   exists: the canvas never derives a position, it receives `board.center` on
+   the `boards` prop and only converts it to a world rect via `boardWorldRect`.
+   What remained was a pure column-layout function and a per-view
+   "boards are not draggable" switch (board dragging is already gated on
+   `selectable: tool === "cursor"`). Neither means anything without a view
+   calling them, and neither could be verified alone, so they land with their
+   consumer rather than as a separate inert cycle.
+
+   A useful accident: `BOARD_WORLD_WIDTH` gives every board the same world
+   width with height from its aspect — which is exactly how Resize already
+   lays its rows out.
+
 3. **Build** the Resize view on the same engine, with per-board chrome
    positioned in world space.
 4. **Delete** the old Resize stages and the Konva fallback.
