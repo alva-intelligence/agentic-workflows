@@ -454,7 +454,7 @@ export type KvHandoffFailureStage = "measure" | "create" | "import";
 cd web && bunx vitest run src/lib/chat/kvHandoff.test.ts
 ```
 
-Expected: 15 passed.
+Expected: 14 passed.
 
 - [ ] **Step 5: Commit**
 
