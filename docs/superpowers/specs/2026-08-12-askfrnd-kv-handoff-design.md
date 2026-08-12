@@ -85,7 +85,7 @@ New files:
 | File | Role |
 |---|---|
 | `web/src/components/chat/KvHandoffCard.tsx` | the card: idle / loading / error states, owns the click orchestration |
-| `web/src/components/chat/KvHandoffBrandPicker.tsx` | brand picker, built on `@/components/frndos/BaseModal` |
+| `web/src/components/chat/KvHandoffBrandPicker.tsx` | brand picker, rendered inline in the chat panel (phrasing content only) |
 
 The card has three states. **Idle** is the resting card. **Loading** disables the
 card and swaps the trailing icon for a spinner while the brand resolves and the
@@ -124,8 +124,23 @@ the brand must be resolved in both:
    origin brand (`ThreadItem`, `response.ts:187`), so this still resolves after
    a reload or when the panel is reopened from the thread list.
 3. **Brand picker** — workspace level. Lists brands from `useWorkspaceBrands`
-   filtered by `hasBrandPillarAccess(id, "brand.studio")`. Skipped when exactly
-   one brand is accessible; the card does not render when none is.
+   filtered by `hasBrandPillarAccess(id, "brand.studio")` **and**
+   `canReadForBrand("brand.studio.kv_generator", id)` — the first alone falls back
+   to workspace-level `canRead` for users whose permissions are not tower-shaped.
+   Skipped when exactly one brand is accessible; the card does not render when
+   none is.
+
+   Rendered **inline in the chat panel**, directly under the card, styled like the
+   genUI `choice_chips` it sits beside — not as a modal. A modal covered the whole
+   app to ask one question and pulled the user out of the answer they were reading,
+   and an uncapped list grew past the viewport in a workspace with dozens of brands.
+   Inline means every element must be phrasing content (`span`/`button`/`input`),
+   because the card renders inside a markdown `<p>`. Above 6 brands the list gets a
+   search box; the list height is capped and scrolls.
+
+   It only *looks* like genUI. A real `choice_chips` click calls `send()` and posts a
+   message to the model; this one invokes a client-side callback, because the handoff
+   is entirely client-side and the model never learns the card was clicked.
 
 ### Landing in Craft
 
