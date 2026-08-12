@@ -90,6 +90,12 @@ because *creating* a file has to choose a brand. Opening one does not.
 | Unit | Responsibility | Depends on |
 |---|---|---|
 | `selectKvToolFile(toolUsages)` | pure: find the KV file this turn produced → `{ fileId, brandId, fileName } \| null` | nothing (no React, no DOM) |
+| `KvOpenInStudioCard` | presentation + one `router.push` | the selector's output, `usePermissions`, the feature flag |
+| `ChatMessage.renderImageFooter` (modify) | choose which card | both cards |
+
+The selector carries all the judgment (which tool, which result shape, what counts as present) and is
+testable without rendering anything — the same split the sibling feature used for `kvHandoff.ts`, and
+the reason its logic could be verified exhaustively in milliseconds.
 
 ### How the selector recognises the right result
 
@@ -115,12 +121,6 @@ print a real `tool_result` from a live KV turn to confirm which it is.
 
 `status: "processing"` is expected and not a reason to withhold the card: the api returns 202 before the
 new version renders, but the **file** exists from that moment, so opening it is valid immediately.
-| `KvOpenInStudioCard` | presentation + one `router.push` | the selector's output, `usePermissions`, the feature flag |
-| `ChatMessage.renderImageFooter` (modify) | choose which card | both cards |
-
-The selector carries all the judgment (which tool, which result shape, what counts as present) and is
-testable without rendering anything — the same split the sibling feature used for `kvHandoff.ts`, and
-the reason its logic could be verified exhaustively in milliseconds.
 
 ## Data flow
 
