@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-13
 **Author:** daffa
-**Services:** web (phase 1), ai-service (phase 2, separate)
+**Services:** ai-service + web (phase 1), ai-service prompt (phase 2, separate)
 **Status:** approved
 
 ## Problem
@@ -42,7 +42,7 @@ no footer slot to hang a card on), and the generated-files gallery.
 
 ## Decisions and why
 
-### No api and no ai-service change in phase 1
+### No api change; one ai-service change, discovered during implementation
 
 Everything needed is already on the wire. `KvToolController::generate` returns
 `studio_file_id`, `brand_id`, and `file_url`
@@ -113,11 +113,23 @@ So the rule is: `data` is a non-array object carrying **both `studio_file_id` an
 `file_name` is the discriminator — the other two use `name`. A turn that lists and then generates
 therefore yields exactly one match, and it is the file the turn produced.
 
-**One thing the plan must settle empirically, not by assumption:** whether `tool_result` reaches web as
-the raw `{ data: {...} }` envelope or already unwrapped by ai-service. The typed fields on
-`ToolUsageData.tool_result` (`file_url`, `filename`) sit at the top level, which suggests unwrapping,
-but that is inference. The selector should read `result.data ?? result` and the plan's first step should
-print a real `tool_result` from a live KV turn to confirm which it is.
+**Settled empirically, and it changed the design.** A real `tool_result` read out of
+`user_chat_history.tools` arrives as a **Python repr string**, not an object:
+`{'data': [...], 'project_id': None}` — single quotes and `None`. `JSON.parse` cannot read it, and
+swapping quotes by hand corrupts any value containing an apostrophe (this workspace has a brand called
+`L'Oréal Indonesia`, and the payload itself mixes `'…'` with `"…"`).
+
+The cause is not a missing parse: `ai-service/app/agents/chat_agent/router.py:451` already
+`ast.literal_eval`s agno's `str(dict)`, then rewrites `tool["result"]` into a small explicit payload
+**per tool** — `web_search` → urls, `generate_file` → file_url/filename/mime_type. Tools without a
+branch keep the raw repr, and `generate_key_visual` was one of them.
+
+So the fix is that missing branch, not a parser in the client:
+`app/utils/kv_tool_result.py` shapes it to `{studio_file_id, brand_id, file_name}`, and the web
+selector reads those keys flat and **ignores any result that is still a string** — a string means a
+tool we deliberately do not handle. Two envelopes are handled there because generation is async: the
+api answers 202 with the file created but the render in flight, which the tool reports as an error,
+putting the payload under `detail.data` instead of `data`.
 
 `status: "processing"` is expected and not a reason to withhold the card: the api returns 202 before the
 new version renders, but the **file** exists from that moment, so opening it is valid immediately.
