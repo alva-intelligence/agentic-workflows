@@ -799,7 +799,17 @@ export interface AskfrndKvHandoffClickedProps {
 
 export const trackAskfrndKvHandoffClicked = (
   p: AskfrndKvHandoffClickedProps
-) => safeCapture("askfrnd.kv_handoff_clicked", p);
+) => safeCapture("askfrnd_kv_handoff_clicked", p);
+
+export interface AskfrndKvHandoffSucceededProps {
+  brand_resolution: KvHandoffBrandSource;
+  conversation_id: string | null;
+  file_id: string;
+}
+
+export const trackAskfrndKvHandoffSucceeded = (
+  p: AskfrndKvHandoffSucceededProps
+) => safeCapture("askfrnd_kv_handoff_succeeded", p);
 
 export interface AskfrndKvHandoffFailedProps {
   stage: KvHandoffFailureStage;
@@ -808,7 +818,7 @@ export interface AskfrndKvHandoffFailedProps {
 }
 
 export const trackAskfrndKvHandoffFailed = (p: AskfrndKvHandoffFailedProps) =>
-  safeCapture("askfrnd.kv_handoff_failed", p);
+  safeCapture("askfrnd_kv_handoff_failed", p);
 ```
 
 - [ ] **Step 5: Write the orchestration**
@@ -1676,7 +1686,9 @@ Expected: success. This catches broken imports and module moves; it does **not**
 
 - [ ] **Step 4: Run the analytics review**
 
-Invoke the `frndos-analytics-events` agent on this diff. The feature is not done until it signs off on `askfrnd.kv_handoff_clicked` / `askfrnd.kv_handoff_failed` naming and properties.
+Invoke the `frndos-analytics-events` agent on this diff. The feature is not done until it signs off on `askfrnd_kv_handoff_clicked` / `askfrnd_kv_handoff_succeeded` / `askfrnd_kv_handoff_failed` naming and properties.
+
+Event names are flat `askfrnd_*`, matching the 20+ other askFRND events (`askfrnd_tools_tab_opened`, `askfrnd_skills_tab_opened`, `askfrnd_to_help`, …). An earlier draft of this plan used dot-namespaced names, which the analytics review rejected: dotted names are for genuinely new domains, and these two would have been the only askFRND events to fall out of a `askfrnd_*` prefix filter in PostHog.
 
 - [ ] **Step 5: Manual end-to-end (requires a running stack)**
 

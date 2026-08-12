@@ -191,10 +191,22 @@ Per `frndos-analytics-events` ("if a user can do it, it gets an event"):
 
 | Event | Properties |
 |---|---|
-| `askfrnd_kv_handoff_clicked` | `brand_resolution`: `url` \| `thread` \| `picker`, `image_model`, `conversation_id` |
-| `askfrnd_kv_handoff_failed` | `stage`: `create` \| `measure` \| `import`, `reason` |
+| `askfrnd_kv_handoff_clicked` | `brand_resolution`: `url` \| `thread` \| `single` \| `picker`, `image_model`, `conversation_id` |
+| `askfrnd_kv_handoff_succeeded` | `brand_resolution`, `conversation_id`, `file_id` |
+| `askfrnd_kv_handoff_failed` | `stage`: `create` \| `measure` \| `import`, `reason`, `conversation_id` |
 
-The `frndos-analytics-events` agent runs before this is called done.
+Three events, not two: attempt / success / failure. Without the success event the
+conversion rate has to be inferred as clicked minus failed, which over-counts —
+a user who closes the tab mid-handoff never reports either outcome.
+
+`brand_resolution` carries **four** values, not three. A workspace-level user with
+exactly one accessible brand is auto-resolved with no picker shown, and labelling
+that `picker` would make the metric lie.
+
+The `frndos-analytics-events` agent runs before this is called done. It did, and
+it caught two things this spec had right and the web plan had drifted from: these
+event names are flat `askfrnd_*` like every other askFRND event, and the funnel
+needs its success leg.
 
 ## Testing
 
