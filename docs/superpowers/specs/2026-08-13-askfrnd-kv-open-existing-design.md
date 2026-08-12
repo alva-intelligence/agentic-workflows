@@ -32,8 +32,9 @@ second, duplicate KV for one the chat had just saved.
 
 ## Scope
 
-Phase 1, web only: on a turn whose tool results contain a KV file, render an **"Open in KV Studio"**
-card under the generated image, routing to the file that already exists.
+Phase 1, ai-service + web: shape `generate_key_visual`'s tool result into structured JSON, and on a
+turn that produced a KV file render an **"Open in KV Studio"** card under the generated image, routing
+to the file that already exists.
 
 Phase 2, separate and later: change the ai-service prompt so the model stops writing the file block.
 
@@ -97,21 +98,16 @@ The selector carries all the judgment (which tool, which result shape, what coun
 testable without rendering anything — the same split the sibling feature used for `kvHandoff.ts`, and
 the reason its logic could be verified exhaustively in milliseconds.
 
-### How the selector recognises the right result
+### How the client recognises the right result
 
-Match on the **result shape**, not on a tool display name — display names are prose and change without
-notice. `generate` is distinguishable from its siblings by construction
-(`KvToolController.php:463-472`, `:68-84`, `:99-108`):
+It does not have to discriminate between the three KV tools, because ai-service only shapes one of
+them. `generate_key_visual` arrives flat as `{studio_file_id, brand_id, file_name}`; `list_key_visuals`
+and `get_key_visual` still arrive as the raw repr **string**, which the selector skips by type. So
+"is this an object with both ids" is the whole rule, and a turn that lists and then generates yields
+exactly one match — the file the turn produced.
 
-| Tool | `data` | Distinctive keys |
-|---|---|---|
-| `generate_key_visual` | **object** | `status: "processing"`, **`file_name`**, `studio_file_id`, `brand_id`, `file_url` |
-| `list_key_visuals` | **array** | per row: `name`, `studio_file_id` |
-| `get_key_visual` | object | `name` (not `file_name`), `id`, no `status` |
-
-So the rule is: `data` is a non-array object carrying **both `studio_file_id` and `file_name`**.
-`file_name` is the discriminator — the other two use `name`. A turn that lists and then generates
-therefore yields exactly one match, and it is the file the turn produced.
+The last match wins: a turn may generate twice (a retry, or a second version), and the newest file is
+the one the answer is about.
 
 **Settled empirically, and it changed the design.** A real `tool_result` read out of
 `user_chat_history.tools` arrives as a **Python repr string**, not an object:
