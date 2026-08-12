@@ -130,15 +130,20 @@ the brand must be resolved in both:
    Skipped when exactly one brand is accessible; the card does not render when
    none is.
 
-   Rendered **inline in the chat panel**, directly under the card, styled like the
-   genUI `choice_chips` it sits beside — not as a modal. A modal covered the whole
+   Rendered **inline in the chat panel**, directly under the card, as a select plus
+   an explicit confirm — shaped like the genUI `form` component's `select` field
+   (the frndOS `Dropdown`, which brings its own search and a scrolling body) — not
+   as a modal, and not as chips. A modal covered the whole
    app to ask one question and pulled the user out of the answer they were reading,
    and an uncapped list grew past the viewport in a workspace with dozens of brands.
-   Inline means every element must be phrasing content (`span`/`button`/`input`),
-   because the card renders inside a markdown `<p>`. Above 6 brands the list gets a
-   search box; the list height is capped and scrolls.
+   Inline means every element rendered in place must be phrasing content
+   (`span`/`button`/`input`), because the card renders inside a markdown `<p>`. The
+   select's popover is exempt: it renders through `RadixPopover.Portal` and leaves
+   the paragraph. Nothing is preselected and confirm stays disabled until a brand is
+   chosen — one real workspace holds 36 brands, four of them differing only by
+   capitalisation, so a mis-click would silently file the work under the wrong one.
 
-   It only *looks* like genUI. A real `choice_chips` click calls `send()` and posts a
+   It only *looks* like genUI. A real genUI form submit calls `send()` and posts a
    message to the model; this one invokes a client-side callback, because the handoff
    is entirely client-side and the model never learns the card was clicked.
 
