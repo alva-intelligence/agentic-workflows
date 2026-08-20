@@ -108,13 +108,19 @@ everywhere else.
 Keying by export id is what keeps a box drawn on the Instagram Story tile from
 appearing on the LinkedIn tile. State is ephemeral.
 
-**Prompt entry.** Craft renders an inline prompt editor on the active box
-(`activeBoxId` / `promptDraft` inside `KvFabricCanvas`) and defers sending to
-the chat composer. Resize has no chat, so the same inline editor is used but
-the send trigger differs: **the tile's existing regenerate control becomes
-"Apply edit" whenever that tile has at least one box carrying a non-empty
-prompt.** No new control is introduced, and the button keeps its established
-meaning of "rebuild this tile".
+**Prompt entry — the same gesture as Craft.** Craft renders an inline prompt
+editor on the active box (`activeBoxId` / `promptDraft` inside
+`KvFabricCanvas`) and defers sending to the chat composer.
+
+Resize already has that composer. Its guided-regenerate flow arms a tile
+(`useKvResizeStore.armedRegenerate`), `KvGeneratorLayout` resolves the armed id
+into a `resizeRegenerate` chip carrying `exportId` / `platformLabel` /
+dimensions / thumbnail, and Send calls
+`regenerateResize.mutate({ exportId, additionalPrompt })`. So no new control is
+needed and no new send path: drawing a box **arms that tile**, the box carries
+its inline prompt exactly as in Craft, and Send routes to `editRegion` instead
+of `regenerate` whenever the armed tile has at least one box. The chip already
+tells the user which tile they are about to change.
 
 **Object select.** Clicking inside the tile with the frame tool active runs
 detection and offers candidate outlines, as in Craft. Boxes upgraded from a
@@ -209,13 +215,18 @@ worktree at HEAD — never via `git stash`.
 
 ## Risks
 
-1. **Output resolution fidelity on non-square tiles.** OpenAI's edit endpoint
-   returns its own supported sizes. Craft's generations are typically already
-   one of them; a 1080×1920 Story tile is not. If the returned image must be
-   resampled back to the tile's dimensions, quality may regress visibly. **This
-   is unverified and is the first thing implementation must prove** — before any
-   UI work, on a real 1080×1920 tile. If fidelity fails, the feature needs a
-   different render path and this design must be revisited.
+1. **Aspect ratios beyond 3:1.** The masked path does *not* send OpenAI a
+   `size`: `edit_image` skips it deliberately because "for the inpainting flow
+   OpenAI requires `size` to match the mask's pixel dimensions, and the output
+   already inherits them". Since the mask is built pixel-matched to the tile's
+   probed dimensions, a 1080×1920 tile returns 1080×1920 — no resampling.
+
+   The real boundary is elsewhere: gpt-image-2 accepts explicit pixel sizes only
+   "flexible up to 3:1". The `x-header` preset (1500×500) sits exactly at that
+   limit and every custom size is unbounded. Implementation must confirm the
+   behaviour at and past 3:1 and fail closed with a clear message rather than
+   returning a distorted tile. This is a bounded verification task, not a
+   gate on the whole design.
 2. **Detection cost on tiles.** Craft caches per generation; a file with twelve
    tiles has twelve independent caches, so the same artwork may be detected
    repeatedly. Mitigated by the cache column, not eliminated.
@@ -230,5 +241,5 @@ worktree at HEAD — never via `git stash`.
 
 ## Open questions
 
-None blocking. Risk 1 is a verification task owned by implementation, not an
-unresolved design decision.
+None blocking. Risk 1 is a bounded verification task owned by implementation,
+not an unresolved design decision.
