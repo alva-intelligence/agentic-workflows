@@ -160,7 +160,11 @@ POST  v1/studio/kv-generator/files/{id}/resize-exports/{export}/detect
 PATCH v1/studio/kv-generator/files/{id}/resize-exports/{export}/detections
 ```
 
-`detect` stays behind `check.credits` exactly as the generation route does.
+`detect` is **not** credit-gated, matching the generation route, which states
+outright that it is "fail-soft and uncharged — deliberately NOT behind
+`check.credits`". (An earlier draft of this spec claimed the opposite; charging
+for a tile detection while the identical gesture on a Craft board is free would
+be an unrequested, asymmetric billing change.) `detections` is not gated either.
 
 The two prefixes are deliberate, not an oversight: `edit-region` sits under
 `v1/studio/files/{file}/resize-exports/...` with the rest of the resize-export
