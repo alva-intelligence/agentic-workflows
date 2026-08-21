@@ -102,12 +102,18 @@ Create `src/services/kv/layerDecomposition.api.test.ts`:
 ```ts
 import { describe, expect, it, mock, beforeEach } from "bun:test";
 
-const post = mock(() => Promise.resolve({ data: { data: {} } }));
-const get = mock(() => Promise.resolve({ data: { data: {} } }));
+const post = mock(async () => ({ data: { data: {} } }));
+const get = mock(async () => ({ data: { data: {} } }));
 
-mock.module("@/lib/axios", () => ({
+// The module is `@/services/axios` with a DEFAULT export, and `mock.module`
+// is process-global — a factory returning only `default` would delete every
+// named export (`axiosPublic`) for every other suite in the run. Spread the
+// real module. Copied from createResizeExports.test.ts, which documents why.
+const actualAxios = await import("@/services/axios");
+
+mock.module("@/services/axios", () => ({
+  ...actualAxios,
   default: { post, get },
-  axiosInstance: { post, get },
 }));
 
 const {
