@@ -81,14 +81,30 @@ tier. Images not output due to moderation are not billed.
 | Layer decomposition | **$0.0225** | $0.045 |
 
 Measured: the frndGlow run (8 images) cost **$0.18**. A 13-image run cost
-$0.315. Unbounded worst case at 2K is $0.765.
+$0.315. Worst case — a 2K source yielding the maximum 16 layers, every image in
+the expensive tier — is $0.765.
 
-**Decision: pin `size: "1.5K"`.** Never send `auto` or `2K`. Every 1.5K aspect
-ratio lands under 2.61M px (largest is 1:1 at 1536×1536 = 2.36M), so every
-output is guaranteed the cheap tier and cost becomes
-`$0.0225 × (1 + layer count)`, capped at $0.3825 for the maximum 16 layers.
-With `auto`, a 2K input echoes its own dimensions and jumps tiers. The docs
-also state 1.5K costs the same as 1K with better quality, so 1K is never right.
+**Decision: `size: "auto"`, quality first.** Cost is explicitly not being
+optimised in v1; it is tuned later if the numbers justify it.
+
+`auto` is also the architecturally correct choice, not just the
+highest-fidelity one. Its rule: an input between 0.92M and 4.62M px is returned
+at its **original dimensions**; below 1K it is raised to 1K; above 2K it is
+capped at 2K. So the clean plate keeps the source board's exact size. Pinning
+`2K` instead would return a 2K plate for a 1536×1024 board, leaving the new
+board a different size from the original it sits beside on the canvas for
+comparison.
+
+This is also the mode every recorded measurement in this spec was taken in.
+
+Cost consequence, accepted: a source at or under 2.61M px keeps every output in
+the $0.0225 tier (the frndGlow case, $0.18). A larger source pushes the base —
+and possibly some layers — into the $0.045 tier, so a 2K board with many layers
+approaches $0.765. Cost per decompose therefore ranges roughly **$0.18–$0.77**
+and is not fixed. If this needs capping later, pin `1.5K`: every 1.5K aspect
+ratio lands under 2.61M px (largest is 1:1 at 1536×1536 = 2.36M), which forces
+the cheap tier and caps a run at $0.3825. Do not pin `1K` — the docs state 1.5K
+costs the same with better quality.
 
 ## Scope
 
@@ -119,7 +135,7 @@ web   POST /api/studio/files/{file}/layer-decompositions
 api   → row status=pending → dispatch ProcessKvLayerDecompositionJob
 job   → POST {ai}/ai/kv-layer-decompose {decomposition_id, source_image_url}
 ai    → 202 immediately, then BackgroundTask:
-          BytePlus layer_decomposition (size=1.5K, watermark=false)
+          BytePlus layer_decomposition (size=auto, watermark=false)
           → download base + N layers
           → mirror to S3 {env}/kv-layer-decompose/{id}/
           → POST {api}/internal/kv-layer-decompositions/{id}/complete
@@ -175,9 +191,9 @@ a wrong number.
 
 Add a per-image pricing path for `dola-seedream-5-0-pro-260628`:
 `images_billed × tier_rate`, where `tier_rate` is chosen per image from its own
-`size`. Because v1 pins 1.5K, every image is $0.0225 in practice, but the tier
-check must still be implemented — the vendor bills per layer and a future
-prompt/bbox mode could return larger layers.
+`size`. Because v1 runs `auto`, images genuinely land in both tiers depending
+on the source board's resolution, so the per-image tier check is load-bearing,
+not a formality.
 
 ## Commit
 
