@@ -122,6 +122,61 @@ costs the same with better quality.
 - Resize canvas tiles as an entry point.
 - Editing a single layer by feeding it back to Seedream.
 - Re-decomposing an already decomposed board.
+- The askFRND tool itself — but v1 MUST leave the seams for it. See
+  *Designed for a future askFRND tool*.
+
+## Designed for a future askFRND tool
+
+Decomposition is intended to become an askFRND chat tool that acts as an entry
+point into KV Studio. That tool is not built in v1, but v1 must not make it
+expensive to add.
+
+The seam already exists and is well established. AskFRND tools call **api**,
+not ai-service: `ai-service/app/tools/kv_tools.py` hits
+`POST /api/v1/mcp/tools/kv/generate` with `X-Internal-Token`, handled by
+`KvToolController` inside the `mcp/tools` route group behind
+`ResolveToolContext`. The future tool is therefore one more route in that
+group — `POST mcp/tools/kv/decompose` — plus a callable in `make_kv_tools()`.
+No new transport, no new auth, no ai-service entry point.
+
+Four constraints on v1 follow. The first and third are load-bearing: skipping
+either forces a rewrite later.
+
+**1. All orchestration lives in `KvLayerDecompositionService`, not in a
+controller.** The web-facing Studio controller and the future
+`KvToolController::decompose` must both be thin callers of the same service.
+Note that `KvToolController::generate` today inlines its own flag checks,
+credit gate, and file resolution — do **not** copy that shape. Validation and
+response formatting belong to each controller; everything else belongs to the
+service.
+
+**2. The source is an image URL, not necessarily an existing generation.**
+`source_generation_id` is already nullable. The service signature must be
+`(StudioFile $file, string $sourceImageUrl, ?string $sourceGenerationId, User $actor)`
+so an image that originated in chat — with no `KvGeneration` behind it — is a
+first-class input. `KvToolController::generate` already resolves-or-creates a
+studio file when the tool supplies none; decompose reuses that helper rather
+than inventing a second path.
+
+**3. The review panel must be reachable by URL.** A chat tool cannot render the
+panel, so it has to hand the user a link. Web must therefore support opening a
+studio file with a given decomposition's review panel already open — a
+`?decomposition=<id>` query parameter on the existing studio file route. This
+is the one v1 web requirement that exists purely for the future tool, and the
+one thing that cannot be retrofitted without reworking the panel's mounting.
+
+**4. The tool must NOT wait for completion.** `generate_key_visual` polls for
+up to 150 s so the image lands in the same turn, and it is tempting to copy
+that. It would be wrong here: the user has to pick layers in the panel
+regardless, so blocking the chat for ~110 s buys nothing, and a long synchronous
+tool call risks the api-worker starvation that has bitten askFRND tools before.
+The tool creates the job and immediately returns the deep link.
+
+A fifth point is hygiene rather than a hard requirement: in ai-service, keep
+the vendor call as a caller-agnostic function (`image_url → {base, layers}`)
+with the FastAPI route, BackgroundTask, and callback as a thin adapter around
+it. The askFRND path does not need this — it goes through api — but it keeps
+the module honest and makes a future synchronous caller possible.
 
 ## Architecture
 
@@ -132,7 +187,10 @@ buys a move later.
 
 ```
 web   POST /api/studio/files/{file}/layer-decompositions
-api   → row status=pending → dispatch ProcessKvLayerDecompositionJob
+api   → KvLayerDecompositionService (the only orchestrator; see
+        *Designed for a future askFRND tool* — a second, tool-facing
+        controller will call this same service)
+      → row status=pending → dispatch ProcessKvLayerDecompositionJob
 job   → POST {ai}/ai/kv-layer-decompose {decomposition_id, source_image_url}
 ai    → 202 immediately, then BackgroundTask:
           BytePlus layer_decomposition (size=auto, watermark=false)
@@ -230,6 +288,11 @@ Upscale), and an offer in `KvUploadBaseBlock` after an upload completes.
 **Review panel.** Right-hand panel listing the base plus every layer, each with
 a thumbnail, its `name`, its `description`, and a checkbox defaulting to
 checked. Primary action "Add to canvas" calls the commit endpoint.
+
+The panel must also be openable from a URL — `?decomposition=<id>` on the
+studio file route — mounting straight into the review state for that
+decomposition, including while it is still generating. This is required by the
+future askFRND tool, which can only hand the user a link.
 
 **Polling.** Follows the existing job-polling pattern, but the window must
 cover ~110 s of generation plus mirroring — size it to roughly 225 s rather
