@@ -21,6 +21,8 @@
 - Vendor URLs expire in 24 hours. No vendor URL may appear in a callback payload — mirror first, then call back.
 - The background task must **always** call back, success or failure. A swallowed exception leaves the api row spinning forever.
 - Existing config keys `BYTEPLUS_ARK_API_KEY` and `BYTEPLUS_ARK_BASE_URL` already exist in `app/utils/config.py` (lines 130–131) and are already used by `app/tools/generate_image.py`. Reuse them; do not add new credential keys.
+- **Every AI call must emit a PostHog `$ai_generation`.** This repo's own `ai-tracing` skill makes it a HIGH, non-negotiable requirement, and its provider-coverage table already lists `byteplus Ark` as Seam 3: a raw HTTP model call the posthog wrappers cannot intercept, captured manually at its single chokepoint with `capture_ai_generation(..., provider="byteplus")` on BOTH the success and the error path. `decompose_image` is that chokepoint.
+- **Identity must reach the background task.** `bind_ai_context` seeds identity from the *request* body, and our request body carries only ids. Without `user_id`/`workspace_id` on the job payload every decomposition attributes to a fresh anonymous person. api sends them; ai-service calls `set_ai_context(...)` before the vendor call.
 - Test baseline: `tests/agents/chat_agent` and `tests/agents/kv_generator` have ~16 pre-existing failures at HEAD. Run only the new test files plus anything you touch; do not treat that baseline as your regression.
 
 ## File Structure
@@ -54,7 +56,7 @@
 
 **Interfaces:**
 - Consumes: `settings.BYTEPLUS_ARK_API_KEY`, `settings.BYTEPLUS_ARK_BASE_URL` (already present).
-- Produces: `decompose_image(image_url: str) -> dict` — returns the vendor's parsed JSON body verbatim. Raises `LayerDecomposeError` on any failure.
+- Produces: `decompose_image(image_url: str) -> dict` — returns the vendor's parsed JSON body verbatim. Raises `LayerDecomposeError` on any failure. Emits one `$ai_generation` per call, success or failure.
 
 - [ ] **Step 1: Add the model-id setting**
 
@@ -146,6 +148,53 @@ def test_decompose_image_raises_on_empty_data(monkeypatch):
     with pytest.raises(LayerDecomposeError) as exc:
         decompose_image("https://example.com/kv.png")
     assert "no_layers_detected" in str(exc.value)
+
+
+def test_a_successful_call_is_captured_for_posthog(monkeypatch):
+    # byteplus is a Seam 3 provider in this repo's ai-tracing contract: the
+    # posthog wrappers cannot intercept a raw HTTP model call, so the single
+    # chokepoint must capture it by hand or the spend is invisible.
+    captured = []
+
+    def fake_post(self, url, json=None, headers=None):
+        return httpx.Response(200, json={"model": "m", "data": [{"url": "u", "size": "1x1", "z_index": 0}]},
+                              request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx.Client, "post", fake_post)
+    monkeypatch.setattr(client_mod, "capture_ai_generation",
+                        lambda **kw: captured.append(kw))
+
+    decompose_image("https://example.com/kv.png")
+
+    assert len(captured) == 1
+    assert captured[0]["provider"] == "byteplus"
+    assert captured[0]["model"] == "dola-seedream-5-0-pro-260628"
+    assert captured[0]["span_name"] == "kv_layer_decompose"
+    assert captured[0]["error"] is None
+
+
+def test_a_failed_call_is_also_captured(monkeypatch):
+    # An untraced failure path hides exactly the runs worth investigating.
+    captured = []
+
+    def fake_post(self, url, json=None, headers=None):
+        return httpx.Response(429, text="rate limited", request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx.Client, "post", fake_post)
+    monkeypatch.setattr(client_mod, "capture_ai_generation",
+                        lambda **kw: captured.append(kw))
+
+    with pytest.raises(LayerDecomposeError):
+        decompose_image("https://example.com/kv.png")
+
+    assert len(captured) == 1
+    assert captured[0]["error"] is not None
+```
+
+Add this import at the top of the test file so the monkeypatches above resolve:
+
+```python
+from app.agents.kv_layer_decompose import client as client_mod
 ```
 
 - [ ] **Step 3: Run the tests to verify they fail**
@@ -166,10 +215,12 @@ bounding_box, name and description — every field this feature exists to read �
 and its generate() requires a prompt we must not send in auto mode.
 """
 import logging
-from typing import Any, Dict
+import time
+from typing import Any, Dict, Optional
 
 import httpx
 
+from app.observability.ai_clients import capture_ai_generation
 from app.utils.config import settings
 
 logger = logging.getLogger(__name__)
@@ -201,27 +252,50 @@ def decompose_image(image_url: str) -> Dict[str, Any]:
         "Content-Type": "application/json",
         "Authorization": f"Bearer {settings.BYTEPLUS_ARK_API_KEY}",
     }
+    model = settings.BYTEPLUS_SEEDREAM_LAYER_MODEL
+    start = time.time()
+
+    # This function is the ONE chokepoint for the byteplus provider, per the
+    # repo's ai-tracing contract. Capture on every exit — an untraced failure
+    # hides the runs most worth looking at. Never pass the image or the layer
+    # payload as content: it is user artwork.
+    def _capture(error: Optional[BaseException]) -> None:
+        capture_ai_generation(
+            model=model,
+            provider="byteplus",
+            span_name="kv_layer_decompose",
+            start_time=start,
+            error=error,
+        )
+
     try:
         with httpx.Client(timeout=settings.BYTEPLUS_LAYER_DECOMPOSE_TIMEOUT_SEC) as client:
             resp = client.post(url, json=build_payload(image_url), headers=headers)
     except Exception as exc:  # noqa: BLE001 — network class is broad on purpose
+        _capture(exc)
         raise LayerDecomposeError(f"layer decomposition request failed: {exc}") from exc
 
     if resp.status_code >= 400:
-        raise LayerDecomposeError(
+        err = LayerDecomposeError(
             f"layer decomposition returned {resp.status_code}: {resp.text[:200]}"
         )
+        _capture(err)
+        raise err
 
     body = resp.json()
     if not body.get("data"):
-        raise LayerDecomposeError("no_layers_detected")
+        err = LayerDecomposeError("no_layers_detected")
+        _capture(err)
+        raise err
+
+    _capture(None)
     return body
 ```
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `cd ai-service && .venv/bin/python -m pytest tests/agents/kv_layer_decompose/test_client.py -v`
-Expected: 4 passed
+Expected: 6 passed
 
 - [ ] **Step 6: Commit**
 
@@ -781,12 +855,24 @@ git commit -m "feat(ai): layer-decomposition completion callback client"
 Create `app/agents/kv_layer_decompose/request_schema.py`:
 
 ```python
+from typing import Optional
+
 from pydantic import BaseModel
 
 
 class LayerDecomposeJobRequest(BaseModel):
     decomposition_id: str
     source_image_url: str
+    # Identity for PostHog attribution. `bind_ai_context` seeds these from the
+    # REQUEST body, and the vendor call happens later in a BackgroundTask — so
+    # without them every decomposition lands on a fresh anonymous person and
+    # the spend cannot be traced to a user, workspace, or brand.
+    user_id: Optional[str] = None
+    user_email: Optional[str] = None
+    workspace_id: Optional[str] = None
+    workspace_name: Optional[str] = None
+    brand_id: Optional[str] = None
+    brand_name: Optional[str] = None
 ```
 
 Create `app/agents/kv_layer_decompose/response_schema.py`:
@@ -829,6 +915,26 @@ def _patch_happy(monkeypatch, calls):
         lambda vendor_url, job_id, file_name: f"https://our-s3/{job_id}/{file_name}",
     )
     monkeypatch.setattr(svc, "post_completed", lambda **kw: calls.append(kw))
+
+
+def test_identity_is_seeded_before_the_vendor_call(monkeypatch):
+    # Without this the $ai_generation from decompose_image attributes to an
+    # anonymous person: bind_ai_context only sees the request body, and the
+    # vendor call runs later in a BackgroundTask.
+    seen = {}
+    monkeypatch.setattr(svc, "set_ai_context", lambda **kw: seen.update(kw))
+    monkeypatch.setattr(svc, "decompose_image", lambda url: json.loads(FIXTURE.read_text()))
+    monkeypatch.setattr(svc, "mirror_url", lambda **kw: "https://our-s3/x.png")
+    monkeypatch.setattr(svc, "post_completed", lambda **kw: None)
+
+    svc.process_layer_decompose_job(LayerDecomposeJobRequest(
+        decomposition_id="d1", source_image_url="https://example.com/kv.png",
+        user_id="u1", workspace_id="w1", workspace_name="Acme",
+    ))
+
+    assert seen["user_id"] == "u1"
+    assert seen["workspace_id"] == "w1"
+    assert seen["workspace_name"] == "Acme"
 
 
 def test_successful_job_posts_done_with_mirrored_urls(monkeypatch):
@@ -934,6 +1040,7 @@ from app.agents.kv_layer_decompose.client import decompose_image
 from app.agents.kv_layer_decompose.mapping import pixel_count, split_response, to_layer
 from app.agents.kv_layer_decompose.mirror import mirror_url
 from app.agents.kv_layer_decompose.request_schema import LayerDecomposeJobRequest
+from app.observability.context import set_ai_context
 from app.utils.config import settings
 
 logger = logging.getLogger(__name__)
@@ -942,6 +1049,21 @@ logger = logging.getLogger(__name__)
 def process_layer_decompose_job(req: LayerDecomposeJobRequest) -> None:
     ai_service_run_id = str(uuid4())
     job_id = req.decomposition_id
+
+    # Re-seed identity inside the background task. Contextvars do propagate
+    # from the scheduling request, but that request's body is the only source
+    # and this is where the values become available — setting them explicitly
+    # is what makes the $ai_generation attribute to a real person and the
+    # workspace group instead of an anonymous trace id.
+    set_ai_context(
+        user_id=req.user_id,
+        user_email=req.user_email,
+        workspace_id=req.workspace_id,
+        workspace_name=req.workspace_name,
+        brand_id=req.brand_id,
+        brand_name=req.brand_name,
+    )
+
     try:
         body = decompose_image(req.source_image_url)
         base_entry, layer_entries = split_response(body)
@@ -981,7 +1103,7 @@ def process_layer_decompose_job(req: LayerDecomposeJobRequest) -> None:
 - [ ] **Step 5: Run the service tests to verify they pass**
 
 Run: `cd ai-service && .venv/bin/python -m pytest tests/agents/kv_layer_decompose/test_service.py -v`
-Expected: 6 passed
+Expected: 7 passed
 
 - [ ] **Step 6: Write the failing router test**
 

@@ -50,7 +50,14 @@ later mistakes them for a bug introduced by mistake:
    zero-height text box is a corrupt overlay either way; drawing it is the more
    useful failure.
 
-Neither affects a normally-authored overlay. If a download diff shows up
+3. **Letter spacing on a zero-height text box no longer collapses.** Same root
+   cause as (2): the old `norm2px = oh / (ov.height || 1)` scale factor also
+   goes to `0` for a zero-height box, so tracking silently vanished. The shared
+   module scales letter spacing by board height directly. (Found during Task 3;
+   no existing test exercises it.)
+
+None of the three affects a normally-authored overlay — all require either a
+sub-pixel font size or a zero-height text box. If a download diff shows up
 anywhere else, stop — that is a real regression, not one of these.
 
 ---

@@ -710,7 +710,9 @@ Create `app/Jobs/Studio/ProcessKvLayerDecompositionJob.php`:
 
 namespace App\Jobs\Studio;
 
+use App\Models\Brand;
 use App\Models\KvLayerDecomposition;
+use App\Models\User;
 use App\Services\Studio\KvLayerDecompositionService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -742,6 +744,12 @@ class ProcessKvLayerDecompositionJob implements ShouldQueue
 
         $service->markGenerating($row);
 
+        $user = User::find($row->created_by);
+        $file = $row->file()->with('workspace')->first();
+        $brandName = $file?->brand_id
+            ? Brand::query()->whereKey($file->brand_id)->value('name')
+            : null;
+
         // Same ai-service base URL every other KV feature uses — no parallel
         // env var for this one.
         $aiUrl = rtrim(config('services.ai.url'), '/');
@@ -753,6 +761,17 @@ class ProcessKvLayerDecompositionJob implements ShouldQueue
             $response = Http::timeout(30)->post("{$aiUrl}/ai/kv-layer-decompose", [
                 'decomposition_id' => $row->id,
                 'source_image_url' => $row->source_image_url,
+                // Identity for PostHog attribution on the ai-service side.
+                // ai-service captures the vendor call in a BackgroundTask, and
+                // its bind_ai_context only reads the REQUEST body — omit these
+                // and every decomposition lands on an anonymous person with no
+                // workspace group, making the spend untraceable.
+                'user_id' => $user?->id,
+                'user_email' => $user?->email,
+                'workspace_id' => $file?->workspace_id,
+                'workspace_name' => $file?->workspace?->name,
+                'brand_id' => $file?->brand_id,
+                'brand_name' => $brandName,
             ]);
         } catch (RequestException|\Throwable $e) {
             $service->markFailed($row, "AI service unreachable: {$e->getMessage()}");
@@ -799,6 +818,19 @@ it('sends only the id and the source url to ai-service', function () {
         ->and($body)->toContain('/ai/kv-layer-decompose');
 });
 
+it('sends identity so the ai-service PostHog capture is attributable', function () {
+    // ai-service captures the byteplus call in a BackgroundTask; its
+    // bind_ai_context only reads the request body. Drop these and every
+    // decomposition attributes to a fresh anonymous person.
+    $body = file_get_contents(
+        app_path('Jobs/Studio/ProcessKvLayerDecompositionJob.php')
+    );
+
+    expect($body)->toContain("'user_id' =>")
+        ->and($body)->toContain("'workspace_id' =>")
+        ->and($body)->toContain("'brand_id' =>");
+});
+
 it('does not use Http::retry, which throws and would strand the row', function () {
     $body = file_get_contents(
         app_path('Jobs/Studio/ProcessKvLayerDecompositionJob.php')
@@ -811,7 +843,7 @@ it('does not use Http::retry, which throws and would strand the row', function (
 - [ ] **Step 7: Run the tests**
 
 Run: `cd api && ./vendor/bin/pest tests/Unit/Studio/KvLayerDecompositionServiceTest.php`
-Expected: 6 passed
+Expected: 7 passed
 
 - [ ] **Step 8: Commit**
 

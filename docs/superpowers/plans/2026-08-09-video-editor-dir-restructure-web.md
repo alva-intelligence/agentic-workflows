@@ -21,6 +21,13 @@
 - **Do NOT edit `web/AGENTS.md`.** It is generated (`generate-agents.sh`).
 - **Use `git mv`,** never delete-and-add — `git log --follow` must survive.
 - **Test runner is `bun test`** (bunfig preloads jest-dom). Not `bunx vitest`. There is no `test` script in `package.json`.
+- **`develop` has a known-red full suite** — ~380 failures across ~98 files from an RTL `screen`-under-bun bug plus missing `vi.importActual` / `vi.stubGlobal` shims. None of it touches the motion stack. **Do not run the full suite as a gate; it will never be green and tells you nothing about this rename.** The gate for every task is the scoped run below, which is green at 408 pass / 0 fail across 28 files at branch point:
+
+  ```bash
+  bun test src/lib/video-editor src/components/video-editor src/components/studio/kv-generator/motion
+  ```
+
+  (Before Task 1's move, the first two paths are `src/lib/motion` and `src/components/motion-editor`.) Any failure here is caused by the rename and must be fixed.
 - **The build is the real gate:** `bun run build`. There is no `typecheck` script.
 - **Branch:** work on a `refactor/` branch off latest `develop`; this must land as one self-contained commit series with nothing else riding along.
 
@@ -73,13 +80,15 @@ git checkout -b refactor/daffa/vc-video-editor-dir
 
 - [ ] **Step 2: Record the pre-move baseline**
 
-The suite must be green *before* the move, or a pre-existing red gets blamed on the rename.
+The scoped area must be green *before* the move, or a pre-existing red gets blamed on the rename. Use the pre-move paths — nothing has been renamed yet.
 
 ```bash
-bun test 2>&1 | tail -20
+bun test src/lib/motion src/components/motion-editor src/components/studio/kv-generator/motion 2>&1 | tail -5
 ```
 
-Write down the pass/fail counts. Expected: all green. If anything is already red, STOP and report it — do not proceed on a red baseline.
+Expected: **408 pass / 0 fail across 28 files.** Write down the counts; every later gate compares against them.
+
+Do NOT run the full `bun test`. `develop` carries ~380 pre-existing failures in unrelated files (see Global Constraints) — running it wastes minutes and tells you nothing. If this *scoped* run is red, STOP and report it.
 
 - [ ] **Step 3: Move the directory with git mv**
 
@@ -107,19 +116,23 @@ Note the `sed -i ''` form — this is macOS/BSD sed. On GNU sed use `sed -i` wit
 
 - [ ] **Step 6: Confirm zero remaining references**
 
+Use the BARE path pattern, not the alias form. `@/lib/motion/` only matches import specifiers; prose comments and JSDoc write `src/lib/motion/...`, and those are stale references too — a comment pointing at a directory that no longer exists is exactly the confusion this rename exists to end.
+
 ```bash
-grep -rn '@/lib/motion/' src
+grep -rn 'lib/motion' src
 ```
 
 Expected: no output.
 
 - [ ] **Step 7: Run the tests**
 
+The engine UI has not moved yet (that is Task 2), so it is still at its old path here:
+
 ```bash
-bun test 2>&1 | tail -20
+bun test src/lib/video-editor src/components/motion-editor src/components/studio/kv-generator/motion 2>&1 | tail -5
 ```
 
-Expected: same pass/fail counts as Step 2.
+Expected: same counts as Step 2 — 408 pass / 0 fail.
 
 Note: `importBoundary.test.ts` will still pass here — but it is now silently checking nothing, because its `ROOTS` still names `src/lib/motion`, which no longer exists, and it swallows that with `catch { continue }`. Task 3 fixes this. Do not "fix" it here; keep this commit purely mechanical.
 
@@ -191,12 +204,18 @@ Expected: no output.
 grep -rn 'motion-editor' src
 ```
 
-Expected: exactly one line — `src/lib/featureFlags/constants.ts:20` with `KV_MOTION_EDITOR: "show-kv-motion-editor"`. That is a PostHog flag key and MUST NOT be changed. If anything else appears, rewrite it.
+Expected: exactly three lines, all correct as they stand —
+
+1. `src/lib/featureFlags/constants.ts:20` — `KV_MOTION_EDITOR: "show-kv-motion-editor"`. A PostHog flag key, not a path. MUST NOT be changed.
+2. `src/components/studio/kv-generator/KvCanvasTopNav.tsx:62` — a doc comment naming that same flag key. Also not a path. MUST NOT be changed.
+3. `src/lib/video-editor/importBoundary.test.ts:6` — the stale `ROOTS` constant. Task 3 owns this; leave it.
+
+Anything beyond these three is a missed rewrite — fix it. The distinction that matters: a *flag key* containing the words "motion editor" is unrelated to the *directory* name, and rewriting one because it resembles the other is how a silent production regression gets shipped.
 
 - [ ] **Step 6: Run the tests**
 
 ```bash
-bun test 2>&1 | tail -20
+bun test src/lib/video-editor src/components/video-editor src/components/studio/kv-generator/motion 2>&1 | tail -5
 ```
 
 Expected: same counts as Task 1 Step 2.
@@ -287,7 +306,7 @@ const ROOTS = ["src/lib/video-editor", "src/components/video-editor"];
 bun test src/lib/video-editor/importBoundary.test.ts
 ```
 
-Expected: PASS — and this time over 30 real files.
+Expected: PASS — and this time over 19 real files (10 in the engine, 9 in the engine UI). Not 34: `walk()` filters out `.test.ts`/`.test.tsx`, so the 15 test files are excluded by design.
 
 - [ ] **Step 4: Prove the guard is live (deliberate violation)**
 
@@ -339,7 +358,7 @@ Expected: PASS.
 - [ ] **Step 7: Run the full suite and build**
 
 ```bash
-bun test 2>&1 | tail -20
+bun test src/lib/video-editor src/components/video-editor src/components/studio/kv-generator/motion 2>&1 | tail -5
 bun run build
 ```
 
@@ -457,7 +476,7 @@ git commit -m "docs(web): explain what the video-editor engine is, and what it i
 - [ ] **Step 4: Final whole-repo verification**
 
 ```bash
-bun test 2>&1 | tail -20
+bun test src/lib/video-editor src/components/video-editor src/components/studio/kv-generator/motion 2>&1 | tail -5
 bun run build
 grep -rn 'lib/motion\|motion-editor' src
 git log --follow --oneline src/lib/video-editor/timeline.ts | head -5
