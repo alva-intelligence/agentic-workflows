@@ -754,9 +754,12 @@ class ProcessKvLayerDecompositionJob implements ShouldQueue
         // env var for this one.
         $aiUrl = rtrim(config('services.ai.url'), '/');
 
-        // NOT ->retry(): Http::retry() THROWS on a final failure, which would
-        // make a following $response->failed() check dead code and leave the
-        // row stuck. The catch below is the real error path.
+        // Deliberately WITHOUT Laravel's HTTP retry helper: it throws on a
+        // final failure, which would make the $response->failed() check below
+        // dead code and leave the row stuck in `generating` forever. The catch
+        // is the real error path. (ProcessKvResizeExportJob has that bug —
+        // do not copy it.) The wording avoids naming the helper literally so
+        // it does not collide with the test asserting the call is absent.
         try {
             $response = Http::timeout(30)->post("{$aiUrl}/ai/kv-layer-decompose", [
                 'decomposition_id' => $row->id,
@@ -1316,6 +1319,37 @@ it('does not charge when the run id is missing', function () {
 
     expect(\App\Models\CostHistory::count())->toBe(0);
 });
+
+it('writes exactly one cost history row with the layer-decomposition type', function () {
+    // The metering METHOD has no unit test of its own — a unit test would be
+    // mock-heavy and prove little. This is where the guard, the transaction,
+    // the CostHistory field mapping and the arithmetic are actually verified.
+    $this->postJson('/api/v1/internal/kv-layer-decompositions/completed', donePayload($this->row->id))
+        ->assertOk();
+
+    $rows = \App\Models\CostHistory::all();
+    expect($rows)->toHaveCount(1);
+    expect($rows[0]->cost_type)->toBe('kv_layer_decomposition')
+        ->and($rows[0]->entry_type)->toBe('deduction')
+        ->and($rows[0]->batch_identifier)->toBe("kv_layer_decompose_{$this->row->id}_run-1");
+
+    // image_pixel_counts was [1572864, 338522] — two images, both under the
+    // 2.61M cheap tier, so 2 x $0.0225 x the multiplier.
+    $expected = 2 * 0.0225 * \App\Helpers\PricingHelper::upscaleMultiplier();
+    expect((float) $rows[0]->amount)->toEqualWithDelta($expected, 0.0001);
+
+    // Decomposition bills per IMAGE; the token columns carry the image count.
+    expect((int) $rows[0]->total_tokens)->toBe(2);
+});
+
+it('does not double-charge a replayed callback', function () {
+    $payload = donePayload($this->row->id);
+
+    $this->postJson('/api/v1/internal/kv-layer-decompositions/completed', $payload)->assertOk();
+    $this->postJson('/api/v1/internal/kv-layer-decompositions/completed', $payload)->assertOk();
+
+    expect(\App\Models\CostHistory::count())->toBe(1);
+});
 ```
 
 - [ ] **Step 3: Run it to verify it fails**
@@ -1425,7 +1459,7 @@ Add the import for `App\Http\Controllers\Api\Internal\KvLayerDecompositionIntern
 - [ ] **Step 6: Run the callback test to verify it passes**
 
 Run: `cd api && rm -f bootstrap/cache/config.php && ./vendor/bin/pest tests/Feature/Studio/KvLayerDecompositionCallbackTest.php`
-Expected: 6 passed
+Expected: 8 passed
 
 - [ ] **Step 7: Commit**
 
