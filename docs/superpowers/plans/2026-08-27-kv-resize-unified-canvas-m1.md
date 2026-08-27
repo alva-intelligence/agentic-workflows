@@ -20,6 +20,17 @@
 - **Canvas geometry is camera-only** (NFR-2). The canvas element's width/height must never change in response to selection, activation or a gesture. Only `props.width/height` (the viewport) and `viewportTransform` may change it.
 - **Test runner is `bun test`, NOT vitest.** See [[lesson-web-test-runner-bun-test]]. There is no type gate in CI; compare `tsc` against a baseline worktree, never assume clean.
 - **Never `git stash`** to compare baselines — use a worktree at HEAD.
+- **Do NOT modify shared modules.** M1 is resize-only by construction:
+  `KvFabricCanvas` (Craft, production) imports none of the files below, and it
+  must stay that way. `fabricExport.ts`, `ghostOverlay.ts`,
+  `overlayGeometry.ts` and `overlayMutations.ts` are used by 8–9 files each,
+  Craft among them — **call them, never edit them**. That is why Task 1 adds a
+  wrapper (`resizeWorldGeometry.ts`) instead of widening `overlayNormFromRect`.
+  If a task seems to require changing a shared module, STOP and escalate: it
+  is a Craft change wearing a resize hat, and the drift it causes is silent
+  (a styling prop added to some overlay renderers but not all makes preview ≠
+  export). `boxPromptUi.tsx` is shared too, but nothing in M1 touches it — it
+  arrives in M2.
 
 ---
 
