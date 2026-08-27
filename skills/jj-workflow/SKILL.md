@@ -9,7 +9,7 @@ Manages JJ (Jujutsu) workspaces for parallel feature development. Each workspace
 
 **Key principles:**
 - JJ runs in **colocated mode** — all git commands stay unchanged. JJ is ONLY used for workspace management.
-- The frndOS workspace is NOT a single repo. It contains 4 service repos (`api/`, `web/`, `ai-service/`, `data-service/`). JJ operations are applied **per-service-repo**, orchestrated at the top level.
+- The frndOS workspace is NOT a single repo. It contains 5 service repos (`api/`, `web/`, `ai-service/`, `data-service/`, `orchestration/`). JJ operations are applied **per-service-repo**, orchestrated at the top level.
 - This skill is **completely separate** from `/workflow`. The workflow skill handles the feature state machine; `/jj-workflow` handles workspace isolation.
 - Most useful with **terminal-based harnesses** (Claude Code, Amp) where you run one session per directory. Cursor is IDE-integrated so benefits less; OpenCode also works per-session and can use workspaces if desired.
 
@@ -61,7 +61,7 @@ Initialize JJ colocated mode in all service repos. Can be run standalone or duri
    > "JJ (Jujutsu) is not installed. Install with `brew install jj` or add it via Nix (`nix develop`), then retry."
 3. For each service directory that has `.git/` but NOT `.jj/`:
    ```bash
-   for service in api web ai-service data-service; do
+   for service in api web ai-service data-service orchestration; do
      if [ -d "$service/.git" ] && [ ! -d "$service/.jj" ]; then
        echo "Initializing JJ colocated mode in $service/"
        cd "$service" && jj git init --colocate && cd ..
@@ -105,7 +105,7 @@ Create a new JJ workspace for parallel feature development.
 
 4. **Create JJ workspaces in each service repo that has `.jj/`:**
    ```bash
-   for service in api web ai-service data-service; do
+   for service in api web ai-service data-service orchestration; do
      if [ -d "$service/.jj" ]; then
        echo "Creating JJ workspace for $service/"
        cd "$service"
@@ -305,7 +305,7 @@ Show current workspace info and JJ state.
 
 3. **Show JJ workspace state per service repo:**
    ```bash
-   for service in api web ai-service data-service; do
+   for service in api web ai-service data-service orchestration; do
      if [ -d "$service/.jj" ]; then
        echo "=== $service ==="
        cd "$service" && jj workspace list && cd ..
@@ -377,7 +377,7 @@ Remove a completed JJ workspace.
 
 4. **Forget JJ workspaces in each service repo:**
    ```bash
-   for service in api web ai-service data-service; do
+   for service in api web ai-service data-service orchestration; do
      if [ -d "$service/.jj" ]; then
        cd "$service"
        jj workspace forget "<slug>" 2>/dev/null || echo "$service: workspace '<slug>' not found (already cleaned)"

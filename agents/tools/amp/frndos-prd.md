@@ -53,7 +53,7 @@ You MUST complete this research before drafting a single line of the PRD.
 
 1. **Read relevant service code** for services you suspect this feature touches (`api/app/`, `web/src/`, `ai-service/app/`, `data-service/app/`). Identify existing routes, models, components, or pipelines that overlap with the described feature.
 2. **Read existing PRDs in `docs/prd/`** — is there a related or partially overlapping feature?
-3. **Check recent commits on base branches** (`develop` for api/web, `development` for ai-service/data-service) for changes in affected areas:
+3. **Check recent commits on base branches** (`develop` for api/web, `development` for ai-service/data-service, `staging` for orchestration) for changes in affected areas:
    ```bash
    cd <service> && git log --oneline -n 30 origin/<base-branch> -- <affected-paths>
    ```
@@ -98,7 +98,7 @@ slug: <feature-slug>
 author: <who wrote this>
 created: <YYYY-MM-DD>
 status: draft | review | approved
-services: [api, web, ai-service, data-service]
+services: [api, web, ai-service, data-service, orchestration]
 ---
 ```
 

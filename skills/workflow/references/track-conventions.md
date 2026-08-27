@@ -10,7 +10,7 @@ Track files live at: `<service>/docs/tracks/<feature-slug>.track.md`
 ---
 prd: <feature-slug>
 parent_prd: docs/prd/<feature-slug>.md
-service: <api|web|ai-service|data-service>
+service: <api|web|ai-service|data-service|orchestration>
 branch: <prefix><worker>/vc-<feature-slug>   # <prefix> = feature/ | fix/ | improvement/ (matches feature type)
 pr_url: <GitHub PR URL or null>
 status: in_progress | completed

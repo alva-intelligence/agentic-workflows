@@ -29,7 +29,12 @@ Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-sta
 
 ### Step 2: Load latest state of relevant services
 
-Identify candidate services from `initial_request` (api, web, ai-service, data-service).
+Identify candidate services from `initial_request` (api, web, ai-service, data-service, orchestration).
+`orchestration` is the Prefect transform layer between Fivetran's raw tables and the marts
+data-service serves — pick it when the request concerns raw→staging→mart transformation, mart
+population, metric derivation, or pipeline scheduling. A new metric is usually a **two-repo**
+change: the projection that computes it is orchestration's, the endpoint that serves it is
+data-service's.
 
 For each candidate service, build a short snapshot. Prefer the code-graph MCP tools (faster, cheaper, structural):
 

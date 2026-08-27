@@ -32,7 +32,7 @@ Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-sta
 
 This phase replaces the old `branch_creation` phase. Before any PRD work:
 
-1. Determine base branch: `develop` for api/web, `development` for ai-service/data-service.
+1. Determine base branch: `develop` for api/web, `development` for ai-service/data-service, `staging` for orchestration (⚠️ staging-first; `main` is production, reached by a separate promotion PR — branch + PR only, never push).
 2. `git checkout <base-branch> && git pull origin <base-branch>`.
 3. Resolve `<prefix>` from `features[<slug>].type` — `feature`→`feature/`, `bug`→`fix/`, `improvement`→`improvement/`. If type missing, default to `feature` and record `q-feature-type` in `open_questions` (options: feature/fix/improvement, `recommended: "feature"`).
 4. Do NOT ask the user. Proceed to create branch `<prefix><worker>/vc-<slug>` from `<base-branch>`. Record naming aspect in `open_questions` only if any aspect was assumed (e.g. worker missing).
@@ -78,7 +78,7 @@ g. Create track file at `<service>/docs/tracks/<slug>.track.md`
 title: <Feature Name> — <Service Name>
 slug: <feature-slug>
 parent_prd: docs/prd/<feature-slug>.md
-service: <api|web|ai-service|data-service>
+service: <api|web|ai-service|data-service|orchestration>
 created: <YYYY-MM-DD>
 status: draft
 ---
@@ -101,7 +101,7 @@ Location: `<service>/docs/tracks/<feature-slug>.track.md`
 ---
 prd: <feature-slug>
 parent_prd: docs/prd/<feature-slug>.md
-service: <api|web|ai-service|data-service>
+service: <api|web|ai-service|data-service|orchestration>
 branch: feature/<worker>/vc-<feature-slug>
 pr_url: null
 status: in_progress

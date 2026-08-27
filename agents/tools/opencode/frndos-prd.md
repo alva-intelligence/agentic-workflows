@@ -88,7 +88,7 @@ slug: <feature-slug>
 author: <who wrote this>
 created: <YYYY-MM-DD>
 status: draft | review | approved
-services: [api, web, ai-service, data-service]
+services: [api, web, ai-service, data-service, orchestration]
 ---
 ```
 

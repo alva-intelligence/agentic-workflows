@@ -66,7 +66,7 @@ If you want the user to double-check before opening, record an `open_questions` 
 
 ### Step 7: Draft PR
 
-Read `.agentic-workflows/templates/pr/feature-pr.template.md`. Title `feat(<service>): <feature-title> — <brief>`. Target `develop` (api/web) or `development` (ai-service/data-service). Append both summaries to PR body verbatim.
+Read `.agentic-workflows/templates/pr/feature-pr.template.md`. Title `feat(<service>): <feature-title> — <brief>`. Target `develop` (api/web), `development` (ai-service/data-service), or `staging` (orchestration — staging-first; `main` is production and is reached by a separate promotion PR; open the PR, never merge it yourself). Append both summaries to PR body verbatim.
 
 ### Step 8: Open PR
 

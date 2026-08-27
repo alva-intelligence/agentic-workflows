@@ -27,7 +27,7 @@ Split the active feature's main PRD into service PRDs.
 3. Verify workflow state is in `prd_splitting` phase.
 
 4. **Create the feature branch (before splitting).** This phase replaces the old `branch_creation` phase.
-   - Determine base: `develop` for api/web, `development` for ai-service/data-service.
+   - Determine base: `develop` for api/web, `development` for ai-service/data-service, `staging` for orchestration (⚠️ staging-first; `main` is production, reached by a separate promotion PR — branch + PR only, never push).
    - `git checkout <base> && git pull origin <base>`.
    - **Resolve branch prefix from `features[<slug>].type`:**
      - `feature` → `feature/`

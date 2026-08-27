@@ -17,7 +17,7 @@ Check what exists in the workspace:
    - If `workspace_meta.is_jj_workspace` is `true` → secondary JJ workspace, scoped to `workspace_meta.feature_slug`. Do NOT offer `/jj-workflow new` from here.
    - Otherwise → primary workspace. Check `command -v jj` for JJ availability.
 
-2. **No service directories** (no `api/`, `web/`, `ai-service/`, `data-service/`):
+2. **No service directories** (no `api/`, `web/`, `ai-service/`, `data-service/`, `orchestration/`):
    → Fresh workspace. Tell user: "This workspace hasn't been set up yet. Run `/onboard` to configure your development environment."
    → Do NOT proceed with workflow commands.
 
@@ -199,6 +199,7 @@ Create an agent team called "frndos-<slug>" with the following teammates:
 **Target branches per service:**
 - `api`, `web` → `develop`
 - `ai-service`, `data-service` → `development`
+- `orchestration` → `staging` (⚠️ staging-first; `main` is production and is reached by a separate promotion PR — open the PR, never merge it)
 
 ### Step 3: Create shared task list
 

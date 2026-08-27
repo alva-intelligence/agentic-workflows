@@ -25,7 +25,7 @@
       "name": "Services",
       "type": "multi_select",
       "required": true,
-      "options": ["api", "web", "ai-service", "data-service"]
+      "options": ["api", "web", "ai-service", "data-service", "orchestration"]
     },
     {
       "name": "Source PRD",

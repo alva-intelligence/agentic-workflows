@@ -386,7 +386,7 @@ ok "Done."
 if [[ "$BOOTSTRAP" == true ]] || [[ -z "$LOCAL_VERSION" ]]; then
   # Check if this is a fresh workspace (no service dirs)
   has_services=false
-  for dir in api web ai-service data-service; do
+  for dir in api web ai-service data-service orchestration; do
     if [[ -d "$WORKSPACE_ROOT/$dir" ]]; then
       has_services=true
       break

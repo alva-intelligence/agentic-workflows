@@ -89,7 +89,19 @@ If you want the user to double-check before opening, record an `open_questions` 
 - Fill in: title, summary, PRD links, changes, tasks completed.
 - Append the `Self-review` and `Security audit` summaries to the PR body verbatim.
 - **Title:** `feat(<service>): <feature-title> — <brief description>`.
-- **Target:** `develop` for api/web, `development` for ai-service/data-service.
+- **Target:** `develop` for api/web, `development` for ai-service/data-service, `staging` for orchestration.
+
+> ⚠️ **orchestration deploys per environment on one shared server (`prefect.frndos.com`).** Verified on the estate 2026-08-27: **production** pulls `main` (pool `local-pool`, queue `ads`); **staging** pulls `staging` (pool `staging-pool`, queue `ads-staging`), both pools `READY` with a live worker. A merge to `main` reaches **production**.
+>
+> **Feature work branches from `staging` and PRs into `staging`.** Reaching production is a **separate promotion PR, `staging` → `main`**, opened deliberately by a human — never as part of a feature. `main` is a strict ancestor of `staging` (43 behind, 0 ahead as of 2026-08-27), so the promotion is a clean merge. Open the PR and stop either way: never merge it yourself, never push to `staging` or `main`.
+> This repo has **no test or lint gate in CI** — its seven workflows cover PR review, contract and
+> governance docs, Alembic single-head and post-merge notification, none of them run the suite. Run
+> `.venv/bin/pytest` from `orchestration/` locally before opening (no `-q` — `pyproject.toml`
+> already sets `addopts = "-q"`, and passing it again makes it `-qq`, which suppresses the
+> pass/fail counts). **Expect one pre-existing
+> failure** — `test_fb_pages_swap.py::test_substitution_order_when_reel_branch_real_with_inner_empty`.
+> Measured on clean clones 2026-08-27: **`staging` 1 failed / 236 passed**, `main` 1 failed / 206
+> passed. Compare against the baseline for the branch you are on; a second failure is yours.
 
 ### Step 8: Open PR
 

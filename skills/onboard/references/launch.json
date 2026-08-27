@@ -35,6 +35,13 @@
       "runtimeExecutable": "nix",
       "runtimeArgs": ["develop", "--command", "mailhog"],
       "port": 8025
+    },
+    {
+      "name": "prefect-server",
+      "runtimeExecutable": "nix",
+      "runtimeArgs": ["develop", "--command", "bash", "-c", "cd orchestration && PREFECT_PROFILE=local .venv/bin/prefect server start"],
+      "port": 4200
     }
-  ]
+  ],
+  "$comment_prefect_server": "prefect-server is OPT-IN and is deliberately NOT started by run-all.sh. Orchestration has no long-running server of its own; this entry exists only for local flow development (onboard Step 7.5). It binds :4200 — the single port orchestration can contend for. Omit this configuration entirely if Orchestration was not selected. The PREFECT_PROFILE=local prefix is required: without it the server inherits whatever profile is globally active, which may be frndos_prefect (staging AND production)."
 }

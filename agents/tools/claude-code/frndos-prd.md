@@ -65,10 +65,10 @@ Estimate source-material size. Rough token count ≈ `char_count / 3.5`.
 You MUST complete this research before drafting a single line of the PRD. Devs naturally check existing behavior; non-dev users don't, and without this step, PRDs tend to ignore existing features, data models, or recent changes.
 
 1. **Read relevant service code** for services you suspect this feature touches:
-   - Scan `api/app/`, `web/src/`, `ai-service/app/`, `data-service/app/` as relevant
+   - Scan `api/app/`, `web/src/`, `ai-service/app/`, `data-service/app/`, `orchestration/flows/` + `orchestration/tasks/` as relevant
    - Identify existing routes, models, components, or pipelines that overlap with the described feature
 2. **Read existing PRDs in `docs/prd/`** — is there a related or partially overlapping feature? Has this been tried before?
-3. **Check recent commits on the base branches** (`develop` for api/web, `development` for ai-service/data-service) for changes in the affected areas:
+3. **Check recent commits on the base branches** (`develop` for api/web, `development` for ai-service/data-service, `staging` for orchestration) for changes in the affected areas:
    ```bash
    cd <service> && git log --oneline -n 30 origin/<base-branch> -- <affected-paths>
    ```

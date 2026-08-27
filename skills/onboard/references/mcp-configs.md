@@ -283,6 +283,157 @@ Configure inside `api/` directory only.
 
 ---
 
+## Prefect MCP (Optional — Orchestration only)
+
+Package: `prefect-mcp-server` (run via `uvx`)
+
+Read-only inspection of the shared Prefect estate — deployments, flow runs, logs, work pools.
+Configure **only** if the user selected Orchestration.
+
+**The `PREFECT_PROFILE` env var is the whole safety story.** It pins the server to one estate for
+its entire lifetime, so the MCP can never be retargeted by a stray `prefect profile use` elsewhere
+on the machine. `frndos_prefect` is the shared **staging + production** server — treat every write
+tool as a production action. `references/claude-settings.json` denies the three tools that create
+or cancel flow runs; keep those denials.
+
+**Prerequisite:** `~/.prefect/profiles.toml` must already contain a `frndos_prefect` profile — see
+onboard Step 6b. Without it the server starts and every call fails with a connection error.
+
+### Claude Code (`.mcp.json`)
+
+```json
+{
+  "mcpServers": {
+    "prefect-frnd": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["prefect-mcp-server"],
+      "env": { "PREFECT_PROFILE": "frndos_prefect" }
+    }
+  }
+}
+```
+
+### Cursor (`.cursor/mcp.json`)
+
+```json
+{
+  "mcpServers": {
+    "prefect-frnd": {
+      "command": "uvx",
+      "args": ["prefect-mcp-server"],
+      "env": { "PREFECT_PROFILE": "frndos_prefect" }
+    }
+  }
+}
+```
+
+### OpenCode (`opencode.json`)
+
+```json
+{
+  "mcp": {
+    "prefect-frnd": {
+      "type": "local",
+      "command": ["uvx", "prefect-mcp-server"],
+      "enabled": true,
+      "environment": { "PREFECT_PROFILE": "frndos_prefect" }
+    }
+  }
+}
+```
+
+### Amp (`.amp/settings.json`)
+
+```json
+{
+  "amp.mcpServers": {
+    "prefect-frnd": {
+      "command": "uvx",
+      "args": ["prefect-mcp-server"],
+      "env": { "PREFECT_PROFILE": "frndos_prefect" }
+    }
+  }
+}
+```
+
+**Credentials:** none in the MCP config. Everything is read from the pinned profile in
+`~/.prefect/profiles.toml`, which is plaintext and lives **outside** the workspace. Never copy a
+profile's `PREFECT_API_AUTH_STRING` into an MCP config or into any file inside the repo.
+
+---
+
+## ClickHouse MCP (Optional — Orchestration + Data Service)
+
+**Remote server** — no npm/pypi package. Connects to `https://mcp.clickhouse.cloud/mcp`,
+authenticates via browser OAuth on first use.
+
+Read access to the warehouse: list databases and tables, run SELECTs. Useful for answering
+"is this mart column actually populated?" without leaving the session.
+
+> ⚠️ This is a **read** surface. Destructive SQL — `DROP`, `TRUNCATE`, `DELETE`, `ALTER` — needs
+> explicit operator confirmation every time, even to test a guard. `references/claude-settings.json`
+> separately denies `clickhouse client` / `clickhouse-client` on the Bash tool, so the local CLI is
+> not a way around this.
+
+### Claude Code (`.mcp.json`)
+
+```json
+{
+  "mcpServers": {
+    "clickhouse-remote": {
+      "type": "http",
+      "url": "https://mcp.clickhouse.cloud/mcp"
+    }
+  }
+}
+```
+
+Or: `claude mcp add --transport http clickhouse-remote https://mcp.clickhouse.cloud/mcp`
+
+### Cursor (`.cursor/mcp.json`)
+
+```json
+{
+  "mcpServers": {
+    "clickhouse-remote": {
+      "url": "https://mcp.clickhouse.cloud/mcp",
+      "type": "http"
+    }
+  }
+}
+```
+
+### OpenCode (`opencode.json`)
+
+```json
+{
+  "mcp": {
+    "clickhouse-remote": {
+      "type": "remote",
+      "url": "https://mcp.clickhouse.cloud/mcp",
+      "enabled": true
+    }
+  }
+}
+```
+
+### Amp (`.amp/settings.json`)
+
+```json
+{
+  "amp.mcpServers": {
+    "clickhouse-remote": {
+      "url": "https://mcp.clickhouse.cloud/mcp"
+    }
+  }
+}
+```
+
+**No token needed** — browser OAuth on first use.
+
+---
+
 ## Sentry MCP (Optional — production debugging)
 
 Package: `@sentry/mcp-server`

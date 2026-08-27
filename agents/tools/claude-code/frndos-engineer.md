@@ -10,14 +10,22 @@ You are a **frndos-engineer** teammate. You are responsible for implementing, se
 
 Extract these from your spawn prompt (provided by the lead when creating the team):
 
-- **Service:** (e.g., api, web, ai-service, data-service)
+- **Service:** (e.g., api, web, ai-service, data-service, orchestration)
 - **Directory:** (e.g., `api/`, `web/`)
 - **Service PRD:** (e.g., `api/docs/prd/feature-slug.md`)
 - **Track file:** (e.g., `api/docs/tracks/feature-slug.track.md`)
 - **Feature branch:** (e.g., `feature/claude/vc-feature-slug`)
-- **Target branch:** (e.g., `develop` or `development`)
+- **Target branch:** (e.g., `develop`, `development`, or `staging` for orchestration)
 - **Feature slug:**
 - **Worker:**
+
+> ⚠️ **If you are the orchestration-engineer:** read `orchestration/AGENTS.md` first — 18 hard
+> rules. It is staging-first: branch from `staging`, PR into `staging`; `main` is production and is
+> reached only by a separate promotion PR. You may NOT push to `staging` or `main`,
+> register or re-register Prefect deployments, mutate Prefect blocks, edit `prefect.yaml` or
+> `deployments/`, or issue DDL / DROP / TRUNCATE / DELETE against a cluster. Run the suite with
+> `.venv/bin/pytest` — `pyproject.toml` sets `pythonpath = ["."]`, so no `PYTHONPATH=.`
+> prefix is needed. Older docs in that repo still say it is; they are stale.
 
 ## YOUR SCOPE (STRICT)
 

@@ -68,6 +68,12 @@
             echo "  gh:         $(gh --version 2>/dev/null | head -1 || echo 'not found')"
             echo "  git:        $(git --version 2>/dev/null || echo 'not found')"
             echo "  jj:         $(jj --version 2>/dev/null || echo 'not found')"
+            # ClickHouse client — needed by orchestration + data-service. NOT a buildInput:
+            # nixpkgs' `clickhouse` is the full server and its darwin build is unreliable, so
+            # adding it here would risk breaking `nix develop` for everyone. Install it out of
+            # band instead: `brew install --cask clickhouse` (a CASK, not a formula) or the
+            # official one-liner `curl https://clickhouse.com/ | sh`.
+            echo "  clickhouse: $(clickhouse client --version 2>/dev/null || echo 'not found — brew install --cask clickhouse')"
             echo ""
 
             echo "Service health checks:"
@@ -84,7 +90,9 @@
               echo "  Redis:       NOT RUNNING"
             fi
 
-            if curl -sf http://localhost:9191/health > /dev/null 2>&1; then
+            # NOTE: the API has no /health route. Its check is `/api`, and ANY HTTP
+            # response means it is up (see skills/onboard/references/service-registry.md).
+            if [ "$(curl -so /dev/null -w '%{http_code}' http://localhost:9191/api 2>/dev/null || echo 000)" != "000" ]; then
               echo "  API:         RUNNING"
             else
               echo "  API:         NOT RUNNING"
@@ -102,10 +110,19 @@
               echo "  AI Service:  NOT RUNNING"
             fi
 
-            if curl -sf http://localhost:9999/health > /dev/null 2>&1; then
+            # NOTE: data-service's health route is /api/v1/health/ and it is auth-protected.
+            # A 401 means the service IS running — treat it as healthy.
+            dscode=$(curl -so /dev/null -w '%{http_code}' http://localhost:9999/api/v1/health/ 2>/dev/null || echo 000)
+            if [ "$dscode" = "200" ] || [ "$dscode" = "401" ]; then
               echo "  Data Service: RUNNING"
             else
               echo "  Data Service: NOT RUNNING"
+            fi
+
+            # Orchestration has NO server and NO health endpoint by design — nothing to curl.
+            # The only thing it can bind is an opt-in local Prefect server on :4200.
+            if curl -sf http://localhost:4200/api/health > /dev/null 2>&1; then
+              echo "  Prefect (local, opt-in): RUNNING"
             fi
 
             echo ""

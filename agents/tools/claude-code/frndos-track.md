@@ -18,6 +18,8 @@ You are the frndos-track agent. You manage track files and session logs across a
 
 `<service>/docs/tracks/<feature-slug>.track.md`
 
+`<service>` is one of: `api`, `web`, `ai-service`, `data-service`, `orchestration`.
+
 ## OPERATIONS
 
 ### Create track file

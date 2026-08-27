@@ -29,6 +29,7 @@ This phase replaces the old `branch_creation` phase. Before any PRD work:
 1. Determine the base branch:
    - `develop` for api / web
    - `development` for ai-service / data-service
+   - `staging` for orchestration (⚠️ staging-first; `main` is production, reached by a separate promotion PR — branch + PR only, never push)
    - If services span both bases, use the one that owns the majority service; service repos are independent — track per-service branches if needed.
 2. Check out and pull:
    ```bash
@@ -109,6 +110,7 @@ g. Create track file at `<service>/docs/tracks/<slug>.track.md`
 | web | `web/` | `web/docs/prd/<slug>.md` | `web/docs/tracks/<slug>.track.md` |
 | ai-service | `ai-service/` | `ai-service/docs/prd/<slug>.md` | `ai-service/docs/tracks/<slug>.track.md` |
 | data-service | `data-service/` | `data-service/docs/prd/<slug>.md` | `data-service/docs/tracks/<slug>.track.md` |
+| orchestration | `orchestration/` | `orchestration/docs/prd/<slug>.md` | `orchestration/docs/tracks/<slug>.track.md` |
 
 ## ON COMPLETION
 

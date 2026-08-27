@@ -14,7 +14,7 @@ slug: <feature-slug>
 author: <who wrote this>
 created: <YYYY-MM-DD>
 status: draft | review | approved
-services: [api, web, ai-service, data-service]  # which services are touched
+services: [api, web, ai-service, data-service, orchestration]  # which services are touched
 ---
 ```
 
@@ -43,7 +43,7 @@ services: [api, web, ai-service, data-service]  # which services are touched
 title: <Feature Name> — <Service Name>
 slug: <feature-slug>
 parent_prd: docs/prd/<feature-slug>.md
-service: <api|web|ai-service|data-service>
+service: <api|web|ai-service|data-service|orchestration>
 created: <YYYY-MM-DD>
 status: draft | in_progress | completed
 ---
