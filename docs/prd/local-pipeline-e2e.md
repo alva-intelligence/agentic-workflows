@@ -432,6 +432,23 @@ ranked by consequence; a minor point lands last rather than being dropped.
   tables — matching `PLATFORM_RAW_TABLES` at `orchestration/domain/platforms.py:258+`
   exactly.
 
+  ⚠️ **Amended 2026-08-31 — this FR contradicted api and api is being changed to match, not
+  the FR.** Counted from `api/database/seeders/DemoWorkspaceSeeder.php:554-600`,
+  `integrationDefinitions()` registers `frndbank` with **6** platforms, not 9:
+  `FACEBOOK_ADS`, `FACEBOOK_PAGES`, `GOOGLE_ADS`, `GOOGLE_SHEETS_ATL`,
+  `GOOGLE_SHEETS_EARNED`, `INSTAGRAM`. Missing: TikTok organic, TikTok Ads, YouTube. Across
+  **all four** demo brands api covers 8 of 9 platforms — **YouTube is registered by no brand
+  at all**. FR-11 and FR-12 each carry an explicit "the api tuple wins" clause; FR-10 did
+  not, and simply asserted 9, so `q-brand-platform-matrix` ("one full brand carries all 9")
+  and "api is source of truth" could not both hold.
+
+  Fahmi resolved this 2026-08-31 by **widening api** rather than narrowing the matrix — see
+  **FR-30**. FR-10 therefore stands at 9 platforms, and api stops being a zero-code service
+  in this feature. The alternatives were rejected on the record: narrowing FR-10 to 6 would
+  have abandoned full-platform coverage and left YouTube seeded for nobody; seeding raw
+  beyond api's registrations for one brand would have made raw and the Postgres integration
+  list deliberately disagree, which is the drift "api is source of truth" exists to prevent.
+
 - **FR-11: `frndskincare` MUST carry the 6-platform subset used by api's
   `DemoWorkspaceSeeder`.** Brand ULID `01ksrm715zf0ejfeje5psv0kfz`. Platforms MUST match the
   tuple that `api/database/seeders/DemoWorkspaceSeeder.php` registers for `frndskincare` —
@@ -591,6 +608,81 @@ ranked by consequence; a minor point lands last rather than being dropped.
   `python3 -c` with `json.load` / `json.dump` (indent=4, matching the existing formatting)
   rather than `jq`, so the setup script gains no new tool dependency. NFR-11 records the
   cross-boundary write cost.
+
+- **FR-30: `api/database/seeders/DemoWorkspaceSeeder.php` MUST register `frndbank` with all
+  nine platforms.** `integrationDefinitions()` at `:554-600` today emits 6 tuples for
+  `frndbank`; this FR adds three — TikTok organic, TikTok Ads and YouTube — so that FR-10's
+  9-platform matrix is true against api rather than in spite of it. Each new tuple follows
+  the existing shape exactly: `brand_id` from `DemoUlids::frndbankBrandUlid()`, `brand_slug`
+  `'frndbank'`, the matching `BrandIntegration::PLATFORM_*` constant, and an `account_name`
+  in the established voice (the existing rows read `'frndBank Facebook'`, `'@frndbank'`,
+  `'frndBank Ads Account'`, `'frndBank Google Ads'`).
+
+  Four constraints:
+
+  1. **`frndskincare`, `frndairline` and `yourfragrance` are NOT widened.** Their tuples are
+     already correct — 6, 6 and 5 respectively, verified 2026-08-31 against FR-11, FR-12 and
+     FR-13. Only `frndbank` changes.
+  2. **No new constant is needed — verified 2026-08-31.**
+     `BrandIntegration::PLATFORM_YOUTUBE = 'youtube_analytics'` already exists at
+     `api/app/Models/BrandIntegration.php:92`, alongside `PLATFORM_TIKTOK_ORGANIC` (`:90`)
+     and `PLATFORM_TIKTOK_ADS` (`:96`). `mediaTypeForPlatform()` at `:346-365` needs no new
+     arm either: YouTube is in none of the PAID / EARNED / ATL / BUSINESS lists, so it falls
+     through to `MEDIA_TYPE_OWNED`, which is correct. This FR is three data rows, nothing
+     structural.
+  3. **The derived ids stay derived.** `:275` builds `demo_{brand_slug}_{platform}` and
+     `:299-300` builds `demo_{brand_slug}_account`; the new tuples must not hardcode either.
+  4. **This does not create ClickHouse `account_ownership` rows** — see the risk note below.
+
+  This FR is why api's service PRD and track file, which were written and committed on
+  2026-08-31 declaring api a zero-code service, are superseded. api now carries code and
+  moves in the merge order accordingly.
+
+- **FR-30b: The seeder MUST map api's platform vocabulary onto orchestration's.** FR-11,
+  FR-12 and FR-13 say the raw seeder's platforms "MUST match" api's tuples, which is
+  ambiguous as written: **four of the nine names differ** between
+  `api/app/Models/BrandIntegration.php:86-102` and
+  `orchestration/domain/platforms.py::PLATFORM_TO_RAW_ALIAS:39-49`. Counted 2026-08-31:
+
+  | api `BrandIntegration::PLATFORM_*` | orchestration key | raw alias | same? |
+  |---|---|---|---|
+  | `instagram_business` | `instagram_business` | `ig` | yes |
+  | `facebook_pages` | `facebook_pages` | `fb` | yes |
+  | `facebook_ads` | `facebook_ads` | `fb_ads` | yes |
+  | `tiktok_ads` | `tiktok_ads` | `tt_ads` | yes |
+  | `google_ads` | `google_ads` | `g_ads` | yes |
+  | `tiktok_organic` | `tiktok` | `tt` | **no** |
+  | `youtube_analytics` | `youtube` | `yt` | **no** |
+  | `google_sheets_earned` | `gs_earned` | `gs_earned` | **no** |
+  | `google_sheets_atl` | `gs_atl` | `gs_atl` | **no** |
+
+  The mapping MUST live in one named place in `scripts/local-seed-raw.py` — a single dict
+  beside the existing `PLATFORMS` map at `:54-59`, not four inline conditionals — and a test
+  MUST assert the mapping is total in both directions: every
+  `PLATFORM_TO_RAW_ALIAS` key resolves to exactly one api constant and vice versa. Without
+  that assertion, adding a tenth platform to either side silently drops a brand's raw DB,
+  and an absent raw DB reads downstream as an empty mart, which looks like a pipeline bug
+  rather than a missing fixture — the same failure mode FR-28's completeness assertion
+  exists to prevent on the orchestration side.
+
+- **FR-30a: Record that widening api does not by itself satisfy `Seeder.registered_account()`.**
+  `frnd_os_master.account_ownership` is **not** derived from api. It is derived by
+  `data-service/database/seeders/frnd_agg_marts/demo/seed_demo.py:635-641` from
+  `frnd_agg_marts.paid_ads_performance` and at `:651-658` from
+  `frnd_agg_marts.social_content_performance` — and those mart rows are themselves **copied
+  from real source tenants** (`copy_mart_for_brand` at `:241`, source filter at `:532-546`;
+  the module header at `:56-57` maps `frndbank` to source `simpati`). So whether frndbank
+  gains TikTok and YouTube rows in `account_ownership` depends on whether the *source*
+  tenant carries those channels, which is a runtime fact and was **not verifiable when this
+  was written** (local ClickHouse was stopped).
+
+  Consequence to check on the first run against a live local stack: if the source tenant has
+  no TikTok/YouTube channels, `Seeder.registered_account()` returns `None` for
+  `frndbank`/`tt` and `frndbank`/`yt`, and **FR-9's fail-fast guard fires** telling the
+  developer to run `setup-local-demo.sh` — which they will already have run. Two acceptable
+  outcomes, decided at that point with the measurement in hand: use FR-9a's
+  `--allow-missing-account` for those two platform legs, or widen the demo mart copy so the
+  channels exist. Do not pre-build either; measure first.
 
 ### Non-Functional Requirements
 
@@ -754,7 +846,15 @@ ranked by consequence; a minor point lands last rather than being dropped.
 
 ### API (`api/`)
 
-Read-only touch. No PHP code changes.
+⚠️ **Amended 2026-08-31 — api is no longer a zero-code service.** This section previously
+read "Read-only touch. No PHP code changes." That was accurate against the PRD as first
+written and is **superseded** by FR-30, after the count at
+`api/database/seeders/DemoWorkspaceSeeder.php:554-600` showed `frndbank` registered with 6
+platforms where FR-10 requires 9.
+
+**One code change: FR-30** — three tuples added to `integrationDefinitions()` so `frndbank`
+carries TikTok organic, TikTok Ads and YouTube, plus a `PLATFORM_YOUTUBE` constant and its
+`mediaTypeForPlatform()` arm if they do not already exist. Nothing else in api changes.
 
 - **FR-11 / FR-12 / FR-13 rely on api's `DemoWorkspaceSeeder`** as the source of truth for
   the per-brand platform tuples. The seeder must NOT be edited in this feature to widen the

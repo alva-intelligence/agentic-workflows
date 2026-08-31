@@ -563,3 +563,56 @@ recommendation. Three resolutions **remove** scope, one adds a stated cost, two 
   questions without the required `prompt` and `answer` keys. Both repaired locally; the resolved
   questions now live in `brainstorming.summary` and in the PRD. **Upstream `agentic-workflows`
   drift — not fixed here**, and it will recur on the next feature until it is.
+
+---
+
+## 2026-08-31 — `W14`: api registered `frndbank` with six platforms while FR-10 demanded nine
+
+Fahmi asked a question before any implementation started: *"I need to make sure my data service
+dummy data did not touch anything from other services dummy seeder … we are more bend into
+following the api-php seeder dummy."* The isolation half of the question came back clean. The
+"follow api" half did not, and it caught a contradiction the PRD had shipped with.
+
+**The isolation answer, for the record.** Four seeders, four surfaces, no collision:
+`api/database/seeders/DemoWorkspaceSeeder.php` writes **Postgres only** and never touches
+ClickHouse — it coordinates through `demo-ulids.json`. `data-service/.../demo/seed_demo.py`
+writes `frnd_agg_marts.*` plus `frnd_os_master.{workspaces,brands,account_ownership}` for the
+demo tenant. `dummy_connector/000_seed_dummy_connector.py` writes `raw_fb_ads_01jq…fbads` plus
+the same registry tables, but under a **deliberately separate fake tenant**
+(`01jq000000000000000000wksp` / `01jq00000000000000000fbads`), and its `--drop` at `:259-262`
+deletes strictly `WHERE brand_id = '<its own>'`, so it cannot reach demo rows.
+`scripts/local-seed-raw.py` writes `raw_<alias>_<brand>` only (`:749-750`) and merely *reads*
+`account_ownership` at `:238`. The one shared surface — `frnd_os_master.workspaces`/`brands`,
+written by both `seed_demo.py:604+` and `dummy_connector:228-235` — is row-isolated by tenant
+and both writers delete-then-insert only their own rows.
+
+**The contradiction.** Counted from `api/database/seeders/DemoWorkspaceSeeder.php:554-600`,
+`integrationDefinitions()` registers `frndbank` with **6** platforms, not 9. Across all four
+demo brands api covers **8 of 9** — **YouTube is registered by no brand at all**. FR-11 and
+FR-12 each carry an explicit *"the api tuple wins"* clause; FR-10 carried none and simply
+asserted 9. So `q-brand-platform-matrix` and "api is source of truth" could not both hold, and
+the PRD had been committed and pushed in that state.
+
+| # | What changed | Supersedes | Why | Cost |
+|---|---|---|---|---|
+| W14 | **api is widened, not the matrix narrowed.** New `FR-30`: `integrationDefinitions()` gains three tuples so `frndbank` registers TikTok organic, TikTok Ads and YouTube. FR-10's 9-platform matrix stands. | FR-10's unqualified "MUST carry all 9", which contradicted api rather than directing it. | Direct instruction, 2026-08-31, chosen over two alternatives that are recorded in the FR-10 note rather than silently dropped: narrowing FR-10 to 6 would have abandoned full-platform coverage and left YouTube seeded for nobody; seeding raw beyond api's registrations for one brand would have made raw and the Postgres integration list deliberately disagree — the exact drift "api is source of truth" exists to prevent. | **api stops being a zero-code service**, which had been verified, committed and pushed hours earlier. Its service PRD and track are superseded in place, and it moves from "N/A" to **merge order 2 of 4** — orchestration 1, api 2, data-service 3, workspace-root 4. Everything downstream renumbers. |
+| W14a | Scope of `FR-30` is three data rows, not a new platform integration. | The assumption that YouTube would need new api plumbing. | Verified: `BrandIntegration::PLATFORM_YOUTUBE = 'youtube_analytics'` already exists at `api/app/Models/BrandIntegration.php:92`, as do `PLATFORM_TIKTOK_ORGANIC` (`:90`) and `PLATFORM_TIKTOK_ADS` (`:96`). `mediaTypeForPlatform()` (`:346-365`) needs no new arm — YouTube is in none of the PAID / EARNED / ATL / BUSINESS lists and falls through to `MEDIA_TYPE_OWNED`, which is correct. | None. Recorded so the next reader does not re-investigate. |
+| W14b | New `FR-30b`: the seeder MUST map api's platform vocabulary onto orchestration's, in **one named dict** beside `PLATFORMS` at `scripts/local-seed-raw.py:54-59`, with a test asserting the mapping is total in both directions. | FR-11 / FR-12 / FR-13's bare "MUST match api's tuples", which was ambiguous. | **Four of the nine names differ**: `tiktok_organic`/`tiktok`, `youtube_analytics`/`youtube`, `google_sheets_earned`/`gs_earned`, `google_sheets_atl`/`gs_atl`. Five match. Compared `BrandIntegration.php:86-102` against `PLATFORM_TO_RAW_ALIAS:39-49`. | Without the totality assertion, adding a tenth platform to either side silently drops a brand's raw DB — and an absent raw DB reads downstream as an empty mart, which looks like a pipeline bug rather than a missing fixture. That is the failure mode this whole feature exists to remove, so it would be a bitter way to reintroduce it. |
+| W14c | New `FR-30a`: widening api does **not** populate ClickHouse `account_ownership`, and the PRD now says what to measure instead of assuming. | The implicit assumption that registering a platform in api makes `Seeder.registered_account()` resolve. | `account_ownership` is derived by `data-service/.../demo/seed_demo.py:635-641` from `frnd_agg_marts.paid_ads_performance` and at `:651-658` from `social_content_performance` — and those rows are themselves **copied from real source tenants** (`copy_mart_for_brand:241`, source filter `:532-546`; the header at `:56-57` maps `frndbank` to source `simpati`). api is Postgres; this is ClickHouse. | If the source tenant carries no TikTok/YouTube channels, `registered_account()` returns `None` for `frndbank`/`tt` and `frndbank`/`yt` and **FR-9's guard fires telling the developer to run a script they already ran**. Not pre-solved: local ClickHouse was stopped, so this was **not verifiable when written**. Two acceptable outcomes named in FR-30a, to be decided with the measurement in hand — FR-9a's `--allow-missing-account` for those two legs, or widen the demo mart copy. |
+
+### Known gaps
+
+- **`W14c` is an unmeasured risk, not a closed question.** Nothing here proves the demo source
+  tenant lacks those channels; nothing proves it has them. The first run against a live local
+  stack settles it, and until then FR-10's nine-platform target for `frndbank` is achievable in
+  api and unproven in ClickHouse.
+- **The `account_ownership` derivation reads two marts the intake brief recommends deleting.**
+  `docs/briefs/2026-08-30-local-pipeline-e2e.md` §4.3 recommends shrinking the demo mart seeder
+  to two marts, which would drop exactly `paid_ads_performance` and `social_content_performance`
+  and silently empty `account_ownership`. The PRD does not adopt that recommendation, so nothing
+  is broken today. Fahmi decided 2026-08-31 to leave it unguarded as out of scope — recorded
+  here because the brief sits committed in `docs/briefs/` recommending the change, with nothing
+  at the code linking the two.
+- **Three of four service PRDs were already pushed** carrying the old merge order, and api's was
+  pushed declaring it a zero-code service. The corrections are amendments on the same branches,
+  not force-pushes; the superseded verdict is bannered in place rather than deleted.

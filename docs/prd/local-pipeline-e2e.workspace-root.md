@@ -9,7 +9,7 @@ type: improvement
 upstream_prd: docs/prd/local-pipeline-e2e.md
 base_branch: (workspace-root is NOT branched — see Bootstrap boundary below)
 target_branch: (none — commits land on feat/fahmi/data-agentic-setup by convention)
-merge_order: 3 of 3 code services (workspace-root ships last; depends on data-service #2 and orchestration #1)
+merge_order: 4 of 4 (workspace-root ships last; depends on orchestration #1, api #2 and data-service #3)  # renumbered 2026-08-31: api gained code (FR-30)  # renumbered 2026-08-31: api gained code (FR-30), now 2 of 4
 ---
 
 # Local pipeline end-to-end — workspace-root
