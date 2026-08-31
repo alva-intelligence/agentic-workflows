@@ -512,3 +512,54 @@ a premise the code refutes.
   `HANDOFF-2026-08-27-mart-ddl-moved.md` and `frnd-orchestration-1-staging/`, a sixth full clone
   of `frnd-orchestration` sitting on `staging`. The workspace layout guard says anything cloned
   inside must be added to `.git/info/exclude`; that has not been done.
+
+---
+
+## 2026-08-31 — `W13`: six of `local-pipeline-e2e`'s seventeen carried decisions were refuted by the code
+
+`W12` re-intaked the feature and chose to re-derive the PRD rather than reconstruct the lost one.
+This row records what that re-derivation actually found, because the answer justifies the choice:
+**six of the seventeen carried decisions were wrong on this machine**, and three of the six had
+been about to add work that the code makes unnecessary.
+
+The brainstorm ran scoped — the eleven verified decisions were not re-litigated. Fahmi took every
+recommendation. Three resolutions **remove** scope, one adds a stated cost, two are corrections.
+
+| # | What changed | Supersedes | Why | Cost |
+|---|---|---|---|---|
+| W13 | Seeder home: `scripts/local-seed-raw.py` is canonical and grows from 4 platforms to 9. | Carried `q-generator-home` = "data-service, generalise `dummy_connector/`". | That answer predates the script. `scripts/local-seed-raw.py:44-146` is already the declaration-driven design brief §4.5 mandates, tracked since 2026-08-21. | The 5 remaining platforms are the harder half — `local-seed-raw.py:51-53` excluded paid and Google-Sheet shapes on purpose as "very different shapes". 4-of-9 done does not de-risk 5-of-9 remaining proportionally. |
+| W13a | ClickHouse runtime: standalone binary only. `docker-compose.dev.yml` leaves scope entirely. | Carried `q-clickhouse-runtime` = "keep both, Windows uses Docker". | The blessed Windows path pointed at a file that does not exist here, while `data-service/scripts/setup-local-demo.sh:44-59` already downloads the binary cross-platform. Also settles brief §5.1's two-rival-servers-on-`:8123`. | Windows developers go via WSL or the native binary. Nobody on this workspace is on Windows, so the cost is theoretical today and real the day someone is. |
+| W13b | S3: `creative_assets` skips locally by default via a guard in `upload_flow.py`; opt-in needs only real `aws-*` Secret blocks. **MinIO dropped.** | Carried `q-s3-substitute` = "MinIO as the default local driver". | MinIO is integrated nowhere, and `orchestration/integrations/aws.py:52-64` has no `endpoint_url`, so it was a new integration. Meanwhile `upload_flow.py:598-611` already emits the `local/` prefix once `resolve_environment()` returns `local` — real-S3-with-prefix works with zero code change. | `orchestration/integrations/aws.py` is untouched, which is the point. Local runs produce no creative assets at all unless a developer opts in. |
+| W13c | Paid/GS shapes enter as `rows_fb_ads` / `rows_tt_ads` / `rows_g_ads` / `rows_gs_earned` / `rows_gs_atl` on the existing `Seeder` class; `insert()` and `_ch_type()` frozen. | Nothing — new question, raised because the script excluded these shapes deliberately. | The class already absorbs shape differences through per-alias builders at `:322-741` and per-key `TYPE_OVERRIDES`. No sibling scripts, no class hierarchy ahead of a second use case. | One file grows by roughly 400 lines. |
+| W13d | Local trigger stays the in-process call at `scripts/local-run-pipeline.sh:53-56`. | Carried `q-bootstrap-polling` = "poll the Prefect API directly". | The current implementation is neither the carried answer nor brief §4.6's webhook post — it already works, needs no server, and gives a fast loop. | **Stated and accepted, recorded as NFR-2:** the local loop never exercises the Fivetran-webhook → tenant-resolution → Prefect-trigger → worker → state-hook path production runs through, and runs are invisible to the Prefect UI. Those are the four things brief §4.6 argues break in production. The poll and webhook paths remain available to `pipeline-run-visibility`. |
+| W13e | `demo-ulids.json` stays per-service. Consolidation leaves scope in all three forms, and **the old FR-35's upstream agentic-workflows PR stops being a prerequisite of this feature.** | Carried `q-demo-ulids-consolidation` = "consolidate now to `.agentic-workflows/constants/demo-ulids.json`", and brief §4.3's description of the two files as "byte-duplicated with no shared source". | `data-service/database/seeders/frnd_agg_marts/demo/_constants.py:1-19` explicitly justifies per-service files for standalone-checkout portability. The "byte-duplicated" claim is **stale**: verified by md5, `api/demo-ulids.json` carries 7 keys including `yourfragrance_brand_ulid` and `data-service/demo-ulids.json` carries 6 without it. The drift is intentional. | The asymmetry is now load-bearing and undocumented, so FR-15 adds a CI probe asserting the key-set difference is exactly `{yourfragrance_brand_ulid}`. Without it the next divergence goes unnoticed the same way this one did. |
+| W13f | **Override.** `data-service/scripts/setup-local-demo.sh` writes `prefect_setup` and `ch_local` into `.onboard-state.json` on success (FR-27). | The PRD's assumed answer, "onboarding maintenance, out of scope". | Direct instruction, 2026-08-31. Neither key exists here; onboarding state currently misreports what this machine has. | **A data-service script now mutates a workspace-root file owned by the onboarding / agentic-workflows domain** — a cross-boundary write, the kind that is hard to find later. Recorded as NFR-11; specified idempotent and non-fatal so it cannot fail the demo setup. |
+| W13g | **Override.** A `SUPERSEDED` banner lands on `dummy_connector/000_seed_dummy_connector.py` and its `README.md` in this PR (FR-29). | The PRD's assumed answer, "deprecation deferred to a follow-up". | Direct instruction, 2026-08-31. Two seeders that both read as live is exactly the trap the ledger protocol exists to prevent. | The file **keeps working and is not removed** — its `frnd_os_master` registry writes at `:228-243` are duplicated nowhere else and are step one of this feature's bootstrap ordering (FR-8/FR-9). The banner reads "KEPT — do not extend" rather than the usual "do not build from this", because the usual wording would be false here. |
+
+### Known gaps
+
+- **A latent bug was found in a file this feature edits, and deliberately not fixed.**
+  `scripts/local-run-pipeline.sh:53-56` passes no `raw_database`, so every local run today takes
+  the path `orchestration/tasks/transform_tasks.py:76` itself logs as **deprecated**. Recorded in
+  the PRD's *Known latent issue* section, ranked last, explicitly out of scope. It needs its own
+  decision; it is not fixed by anything above.
+- **Reference-DDL capture for `google_ads`, `tiktok` and `youtube` is blocked, not merely pending.**
+  FR-16 is precondition-gated on re-verifying handoff §5 in an interactive session, because
+  `prefect-frnd` and `prefect-alva` fail `CONNECTION_CLOSED` and `clickhouse-remote` is
+  unauthenticated here. Until that runs, the service ids, the 7/9-vs-9/9 raw coverage split and the
+  multi-connector `raw_<alias>_<n>_<brand>` naming rest on the handoff's authority alone.
+- **A scope expansion was proposed and withdrawn, and the withdrawal is the useful record.** An
+  intermediate answer asked for seeded rows on doubled raw DBs across all 9 platforms. It was
+  withdrawn once the word "connector" was disambiguated — the `dummy_connector/` *folder* versus a
+  Fivetran second *instance* — which had been conflated in the question, not by Fahmi. It would
+  have taken the fixture from 26 raw DBs / 178 tables to roughly 52 / 356 and doubled pipeline
+  invocations per bootstrap. Feature scope is 4 platforms to 9, nothing more.
+- **The framework's own state schema contradicts its own protocol.**
+  `.agentic-workflows/workflow/state-schema.json` sets `additionalProperties: false` on the feature
+  object and does not list `open_questions`, while the Batched Open-Questions Protocol
+  (`.agentic-workflows/fragments/workflow-rules.core.md:180-190`, `AGENTS.md:159-160`) tells every
+  Tier-2 agent to produce it — so a compliant agent writes a schema-invalid state file. Seen twice
+  this session: `frndos-prd` wrote `open_questions`, and `frndos-brainstorm` wrote all six of its
+  questions without the required `prompt` and `answer` keys. Both repaired locally; the resolved
+  questions now live in `brainstorming.summary` and in the PRD. **Upstream `agentic-workflows`
+  drift — not fixed here**, and it will recur on the next feature until it is.
