@@ -134,3 +134,37 @@ Ship after **orchestration** (FR-22 local skip guard) and **data-service** (FR-2
 ## Open Questions
 
 None outstanding at this level. Six PRD-review open questions were closed in the main PRD `docs/prd/local-pipeline-e2e.md` Open Questions section; two were overridden (`q-onboarding-state-scope` → FR-27 and NFR-11 in data-service; `q-dummy-connector-deprecation-scope` → FR-29 in data-service). See split-time open questions in the splitter report — none blocks this file.
+
+
+## Amendment 2026-08-31 — FR-31 supersedes FR-5
+
+`FR-5` (extend the `--platforms` default to all nine aliases) is **superseded**. An all-nine
+default is right for `frndbank` and wrong for the other three brands, which api registers with
+6, 6 and 5 platforms — the natural no-flag invocation would have overshot `frndskincare` by 3,
+`frndairline` by 3 and `yourfragrance` by 4, silently violating FR-11/FR-12/FR-13 and AC-3 on
+three brands out of four. The argument validator cannot catch it: every overshooting alias is a
+legitimate member of `PLATFORMS`.
+
+**FR-31 replaces it, and is workspace-root's work.** Three parts in `scripts/local-seed-raw.py`:
+
+1. **`BRAND_PLATFORMS`** — a dict beside `PLATFORMS` (`:54-59`) mapping each demo brand ULID to
+   its registered alias set. Omitting `--platforms` resolves to that brand's set, never to all
+   nine; `--platforms` stays available as an explicit override; an unknown `--brand` is an error
+   naming the four known brands, not a silent fall-through.
+2. **`--brand all`** — seeds all four brands in one run, each with its own set. This is the
+   command AC-3 is written against. Totals: 26 raw databases, 178 raw tables.
+3. **`--verify-matrix`** — parses api's `integrationDefinitions()`, maps its constants through
+   FR-30b's vocabulary mapping, and asserts equality with `BRAND_PLATFORMS`. Its CI home is
+   `data-service/tests/` (invoked as a subprocess), because workspace-root has **no test
+   infrastructure** — `.github/workflows/` holds only `update-manifest.yml`, and there is no
+   `conftest.py` or `test_*.py` anywhere at the root.
+
+**Stated cost:** `--verify-matrix` parses PHP from Python by regex. It works and it fails loudly
+(a parse finding nothing mismatches every brand), but it is brittle to reformatting of
+`integrationDefinitions()`. The honest fix if that bites is for api to emit a JSON artifact —
+deliberately not built now, because the demo-ulids precedent chose per-service copies plus a
+probe over a shared file, for standalone-checkout portability.
+
+**No new files under `scripts/`.** FR-31 is a dict and two flags on the existing CLI, not a
+second entry point — the Out-of-Scope rule against `bootstrap-pipeline.sh` and rivals still
+holds. Ledger row `W15`.

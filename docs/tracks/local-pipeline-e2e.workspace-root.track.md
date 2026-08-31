@@ -122,3 +122,21 @@ collision).
 ## Open Questions
 
 See splitter report — none blocks this file.
+
+
+## Amendment 2026-08-31 — FR-31 (supersedes FR-5)
+
+| # | Task | FR | Status |
+|---|---|---|---|
+| TASK-A | Add `BRAND_PLATFORMS` beside `PLATFORMS` at `scripts/local-seed-raw.py:54-59`; resolve `--platforms` from it per brand when the flag is omitted; error on an unknown `--brand`. | FR-31 | not_started |
+| TASK-B | Add `--brand all` to seed all four brands in one run (frndbank 9, frndskincare 6, frndairline 6, yourfragrance 5 → 26 raw DBs, 178 tables). | FR-31 | not_started |
+| TASK-C | Add `--verify-matrix`: parse api's `integrationDefinitions()`, map through FR-30b's vocabulary mapping, assert equality with `BRAND_PLATFORMS`, exit non-zero naming every mismatch. | FR-31 | not_started |
+| TASK-D | Add a test in `data-service/tests/` invoking `--verify-matrix` as a subprocess (workspace-root has no test infrastructure). | FR-31 / AC-3a | not_started |
+
+### Session log — 2026-08-31
+
+FR-5 was superseded before any code was written. Fahmi asked whether the seeder already
+covers the demo brands; it does not — `--brand` is singular at `:777`, the brand × platform
+matrix lived nowhere in code, and this PRD forbids a driver script. Worse, FR-5's all-nine
+default was measured wrong for three of the four brands. FR-31 puts the matrix in the seeder
+with a CI probe, which makes AC-3 mechanical instead of manual discipline. Ledger row `W15`.

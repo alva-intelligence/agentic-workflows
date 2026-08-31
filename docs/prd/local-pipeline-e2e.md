@@ -369,11 +369,70 @@ ranked by consequence; a minor point lands last rather than being dropped.
   `load_contract()` returns. Missing this step will surface as `NO_SUCH_COLUMN_IN_TABLE` at
   transform time, not at seed time.
 
-- **FR-5: Extend the `--platforms` CLI flag default to include all nine aliases.** The
-  default at `scripts/local-seed-raw.py:778` is `"ig,fb,tt,yt"`; must become
-  `"ig,fb,tt,yt,fb_ads,tt_ads,g_ads,gs_earned,gs_atl"`. The argument-validation loop at
-  `:815-818` already refuses unknown aliases against `PLATFORMS`, so extending `PLATFORMS`
-  (FR-1) also extends validation; no code there changes.
+- > ⛔ **SUPERSEDED** by **FR-31** (2026-08-31). Kept for history — do not build from this.
+  >
+  > **FR-5: Extend the `--platforms` CLI flag default to include all nine aliases.** The
+  > default at `scripts/local-seed-raw.py:778` is `"ig,fb,tt,yt"`; must become
+  > `"ig,fb,tt,yt,fb_ads,tt_ads,g_ads,gs_earned,gs_atl"`. The argument-validation loop at
+  > `:815-818` already refuses unknown aliases against `PLATFORMS`, so extending `PLATFORMS`
+  > (FR-1) also extends validation; no code there changes.
+  >
+  > **Why this was wrong.** An all-nine default is correct for `frndbank` and **wrong for the
+  > other three brands**, which api registers with 6, 6 and 5 platforms. Measured 2026-08-31:
+  > the default would overshoot `frndskincare` by 3 (`fb`, `yt`, `g_ads`), `frndairline` by 3
+  > (`tt`, `yt`, `tt_ads`) and `yourfragrance` by 4 (`yt`, `fb_ads`, `tt_ads`, `g_ads`). So
+  > the *natural* invocation — `local-seed-raw.py --brand <ulid>` with no flag — would
+  > silently violate FR-11 / FR-12 / FR-13 and blow past AC-3 on three brands out of four.
+  > The validation loop cannot catch it: every overshooting alias is a legitimate member of
+  > `PLATFORMS`.
+
+- **FR-31: The seeder MUST derive each brand's platform set itself, and MUST be able to seed
+  every brand in one run.** Three parts, all in `scripts/local-seed-raw.py`:
+
+  1. **`BRAND_PLATFORMS` declaration.** A dict beside `PLATFORMS` (`:54-59`) mapping each demo
+     brand ULID to its registered alias set. Measured 2026-08-31 from
+     `api/database/seeders/DemoWorkspaceSeeder.php::integrationDefinitions()`, **including
+     FR-30's three additions to `frndbank`**:
+
+     | brand | ULID | n | raw tables | aliases |
+     |---|---|---:|---:|---|
+     | `frndbank` | `01ksrm715x6ptwyjjc9gtq9vys` | 9 | 67 | `ig,fb,tt,yt,fb_ads,tt_ads,g_ads,gs_earned,gs_atl` |
+     | `frndskincare` | `01ksrm715zf0ejfeje5psv0kfz` | 6 | 40 | `ig,tt,fb_ads,tt_ads,gs_earned,gs_atl` |
+     | `frndairline` | `01KT20EM84NMY4H2F492PVF9VK` | 6 | 45 | `ig,fb,fb_ads,g_ads,gs_earned,gs_atl` |
+     | `yourfragrance` | `01kxyx49wtvch7zxxe34mxkhbe` | 5 | 26 | `ig,fb,tt,gs_earned,gs_atl` |
+     | **total** | | **26** | **178** | matches AC-3 exactly |
+
+     `--platforms` keeps working as an explicit override for a one-off. Omitted, it resolves to
+     that brand's registered set — **never to all nine**. A `--brand` ULID absent from
+     `BRAND_PLATFORMS` is an error naming the four known brands, not a silent fall-through.
+
+  2. **`--brand all`** seeds all four in one invocation, each with its own set, in the table's
+     order. This is the command AC-3 is written against.
+
+  3. **`--verify-matrix`** — a self-check that reads
+     `api/database/seeders/DemoWorkspaceSeeder.php::integrationDefinitions()`, maps its
+     `BrandIntegration::PLATFORM_*` constants onto orchestration keys via FR-30b's mapping, and
+     asserts the result equals `BRAND_PLATFORMS` exactly. Exits non-zero naming every brand and
+     alias that differs. The check lives **in the seeder** so the logic sits with the data it
+     checks; its CI home is `data-service`'s existing pytest suite (`data-service/tests/`),
+     invoking it as a subprocess — the same home FR-15's demo-ulids probe already uses, chosen
+     because workspace-root has no test infrastructure at all (`.github/workflows/` there holds
+     only `update-manifest.yml`, and there is no `conftest.py` or `test_*.py`).
+
+  **Stated cost, accepted:** `--verify-matrix` parses PHP from Python by regex over
+  `brand_slug' => '<slug>'` / `PLATFORM_<CONST>` pairs. It works — that is how the numbers in
+  the table above were measured — but it is brittle to reformatting of
+  `integrationDefinitions()`. It fails loudly rather than silently, which is the right failure
+  direction: a parse that finds nothing yields an empty set and mismatches every brand. If it
+  proves annoying in practice the honest fix is for api to emit the tuples as a JSON artifact;
+  that is deliberately **not** built now, because the demo-ulids precedent
+  (`data-service/database/seeders/frnd_agg_marts/demo/_constants.py:1-19`) chose per-service
+  copies plus a probe over a shared file, for standalone-checkout portability.
+
+  **Why a declaration and not a driver script.** This PRD forbids new files under `scripts/`
+  (no `bootstrap-pipeline.sh`, no rivals) — see the Out-of-Scope list. FR-31 honours that: the
+  matrix is a dict inside the existing seeder and a flag on its existing CLI, not a second
+  entry point.
 
 - **FR-6: Replace the hardcoded absolute date base with a rolling window relative to today.**
   `Seeder.__init__` at `scripts/local-seed-raw.py:215` currently sets
@@ -964,10 +1023,17 @@ None. This feature adds no HTTP endpoints and modifies none.
       `raw_fb_frndbank...`, ..., `raw_gs_atl_frndbank...`) after
       `data-service/scripts/setup-local-demo.sh` has been run, at the default `--days 30 --posts 40`
       settings, in under 2 minutes.
-- [ ] **AC-3:** The same command run for `frndskincare`, `frndairline` and `yourfragrance`
-      seeds exactly the subset registered in `api/database/seeders/DemoWorkspaceSeeder.php`
-      for each brand (FR-11, FR-12, FR-13). Total across four brands: 26 raw databases and
-      178 raw tables. If the api tuple changes the target arithmetic follows.
+- [ ] **AC-3:** `scripts/local-seed-raw.py --brand all` (FR-31) seeds every demo brand with
+      exactly the subset registered in `api/database/seeders/DemoWorkspaceSeeder.php` — no
+      `--platforms` flag supplied, and no brand overshooting its registered set. Totals across
+      the four brands: **26 raw databases and 178 raw tables** (frndbank 9/67, frndskincare
+      6/40, frndairline 6/45, yourfragrance 5/26). If the api tuple changes, the target
+      arithmetic follows and `--verify-matrix` is what catches the divergence.
+- [ ] **AC-3a:** `scripts/local-seed-raw.py --verify-matrix` (FR-31) exits zero against the
+      current api seeder, and exits non-zero naming the offending brand and alias when a
+      platform is added to or removed from `integrationDefinitions()` without updating
+      `BRAND_PLATFORMS`. Asserted by a test in `data-service/tests/` invoking it as a
+      subprocess.
 - [ ] **AC-4:** Every fact-table row seeded by `local-seed-raw.py` at the default `--days
       30` has an event timestamp within the last 30 days from the moment the script runs, and
       no row is dropped by `staging_date_cutoff` (`2025-01-01` in production; effectively

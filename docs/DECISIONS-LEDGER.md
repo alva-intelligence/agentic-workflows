@@ -616,3 +616,50 @@ the PRD had been committed and pushed in that state.
 - **Three of four service PRDs were already pushed** carrying the old merge order, and api's was
   pushed declaring it a zero-code service. The corrections are amendments on the same branches,
   not force-pushes; the superseded verdict is bannered in place rather than deleted.
+
+---
+
+## 2026-08-31 — `W15`: the seeder's default would have overshot three of the four brands
+
+Fahmi asked whether the raw seeder already covers the demo brands: *"can we complete the
+connector (raw seeder) in these 3 brands? or is it already doing that way?"* It does not, and
+the PRD as written would not have made it, for three separate reasons that only show up
+together.
+
+`--brand` is **singular** (`scripts/local-seed-raw.py:777`) — one brand per invocation, no
+multi-brand mode. The brand × platform matrix existed **nowhere in code**: only in this PRD's
+prose (FR-10 to FR-13) and in api's PHP. And the PRD's own Out-of-Scope list forbids a driver
+script (*"No new files under `scripts/` — no `bootstrap-pipeline.sh`, no rivals"*). So seeding
+the demo set meant four hand-typed invocations kept in sync with api by reading
+`DemoWorkspaceSeeder.php` yourself.
+
+**The defect that makes it worse.** `FR-5` extended the `--platforms` default to all nine
+aliases. Measured 2026-08-31, that default is right for `frndbank` and wrong for the other
+three: it overshoots `frndskincare` by 3 (`fb`, `yt`, `g_ads`), `frndairline` by 3 (`tt`, `yt`,
+`tt_ads`) and `yourfragrance` by 4 (`yt`, `fb_ads`, `tt_ads`, `g_ads`). The *natural*
+command — `--brand <ulid>` with no flag — would silently violate FR-11/FR-12/FR-13 and blow
+past AC-3 on three brands out of four. The argument validator cannot catch it, because every
+overshooting alias is a legitimate member of `PLATFORMS`.
+
+| # | What changed | Supersedes | Why | Cost |
+|---|---|---|---|---|
+| W15 | **`FR-31`: the seeder owns the matrix.** A `BRAND_PLATFORMS` dict beside `PLATFORMS` (`:54-59`) maps each demo brand ULID to its registered alias set; omitting `--platforms` resolves to that brand's set, **never to all nine**; an unknown `--brand` errors naming the four known brands rather than falling through. | `FR-5` in full — bannered in place, with the measured overshoot recorded on it. | Direct instruction, 2026-08-31, chosen over having api emit a JSON artifact and over merely deleting FR-5's default. It makes AC-3 mechanical instead of manual discipline. | One more declaration to keep honest. Guarded by W15b's probe, which is the whole reason the declaration is acceptable. |
+| W15a | **`--brand all`** seeds all four brands in one run — frndbank 9/67, frndskincare 6/40, frndairline 6/45, yourfragrance 5/26 = **26 raw databases, 178 raw tables**. AC-3 is rewritten against this command; AC-3a is added for the probe. | AC-3's previous phrasing, which asserted the totals without naming a mechanism that produces them. | Recomputed independently from api's `integrationDefinitions()` and `PLATFORM_RAW_TABLES`; matches the PRD's target arithmetic exactly. | Seeding all four is the slower default. Any brand is still reachable individually. |
+| W15b | **`--verify-matrix`** parses api's `integrationDefinitions()`, maps its `BrandIntegration::PLATFORM_*` constants through `FR-30b`'s vocabulary mapping, and asserts equality with `BRAND_PLATFORMS`. CI home is `data-service/tests/`, invoking it as a subprocess. | Nothing — new. | The check lives **in the seeder** so the logic sits with the data it checks. Its CI home is data-service because **workspace-root has no test infrastructure at all**: `.github/workflows/` there holds only `update-manifest.yml`, and there is no `conftest.py` or `test_*.py` anywhere at the root. That is the same home `FR-15`'s demo-ulids probe already uses. | **It parses PHP from Python by regex.** That is how the numbers in this row were measured, so it works — but it is brittle to reformatting of `integrationDefinitions()`. It fails loudly rather than silently: a parse that finds nothing yields an empty set and mismatches every brand. |
+
+### Known gaps
+
+- **The PHP-parsing probe is a deliberate second-best.** The clean fix is for api to emit its
+  tuples as a JSON artifact the seeder reads. It is **not** built, because the demo-ulids
+  precedent (`data-service/database/seeders/frnd_agg_marts/demo/_constants.py:1-19`) explicitly
+  chose per-service copies plus a probe over a shared cross-service file, to keep a standalone
+  checkout runnable. If the regex proves annoying in practice, that JSON is the honest
+  escalation and it reverses this row rather than patching it.
+- **`FR-31` does not make the matrix true, only self-consistent.** The probe asserts
+  `BRAND_PLATFORMS` matches api. It cannot assert that api's tuples are what anyone *wants* —
+  that judgement lives in `FR-10` to `FR-13`, and `FR-30` had to widen api once already because
+  the two disagreed.
+- **Nothing here addresses `account_ownership`.** `--brand all` will seed 26 raw databases, but
+  whether `Seeder.registered_account()` resolves for each brand × platform leg still depends on
+  the copied demo mart rows, per `FR-30a`, and is still unmeasured because local ClickHouse was
+  stopped throughout.
