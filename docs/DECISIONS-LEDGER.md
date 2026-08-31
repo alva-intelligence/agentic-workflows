@@ -459,3 +459,56 @@ and an ER fix had already landed on one of two api branches only.
 - **Still not click-tested** — the page is behind a login this session cannot perform.
 - **`web/docs/prd/content-click-detail.md` TASK-13** is corrected in place rather than bannered:
   it described the pre-`W10` behaviour of a single task, not a decision worth a tombstone.
+
+---
+
+## 2026-08-31 — `W12`: `local-pipeline-e2e` arrives without its PRD, and its founding claim is false here
+
+The feature was brainstormed and PRD'd on another machine, at working trees under
+`Work/frndos/<service>/`. Its own handoff §6 warned that every workflow artifact was local-only
+and would not travel by git. It was right. Two files reached this machine through `~/Downloads` —
+the intake brief and the handoff. The 72 KB PRD (41 FRs, 10 NFRs, 17 ACs) and the 51 KB
+`.workflow-state.json` carrying its 17 decisions did not, and a `find` across the home tree
+confirms they exist nowhere here.
+
+Fahmi chose, 2026-08-31, to **re-derive the PRD through `/workflow` in `projects/frndos`** rather
+than reconstruct the old one verbatim or skip the PRD and code directly. The 17 decisions
+themselves survive — the handoff tabulates every one at §3.1–3.3 — so the re-derivation starts
+from answered questions, not from zero.
+
+That re-derivation is not a formality, because **the brief's founding claim is false on this
+machine.** §3 says onboarding Step 7.6 probes two seeder paths and *"Neither path exists anywhere
+in the workspace"*, and concludes *"This brief exists to close 7.6."* Here, `scripts/local-seed-raw.py`
+exists — 826 lines, tracked at `0505be8` since 2026-08-21, built the way §4.5 specifies — and
+`scripts/local-run-pipeline.sh` exists beside it. Reconstructing the old PRD would have re-encoded
+a premise the code refutes.
+
+| # | What changed | Supersedes | Why | Cost |
+|---|---|---|---|---|
+| W12 | `local-pipeline-e2e` is re-intaken in `projects/frndos` as a fresh `/workflow` feature. The brief and handoff are committed to `docs/briefs/`, which is what makes them survive the next move. | The lost PRD and the lost `.workflow-state.json` entry. Nothing on this machine ever held either. | Chosen over verbatim reconstruction (would re-encode the false §3 premise) and over skipping the PRD (leaves no FR/AC list and nothing for a later session to resume from). | The old FR numbering is gone for good. Any future reference to "FR-35" resolves only through the handoff's prose, not through a numbered spec. New FRs will not line up with it. |
+| W12a | The brief's §3 seeder claim and §4.5 reference-DDL count are **bannered, not edited**. Corrections sit in a block under the H1; the original text stays verbatim below it. | §3's "Neither path exists anywhere in the workspace" and §4.5's "Present for 7 of 9". | The brief is an evidence record, not a spec. Editing its body would destroy the receipt for what was believed on 2026-08-30. | A reader who skips the banner still reads the false claim. Mitigated by putting the banner above the fold, directly under the title. |
+| W12b | Real scope on this machine: **extend from 4 platforms to 9**, not build from zero. `local-seed-raw.py` covers `ig`/`fb`/`tt`/`yt`. Missing: `facebook_ads`, `tiktok_ads`, `google_ads`, `gs_earned`, `gs_atl`. | The brief's §3 framing of Step 7.6 as unstarted. | Measured, not assumed — read from the script's own `PLATFORMS` map against `PLATFORM_RAW_TABLES`. | The 5 missing platforms are the harder half: 4 of the 5 are paid or Google-Sheet shapes, which the script's author explicitly excluded as *"very different shapes"*. The 4 done do not de-risk the 5 remaining as much as the count suggests. |
+| W12c | Reference DDL is **6 of 9**, not 7. Present: `facebook_ads`, `facebook_pages`, `gs_atl`, `gs_earned`, `instagram_business`, `tiktok_ads`, plus `appsflyer` which is not one of the nine. | §4.5's "Present for 7 of 9". | Counted from `data-service/database/reference/raw_sources/`. | None — the three needing capture (`google_ads`, `tiktok`, `youtube`, per D6) are the same either way. |
+| W12d | `insights-missing-metrics` closed to `completion` / `completed`, `phase_entered` `2026-08-27T20:36:22+07:00`, and its empty `pr_urls` backfilled with all four merged PRs. `active_feature` set to `null`. | Its own `implementation` / `inprogress` record, stale since 2026-08-27. | All four PRs merged 2026-08-27 (api #414, web #535, data-service #217 re-landing #216, orchestration #69) and every branch sits 0 ahead of origin. `/workflow` would otherwise have refused or mis-branched a new feature. | `phase_entered` is the last merge time, not the moment of correction — chosen so the record reads as when the work finished, at the cost of not recording when the correction happened. That is what this row is for. |
+
+### Known gaps
+
+- **The local runtime is down and was not started.** Nothing answers on `:4200` or `:8123`.
+  The `local` Prefect profile and `~/clickhouse-local/ch.sh` both exist, so this is a start
+  command, not a setup gap — but nothing in this feature has been executed against a live stack
+  yet, and no claim here rests on one.
+- **Handoff §5's live-cluster findings could not be re-verified.** `prefect-frnd` and
+  `prefect-alva` both fail `CONNECTION_CLOSED` this session and `clickhouse-remote` is
+  unauthenticated in a non-interactive session. The staging/production service ids, the 7/9 vs
+  9/9 raw coverage split, and the multi-connector `raw_<alias>_<n>_<brand>` naming are carried
+  forward **on the handoff's authority alone** and must be re-checked before any capture script
+  targets a cluster.
+- **Commits from this workspace carry no configured git identity.** `git config user.name` and
+  `user.email` are unset both locally and globally, so every commit here — including `W8`,
+  this one, and every commit in all four service repos — is authored
+  `JKM.E/2022/03/011 <jkm.e202203011@JKME202203011s-MacBook-Pro.local>`. GitHub cannot attribute
+  those to Fahmi's account. Not fixed here; it is an identity decision, not a code one.
+- **Two untracked items still dirty `git status`** and were deliberately left alone:
+  `HANDOFF-2026-08-27-mart-ddl-moved.md` and `frnd-orchestration-1-staging/`, a sixth full clone
+  of `frnd-orchestration` sitting on `staging`. The workspace layout guard says anything cloned
+  inside must be added to `.git/info/exclude`; that has not been done.
