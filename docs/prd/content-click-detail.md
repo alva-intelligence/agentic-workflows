@@ -304,22 +304,36 @@ No new or removed endpoints. Two existing responses gain optional fields.
 - [ ] **Q-1:** `programmatic` has 0% `body`/`media_permalink` coverage (0/119 rows). Should
       programmatic cards still be clickable, given the modal will show only a thumbnail and four
       "No benchmark data" tiles? Current spec says yes, for click-affordance consistency (FR-1).
-- [ ] **Q-2:** Should the deferred one-line `onRowClick` additions on the two owned `BaseTable`s
-      (`SocialMediaPerformance.tsx:366`, `ContentPerformance.tsx:321` — `BaseTable.tsx:396` already
-      supports it) be folded in later as a follow-up, or dropped?
+- [x] **Q-2 — ANSWERED 2026-08-28: folded in NOW, into this PR.** Fahmi, verbatim: "only add this
+      on social media, but leave it be on the ads". Both owned `BaseTable`s
+      (`insight/SocialMediaPerformance.tsx` "Performance by Platforms",
+      `insight/ContentPerformance.tsx` "Metrics Summary") now open `BenchmarkRowDetailModal`;
+      the four paid Performance Breakdown tables stay deferred. Shipped in web #478 as TASK-12 /
+      TASK-13. **Cost, stated and accepted:** these rows are aggregates, not posts — no creative,
+      no permalink, no cohort — so both modals render without the score hero, the "vs typical" chip
+      and the "Link to post" affordance. Ledger row: `W9`.
 - [ ] **Q-3:** `mediaSrc` (FR-6) is specified but has no consumer in this feature, since the modal
       renders `getThumbnail`. Ship it as forward-looking, or drop it until something reads it?
 
 ## Deferred — found while drilling, NOT in this feature
 
 Carried from `PLAN-content-click-detail.md` §Deferred so they are not lost. Item 1 of that list is
-**retired** — owned link-to-post is now in scope (FR-8).
+**retired** — owned link-to-post is now in scope (FR-8). **Item 2 is also retired** as of
+2026-08-28 — see the banner on it and Q-2.
 
 1. **4 paid "Performance Breakdown" tables have zero click** — `PlatformPerformanceTable` plus
    Awareness / Consideration / Conversion. Hand-rolled `<table>`, no `onRowClick` support.
-2. **Owned "Performance by Platforms"** `SocialMediaPerformance.tsx:366` and **"Metrics Summary"**
-   `ContentPerformance.tsx:321` — both `BaseTable`, which supports `onRowClick` at `:396`. One line
-   each. See Q-2.
+2. > ⛔ **SUPERSEDED** by Q-2 / `W9` (2026-08-28). Kept for history — do not build from this.
+   >
+   > **Owned "Performance by Platforms"** `SocialMediaPerformance.tsx:366` and **"Metrics Summary"**
+   > `ContentPerformance.tsx:321` — both `BaseTable`, which supports `onRowClick` at `:396`. One
+   > line each. See Q-2.
+   >
+   > Both are now IN SCOPE and implemented (web TASK-12 / TASK-13). The "one line each" estimate
+   > was wrong: `onRowClick` is one line, but each surface also needs its own modal element, a
+   > `MetricColumn[]` mirroring the table's formatters, an `isAskFRND` guard, a
+   > `buildAskFrndSection`, and — for `SocialMediaPerformance` — a new `brandId` prop threaded
+   > from `insight/OwnedMediaContent.tsx`.
 3. **Share-context modal CTAs are silent no-ops.** `BenchmarkRowDetailModal.tsx:440,:454` render
    enabled buttons; `useAskFRNDContext()` falls back to `openChat: () => {}`
    (`AskFRNDContext.tsx:38`) because no provider wraps `src/app/share/brand/[slug]/layout.tsx`.

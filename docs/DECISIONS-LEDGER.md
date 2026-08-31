@@ -372,3 +372,90 @@ receipt, not a re-argument.
 - **`frnd-data`'s rule files remain plain, uncommitted files.** `W5`'s gap is untouched by
   this row — the new branch gives the data work a commit-backed home in `frndos`, not in
   `frnd-data`.
+
+---
+
+## 2026-08-28 — `W9`: the two owned tables get the detail modal; the paid tables do not
+
+`content-click-detail` shipped the modal on the two content carousels and left both owned
+`BaseTable`s as open question **Q-2** — "folded in later as a follow-up, or dropped?" — with the
+four paid Performance Breakdown tables in §Deferred item 1 beside them. Q-2 had been open since
+2026-08-20 while the three PRs sat approved.
+
+Fahmi answered it directly, mid-merge, verbatim: *"only add this on social media, but leave it be
+on the ads"*. Asked whether it should land in the approved PRs or a follow-up branch, he chose the
+current PRs.
+
+The concern was raised before building and is recorded here as the receipt, not a re-argument:
+**these rows are aggregates, not posts.** A "Performance by Platforms" row is one platform's period
+totals; a "Metrics Summary" row is a single metric. Neither has a creative, a permalink or a cohort,
+so the modal renders without its score hero, its "vs typical" chips and its "Link to post". He was
+shown that and chose it anyway.
+
+| # | What changed | Supersedes | Why | Cost |
+|---|---|---|---|---|
+| W9 | `insight/SocialMediaPerformance.tsx` ("Performance by Platforms") and `insight/ContentPerformance.tsx` ("Metrics Summary") open `BenchmarkRowDetailModal` on row click. Shipped inside web #478 as TASK-12 / TASK-13, not a follow-up branch. | `content-click-detail` PRD **Q-2** (now answered) and **§Deferred item 2** (now bannered). The web service PRD's "Out of scope … the two owned `BaseTable`s" line is rewritten. | Direct instruction, 2026-08-28. Owned/social only — the four paid Performance Breakdown tables stay deferred exactly as asked, and they could not have been done cheaply anyway: they are hand-rolled `<table>`s with no `onRowClick`. | Both modals degrade to title + meta + metric grid — no score hero, no "vs typical" chip, no "Link to post" — because aggregate rows carry no benchmark, no cohort median and no permalink. This is the modal's own documented gating (`benchmark` / `median > 0`), not new behaviour, but these two surfaces are visibly thinner than the carousels. Adding commits to an **approved** PR also re-opens review on it, on top of the 19 review threads already unresolved across the three PRs. |
+| W9a | §Deferred item 2's "one line each" estimate is retired with the item. | That estimate. | `onRowClick` is one line; each surface also needed its own modal element, a `MetricColumn[]` mirroring the table's per-column `formatValue` type argument, an `isAskFRND` guard, a `buildAskFrndSection`, and a new `brandId` prop on `SocialMediaPerformance` threaded from `insight/OwnedMediaContent.tsx:296`. | None beyond the work itself. Recorded so the next "one line" estimate on a modal surface is read with suspicion. |
+| W9b | No contract widened for the addition. `entity_type: "post"` is reused for both aggregate surfaces, and `source: "table"` was already a member of the analytics union (`benchmark-events.ts:148`). | — | `BenchmarkRowDetailModalProps.entityType` is `ad \| post \| influencer \| campaign`. Adding a `platform` or `metric` member would edit a shared type — consumed by the AI explanation hook — to serve a UI addition, which the contract guard forbids. "post" is the honest member: both surfaces aggregate owned posts. | The AI explanation hook is told "post" for a row that is a platform or a metric. Mitigated in the payload rather than the type: each `analysis_directive` states these are totals with no cohort and instructs the model not to invent percentile or vs-typical claims. |
+| W9c | **Correction to the `content-click-detail` web track, 2026-08-21 entry**, which recorded tsc as "zero introduced errors … the only 4 errors are pre-existing noise in the generated `.next/dev/types/validator.ts`". | That verification claim. | A tsc run whose entire output is `TS6053 File '.next/dev/types/…' not found` has aborted program construction and typechecked **nothing** — those paths sit in `tsconfig.json`'s `include`, so any run with `.next` absent or mid-rebuild looks exactly that clean. The same misreading was made again on 2026-08-28 and caught by re-running with `.next` present and an 8 GB heap. | The real numbers, measured with the same compiler, `node_modules` and `.next`: `origin/develop` **709**, the merged branch **708**, and still **708** after `W9`. The one removed error is the `CreativeAssets.tsx` TS2741 that commit `4299ac1d1` fixed. Any future "tsc is clean" claim on `frnd-web` must show real diagnostics in the output first. |
+
+### Known gaps
+
+- **Not click-tested in a browser.** Both owned routes recompile and answer 200, and the wiring is
+  type-checked, but the page is behind a login this session cannot perform. Nobody has yet seen
+  either modal open.
+- **The Metrics Summary modal shows the whole metric set, not the clicked metric.** `visibleCols` is
+  built from the full `metricsTable` and the clicked row supplies only the title, because a
+  single-tile "Key Metrics" grid would show the user the one number they had just clicked. This is a
+  design call made while building, not something Fahmi asked for — it is the one part of `W9` most
+  likely to want reverting to the literal one-tile reading.
+- **The four paid Performance Breakdown tables remain in §Deferred item 1**, untouched and now
+  asymmetric with owned: social rows open a modal, ads rows do not.
+
+---
+
+## 2026-08-28 — `W10`: the owned carousel modal shared a component with the table but not its metrics
+
+`content-click-detail` gave the owned carousel its own seven-column `CAROUSEL_METRIC_COLUMNS`. One
+of the seven (`clicks`) is Facebook-Pages-only and the modal drops non-finite metrics, so on every
+other platform the carousel modal rendered **six** tiles while the Content Posts table's modal
+rendered **fifteen** for the same post. Fahmi reported it as "it only carries 6, I want it complete
+like my image".
+
+**This row also records a mis-scoped session.** The request one turn earlier — "add the modal that
+we build like the other modal pop up in the content post … only add this on social media, but leave
+it be on the ads" — was read as *which surface gets a modal* and answered with a multiple-choice
+question about surfaces. It meant *which metrics the existing modal shows*. The options offered
+were all wrong; the work chosen from them (`W9`) is real but was not what was asked for.
+
+| # | What changed | Supersedes | Why | Cost |
+|---|---|---|---|---|
+| W10 | The owned carousel modal renders `OWNED_BENCHMARK_COLUMNS`, imported from `ownedBenchmarkColumns.tsx`, and is typed `<ContentListItem>`. `CAROUSEL_METRIC_COLUMNS` and the local `parseNumeric` copy are deleted. | The owned half of the PRD's metric-subset decision, and the `CAROUSEL_METRIC_COLUMNS` block in `insight/ContentPerformance.tsx`. | Sharing the component but forking the column list is the same desync `insights-shared/metricFormat.ts` was created to prevent — it just moved from the formatters to the column array. Importing the table's array makes drift impossible rather than unlikely. | The card must now hand the modal the SOURCE `contentList` row, not the `CarouselItem` it renders, so a `contentListById` map sits between them. If a card ever renders an id absent from `contentList` the modal will not open. |
+| W10a | ⛔ **SUPERSEDED by `W11` (2026-08-28)** — the population is now `contentListFull`, not `contentList`. Kept for history; do not build from the cell below. `medians={{}}` replaced by real per-metric medians over the whole `contentList`, computed the same way `OwnedContentBenchmarkTable.tsx:332-350` computes its own. | The PRD note "curated top/least/recent slice, not a cohort — no medians". | That note was right about the *filtered* slice and wrong about the population available: the full `contentList` is the same set the table's medians describe. Medians over the six visible top performers would have reported every top performer as average. | "vs typical" chips now appear on this surface. They describe the platform's content list, not an industry cohort — the same caveat the table has always carried. |
+| W10b | Paid carousel untouched. `CreativeAssets.tsx` keeps its own `CAROUSEL_METRIC_COLUMNS`. | — | "leave it be on the ads", verbatim. | Owned and paid carousel modals now differ deliberately: owned shows up to 19 metrics with medians, paid shows its four-column subset with none. |
+
+### Known gaps
+
+- **Nobody has seen it.** Not click-tested; the page is behind a login this session cannot perform.
+- **`W9` (the two owned tables) is still in the branch** and was not asked for. It is one revert away.
+
+---
+
+## 2026-08-28 — `W11`: the parity claim was three hand-kept copies, and one of them had already drifted
+
+`W10`/`W10a` made the carousel modal render the Content Posts table's column array and
+its own medians. A max-effort review of that change found the guarantee was not structural:
+the population choice, the median loop and the platform column list were each duplicated,
+and an ER fix had already landed on one of two api branches only.
+
+| # | What changed | Supersedes | Why | Cost |
+|---|---|---|---|---|
+| W11 | `ownedBenchmarkRows()` and `ownedBenchmarkMedians()` live once in `ownedBenchmarkColumns.tsx`; both the Content Posts table and the carousel modal call them. The population is `contentListFull` with `contentList` as fallback. | `W10a`'s "over the whole `contentList`", the same claim in `web/docs/tracks/content-click-detail.track.md`, and the duplicated median loop in `OwnedContentBenchmarkTable.tsx`. | `contentList` is the merged curated set (20 top + 20 least + 20 recent), so its median describes a bimodal best-and-worst sample, and it disagreed with the table's median over up to 500 rows. Two copies of the algorithm meant any correction to one silently broke parity. | The carousel modal now keys its row by `mediaPermalink` rather than `id` — contentList ids are per-request `uniqid()` and share nothing with contentListFull's post ids. A card whose permalink is empty upstream falls back to its contentList row, which is the thinner payload. |
+| W11a | `engagementTotal` is guarded on `> 0` on **both** mapper branches (`:1556` and `:1700`), not isset(). | The isset() form on the contentListFull branch. | data-service reads `engagement` off the sanitized frame where a mart NULL is already 0, so isset() forwarded 0 and `engagementOf` short-circuited to ER 0.00% instead of deriving from likes+comments+shares. Fixing one branch made the two surfaces disagree on the 8 affected rows. | None — both surfaces now derive ER the same way. |
+| W11b | The Metrics Summary modal matches its clicked row by reference, and "Performance by Platforms" generates both its table columns and its modal columns from one `PLATFORM_METRICS` list. | `id: m.label` matching, and the second hand-written column array. | Label matching rendered a duplicate tile when two metrics share a display string; the duplicated column array meant a metric added to the table silently never appeared in the modal. | None. |
+
+### Known gaps
+
+- **Still not click-tested** — the page is behind a login this session cannot perform.
+- **`web/docs/prd/content-click-detail.md` TASK-13** is corrected in place rather than bannered:
+  it described the pre-`W10` behaviour of a single task, not a decision worth a tombstone.
