@@ -168,8 +168,16 @@ calling the writer through `push()` — one undo step per gesture, no label,
 matching how segment drags already behave.
 
 Snapping stays on: lanes consume the same `snapGuides` the dock already
-collects across tracks, so Scale can latch to the edge of Move or to the
-playhead.
+collects across tracks, so a lane bar latches to the playhead, the timeline
+bounds, the preview range, the ruler ticks, and any BLOCK edge.
+
+It does **not** latch to another lane's edge. `staticGuides` is built from
+`trackSegments` — block edges — and `propGroupSegments` edges are never added
+to it, so Scale meets Move's edge only where that edge happens to coincide
+with a block boundary. Lane-to-lane snapping is a separate change (add lane
+edges to the guide set) and is deliberately not in this scope: the guide set
+is shared by every row in the dock, and four lanes per expanded track would
+multiply it in a way that needs its own thinking about noise.
 
 ## Data Flow
 
