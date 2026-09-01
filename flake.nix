@@ -35,6 +35,38 @@
             (postgresql_18.withPackages (ps: [ ps.pgvector ]))
             redis
 
+            # ClickHouse — the data-service warehouse (frnd_agg_marts,
+            # frnd_os_master, frnd_ai_database). Provisioned here for the same
+            # reason postgresql and redis are: it is a backing service every
+            # developer needs, and while it was missing from this file the only
+            # answer to "where is my ClickHouse?" was the shared staging
+            # cluster. Ending that is the point.
+            #
+            # nixpkgs attr `clickhouse` (pkgs/by-name/cl/clickhouse), 26.7.5.10
+            # on nixos-unstable. `meta.platforms` covers 64-bit darwin as well
+            # as linux, so both systems this flake targets are supported, and
+            # Hydra's `clickhouse.aarch64-darwin` / `.x86_64-darwin` jobs are
+            # green — the binary comes from cache.nixos.org, not a local build.
+            #
+            # ⚠️ It IS a source-built package (`requiredSystemFeatures =
+            # [ "big-parallel" ]`; the package notes "7+h with 2 cores, ~20m
+            # with a big-parallel builder"). That never bites while flake.lock
+            # points at a revision Hydra has already built for your system. It
+            # CAN bite whoever runs `nix flake update` inside the window between
+            # a version bump and Hydra finishing the darwin job — the darwin
+            # jobs lag trunk (aarch64 was on 26.7.4.58 when this landed). If a
+            # `nix develop` ever starts compiling ClickHouse, that is why: roll
+            # flake.lock back, or use the standalone binary path below, which is
+            # a prebuilt download and takes seconds.
+            #
+            # This provides the BINARY (server + client) on PATH. It does not
+            # start a server, create databases, or apply migrations — that stays
+            # `data-service/scripts/setup-local-demo.sh`, which is the one place
+            # that owns the local ClickHouse lifecycle and which now prefers
+            # this binary over downloading its own. Ledger W13a: the standalone
+            # binary is the single provisioning path.
+            clickhouse
+
             # Email testing
             mailhog
 
@@ -65,6 +97,10 @@
             echo "  PostgreSQL: $(pg_isready --version 2>/dev/null || echo 'not found')"
 
             echo "  Redis:      $(redis-server --version 2>/dev/null || echo 'not found')"
+            # `clickhouse` is a multi-call binary; `clickhouse --version` is the
+            # entrypoint that always exists, whether or not the package also
+            # installs clickhouse-server/clickhouse-client symlinks.
+            echo "  ClickHouse: $(clickhouse --version 2>/dev/null | head -1 || echo 'not found')"
             echo "  gh:         $(gh --version 2>/dev/null | head -1 || echo 'not found')"
             echo "  git:        $(git --version 2>/dev/null || echo 'not found')"
             echo "  jj:         $(jj --version 2>/dev/null || echo 'not found')"
@@ -82,6 +118,16 @@
               echo "  Redis:       RUNNING"
             else
               echo "  Redis:       NOT RUNNING"
+            fi
+
+            # ClickHouse speaks HTTP on 8123, not a wire protocol with its own
+            # readiness probe, so the check is a trivial query over curl. This
+            # is the same probe data-service/scripts/setup-local-demo.sh waits
+            # on, kept identical on purpose.
+            if curl -s --max-time 2 http://localhost:8123/ --data-binary "SELECT 1" > /dev/null 2>&1; then
+              echo "  ClickHouse:  RUNNING"
+            else
+              echo "  ClickHouse:  NOT RUNNING (run data-service/scripts/setup-local-demo.sh)"
             fi
 
             if curl -sf http://localhost:9191/health > /dev/null 2>&1; then
