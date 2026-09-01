@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-31-motion-build-tab-design.md`
 
-**Depends on:** `docs/superpowers/plans/2026-08-31-motion-prop-lane-drag.md` — shipped, merged into this branch's base as PR #563. Build writes every selected channel into the SAME window; the per-property lanes from that plan are what pull them apart afterwards. Without them Build produces a composition the user cannot tune.
+**Depends on:** `docs/superpowers/plans/2026-08-31-motion-prop-lane-drag.md` — shipped and MERGED into `develop` as PR #563, plus a follow-up commit (`59cb90ac8`) addressing seven review findings. That follow-up reformatted several of the files below to prettier and added a `trackKvMotionPropLaneDragged` event; it did not change any API this plan calls. Build writes every selected channel into the SAME window; the per-property lanes from that plan are what pull them apart afterwards. Without them Build produces a composition the user cannot tune.
 
 ## Global Constraints
 
@@ -20,7 +20,7 @@
 - jsdom here has no `PointerEvent`. Sibling drag tests carry a `PointerEventPolyfill` shim; copy that pattern if a test needs pointer events (this plan's tests need only clicks).
 - New test files only. Do **not** add to `presets.test.ts` (44.1KB), `blocks.test.ts` (37.9KB) or `TimelineDock.test.tsx` (48.8KB) — all three sit at or near bun 1.3.2's ~51KB transpiler cliff, past which a file dies with a bogus SCSS parse error naming `base.module.scss`.
 - New props on `TimelineDockProps` MUST be optional, so existing harnesses gain no type error and a host that omits them simply gets no Build tab.
-- Lint changed files only: `bunx eslint <paths>`. `presets.ts`, `blocks.ts`, `BlockTrackRow.tsx` and `KvMotionEditor.tsx` are all NOT prettier-clean at HEAD — do not reformat them and never run a blanket `--fix` over them. Only files you create may be `--fix`ed.
+- Lint changed files only: `bunx eslint <paths>`. **Verified on 2026-09-01, after PR #563's review fixes reformatted them:** `blocks.ts`, `useMotionEditorState.ts`, `BlockTrackRow.tsx`, `KvMotionEditor.tsx` and `MotionSourceTabs.tsx` are now prettier-**clean**, so keep them that way — `bunx eslint --fix` on those is safe and expected. `presets.ts` is still NOT clean (it has a pre-existing baseline): do not reformat it and never run a blanket `--fix` over it. Re-check with `bunx prettier --check <file>` rather than trusting this line if you find it disagrees.
 - No type gate: `next build` sets `ignoreBuildErrors` and `tsc --noEmit` has a ~1080-line pre-existing baseline. Judge `tsc` only by whether YOUR files appear. `KvMotionEditor.tsx` has one baseline `useAuth()` error — not yours.
 - Stage with explicit paths — never `git add -A` or `git add .`. A task in the previous plan swept an unrelated feature into its commit that way.
 - **Assertion strength is the known weak spot of this feature area.** Five assertions across the previous plan were caught passing under the very regression they existed to catch. Assert whole arrays and `(time, value)` pairs, never aggregates like `Math.max` or a bare "mock was called".
