@@ -1275,23 +1275,49 @@ git commit -m "feat(web): Duplicate icon on custom resize panel rows"
 - Consumes: `platformById` from `@/lib/studio/kv/resizePlatforms` (Task 5).
 - Produces: nothing.
 
-**Why:** the line reads `platformId.startsWith("custom-") ? "Custom" : platformId`. Suffix-safe, but two duplicates would both render `"Custom"` on a share page — the very ambiguity the ordinal exists to remove. It is also the only place outside the shared parser that inspects an id.
+**Why:** `platformLabel()` falls back to `platformId.startsWith("custom-") ? "Custom" : platformId`. Suffix-safe, but two duplicates would both render `"Custom"` on a share page — the very ambiguity the ordinal exists to remove. It is also the only place outside the shared parser that inspects an id.
 
-- [ ] **Step 1: Read the surrounding expression**
+**Two facts about this file that change the shape of the edit:**
+
+1. The label is not an inline ternary. Lines 16-28 build a `PLATFORM_LABEL:
+   Record<string, string>` map from `PLATFORMS` and consult it first.
+   `platformById` already does that registry lookup itself
+   (`PLATFORMS.find((p) => p.id === id)`), so once you route through it the
+   map and its `PLATFORMS` import are **dead code and must be removed** —
+   leaving them is worse than the bug being fixed.
+2. `platformLabel` is also called with motion **ratio** strings, not only
+   platform ids (lines 299 and 309, e.g. `platformLabel(item.ratio)`). Those
+   must keep rendering the raw string. They do: a ratio like `9:16` is never
+   a `PLATFORMS` id, so today it misses the map and falls through to
+   `platformId`, and after the change it misses `platformById` and falls
+   through to the same `?? platformId`. Verify this by reading lines 296-310
+   before you edit — do not change those call sites.
+
+- [ ] **Step 1: Read the function and its call sites**
 
 ```bash
-cd web && sed -n '15,40p' "src/app/share/[token]/KvShareClient.tsx"
+cd web && sed -n '10,30p' "src/app/share/[token]/KvShareClient.tsx" && sed -n '294,312p' "src/app/share/[token]/KvShareClient.tsx"
 ```
 
-Confirm what the fallback branch feeds (a label string for a tile heading) before editing.
+Confirm the two facts above before editing.
 
-- [ ] **Step 2: Replace the ad-hoc check with the shared lookup**
+- [ ] **Step 2: Route the label through the shared lookup and delete the dead map**
+
+Replace the `PLATFORM_LABEL` map and the `platformLabel` function with:
 
 ```tsx
-    (platformById(platformId as PlatformId)?.label ?? platformId)
+/** Human label for a resize tile's platform id — or for a motion ratio,
+ *  which has no registry entry and renders as its own string.
+ *
+ *  Routed through `platformById` rather than a local map so a custom size
+ *  reads `100 × 200` (and `100 × 200 (2)` for a duplicate) instead of a flat
+ *  "Custom" that cannot tell two same-size tiles apart. */
+function platformLabel(platformId: string): string {
+  return platformById(platformId as PlatformId)?.label ?? platformId;
+}
 ```
 
-Import `platformById` from `@/lib/studio/kv/resizePlatforms` and `PlatformId` from `@/types/kv/resize`. `platformById` already handles both kinds — it synthesises a custom label with its ordinal and looks presets up in the registry — so this branch stops being custom-specific at all.
+Then remove the now-unused `PLATFORMS` import (line 12) and add `platformById` from `@/lib/studio/kv/resizePlatforms` plus the `PlatformId` type from `@/types/kv/resize`. If `PLATFORMS` turns out to be referenced somewhere else in the file, keep the import and say so in your report.
 
 - [ ] **Step 3: Verify in the running app**
 
