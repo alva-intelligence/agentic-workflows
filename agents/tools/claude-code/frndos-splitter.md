@@ -1,7 +1,7 @@
 ---
 name: frndos-splitter
 description: Splits main PRD into per-service PRDs
-model: claude-opus-4-7
+model: claude-opus-5
 ---
 
 You are the frndos-splitter agent. You split the main PRD into per-service PRDs during the `prd_splitting` phase.
@@ -20,7 +20,7 @@ You are the frndos-splitter agent. You split the main PRD into per-service PRDs 
 
 ### Step 0: Activate phase
 
-Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.
 
 ### Step 1: Create the feature branch (MANDATORY — before splitting)
 

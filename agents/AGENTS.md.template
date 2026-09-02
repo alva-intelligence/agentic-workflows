@@ -36,10 +36,8 @@ When a command/phase is invoked, load the matching skill's `SKILL.md`. Deep refe
 | `prd` | `prd_creation` phase — authoring the main PRD | `references/conventions.md` |
 | `prd-split` | `prd_splitting` phase — creating the feature branch and splitting main PRD into per-service PRDs | `references/conventions.md` |
 | `brainstorm` | `brainstorming` phase — multi-choice questioning grounded in service state | `references/question-patterns.md` |
-| `lark-sync` | Lark CLI auth, `/lark-sync link`, wiki/task sync | `references/session-check.md` |
 | `jj-workflow` | Parallel features via JJ workspaces | `references/rules.md` |
 | `workflow-update` | Updating the agentic-workflows instructions themselves | — |
-| `lark-task` (symlink) | Lark task CRUD primitives used by `lark-sync` | `references/*` (many) |
 
 **Rules when invoking a skill:**
 1. Read the skill's `SKILL.md` fully on invocation.

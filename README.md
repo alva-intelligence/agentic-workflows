@@ -23,7 +23,7 @@ workflow — from brainstorming to PRD creation, implementation, and PR submissi
 
 What gets installed:
   - 10 phase-scoped AI agents (orchestra, brainstorm, prd, splitter, implement, engineer, architect, pr, pr-review, track)
-  - 9 skills (/onboard, /workflow, /workflow-update, /brainstorm, /prd, /prd-split, /jj-workflow, /lark-sync, /setup-workspace)
+  - 8 skills (/onboard, /workflow, /workflow-update, /brainstorm, /prd, /prd-split, /jj-workflow, /setup-workspace)
    - An 8-phase workflow state machine with gate enforcement (with `phase_status` per phase — `idle` / `inprogress` / `completed`, no auto-advance)
   - Agent Teams support — parallel per-service engineers + architect (Claude Code)
   - JJ workspace support — parallel features in isolated directories (Claude Code, Amp)
@@ -251,13 +251,13 @@ Terminal 1 (primary):                    Terminal 2 (workspace):
 - `/jj-workflow list` — List all workspaces and their features
 - `/jj-workflow cleanup <slug>` — Remove a completed workspace
 
-**Requirements:** JJ installed (`brew install jj` or via `nix develop`). Best with terminal-based harnesses (Claude Code, Amp) — Cursor is IDE-integrated so benefits less.
+**Requirements:** JJ installed (`brew install jj`). Best with terminal-based harnesses (Claude Code, Amp) — Cursor is IDE-integrated so benefits less.
 
 **Loki coexistence:** if you chose Claude Code + GUI (loki) during `/onboard`, `/jj-workflow` becomes inert in that workspace — loki writes `.loki/marker.json` on install, and the skill detects it and exits with a redirect message. Parallel features in loki-managed workspaces happen via kanban cards (each card gets its own `git worktree`) rather than JJ workspaces. If you also installed Amp alongside Claude Code + loki, Amp continues to use `/jj-workflow` normally from its own terminal — the two models coexist because Amp doesn't share loki's worktree surface.
 
 ### loki (Claude Code GUI) — optional surface
 
-[loki](https://github.com/arhen/loki) is a native macOS app that provides a kanban + chat + diff + terminal shell over the agentic workflow when Claude Code is the chosen tool. During `/onboard`, after picking Claude Code, the agent asks "GUI (loki) or terminal?" and if GUI is chosen, guides the user through installing loki and launching it against the workspace. loki never reimplements skills — it shells out to the same `/lark-sync push-prd`, `/workflow start`, `/workflow next` etc. the terminal agent calls. `.workflow-state.json` is the shared source of truth, so terminal and GUI stay in lockstep. **Scope:** Claude Code only, macOS only. Cursor/OpenCode/Amp are unaffected.
+[loki](https://github.com/arhen/loki) is a native macOS app that provides a kanban + chat + diff + terminal shell over the agentic workflow when Claude Code is the chosen tool. During `/onboard`, after picking Claude Code, the agent asks "GUI (loki) or terminal?" and if GUI is chosen, guides the user through installing loki and launching it against the workspace. loki never reimplements skills — it shells out to the same `/workflow start`, `/workflow next` etc. the terminal agent calls. `.workflow-state.json` is the shared source of truth, so terminal and GUI stay in lockstep. **Scope:** Claude Code only, macOS only. Cursor/OpenCode/Amp are unaffected.
 
 ### Creating a New Workspace for a Different Project
 
@@ -268,7 +268,7 @@ Use `/setup-workspace` to create a brand new agentic workspace for a completely 
 3. Workflow phases (keep/remove/add from the default 8)
 4. Agents (which phase agents, models, editor support)
 5. Skills and MCP servers
-6. Dev environment (flake.nix packages, branch conventions)
+6. Dev environment (toolchain versions, branch conventions)
 
 Then generates all configuration files — agents, fragments, skills, schemas, templates, and manifest.
 
@@ -310,15 +310,15 @@ Agents are phase-scoped specialists. You never invoke them directly — the orch
 | Agent | Model | Phase | What it does |
 |-------|-------|-------|-------------|
 | `frndos-orchestra` | Opus 4.5 | All | **The router.** Reads workflow state, delegates to the right agent, never does work itself. Captures intake on `idle → brainstorming` and never auto-advances when `phase_status` flips to `completed`. In Team Session mode, acts as the lead — creates the team, approves plans, coordinates reviews. |
-| `frndos-brainstorm` | Opus 4.6 | Brainstorming | Loads latest service state via code-graph MCP, asks 3–6 multi-choice questions (each with one `(Recommended)` option), records answers + summary that feeds the PRD. |
-| `frndos-prd` | Opus 4.6 | PRD Creation | Authors a structured PRD from the brainstorming summary + user input. Includes a `Brainstorming Outcome` section pulling answers verbatim. |
-| `frndos-splitter` | Opus 4.6 | PRD Splitting | Creates `feature/<worker>/vc-<slug>` from base, then splits the main PRD into per-service PRDs. (Replaces the old separate `branch_creation` phase.) |
-| `frndos-implement` | Opus 4.6 | Implementation | **Sequential mode only.** Implements across all services following service PRDs. On entry, offers a wireframe-first sub-step (web UI with mocks on the feature branch) when web work is in scope. |
-| `frndos-engineer` | Opus 4.6 | Implementation | **Team Session only.** One per service. Implements, self-reviews, creates PR for their assigned service. Communicates via mailbox. Cannot write code outside their service directory. |
-| `frndos-architect` | Opus 4.6 | Implementation | **Team Session only.** Reviews cross-service integration — API contracts, shared types, data flow, auth consistency. Does NOT review code quality. Does NOT write code. |
-| `frndos-pr` | Sonnet 4.6 | PR Submission | Runs full self code-review on the diff (correctness, lint, conventions) plus a `security-reviewer` skill audit BEFORE opening the PR. Body includes both summaries. |
-| `frndos-pr-review` | Sonnet 4.6 | PR Review | Resolves PR threads / bot findings (CodeRabbit, CI, reviewer comments). Classifies must-fix / nit / question, applies fixes, pushes, marks threads resolved. |
-| `frndos-track` | Sonnet 4.6 | Completion | Updates track files with task completion, session logs, PR URLs. Marks features complete in workflow state. |
+| `frndos-brainstorm` | Opus 5 | Brainstorming | Loads latest service state via code-graph MCP, asks 3–6 multi-choice questions (each with one `(Recommended)` option), records answers + summary that feeds the PRD. |
+| `frndos-prd` | Opus 5 | PRD Creation | Authors a structured PRD from the brainstorming summary + user input. Includes a `Brainstorming Outcome` section pulling answers verbatim. |
+| `frndos-splitter` | Opus 5 | PRD Splitting | Creates `feature/<worker>/vc-<slug>` from base, then splits the main PRD into per-service PRDs. (Replaces the old separate `branch_creation` phase.) |
+| `frndos-implement` | Opus 5 | Implementation | **Sequential mode only.** Implements across all services following service PRDs. On entry, offers a wireframe-first sub-step (web UI with mocks on the feature branch) when web work is in scope. |
+| `frndos-engineer` | Opus 5 | Implementation | **Team Session only.** One per service. Implements, self-reviews, creates PR for their assigned service. Communicates via mailbox. Cannot write code outside their service directory. |
+| `frndos-architect` | Opus 5 | Implementation | **Team Session only.** Reviews cross-service integration — API contracts, shared types, data flow, auth consistency. Does NOT review code quality. Does NOT write code. |
+| `frndos-pr` | Sonnet 5 | PR Submission | Runs full self code-review on the diff (correctness, lint, conventions) plus a `security-reviewer` skill audit BEFORE opening the PR. Body includes both summaries. |
+| `frndos-pr-review` | Sonnet 5 | PR Review | Resolves PR threads / bot findings (CodeRabbit, CI, reviewer comments). Classifies must-fix / nit / question, applies fixes, pushes, marks threads resolved. |
+| `frndos-track` | Sonnet 5 | Completion | Updates track files with task completion, session logs, PR URLs. Marks features complete in workflow state. |
 
 ### How auto-update works
 
@@ -373,7 +373,6 @@ agentic-workflows/
     state-schema.json     # JSON schema for .workflow-state.json
   manifest.json           # File registry with SHA-256 hashes
   VERSION                 # Semver (patch auto-bumped by CI)
-  flake.nix               # Nix flake for dev environment
 ```
 
 ### Making changes

@@ -12,7 +12,6 @@ The update-check script handles file downloads by SHA-256 comparison, but some u
 - New symlinks or directory structures
 - Workflow state schema migrations (new fields in `.workflow-state.json`)
 - New MCP configs or skill registrations
-- Changes to `flake.nix` that need `nix develop` re-entry
 
 This skill handles the full update lifecycle.
 
@@ -48,7 +47,7 @@ For each updated file, read it and summarize what changed compared to what was t
 | **Templates** | `templates/**/*.md` | PRD/PR/track templates — affects new artifacts only |
 | **Skills** | `skills/*/SKILL.md` | Skill behavior changes — new commands, updated steps |
 | **Scripts** | `scripts/*.sh` | Update/generation scripts — already applied |
-| **Config** | `flake.nix`, scaffolds | Dev environment scaffolding |
+| **Config** | scaffolds, templates | Dev environment scaffolding |
 
 Present a concise summary to the user:
 ```
@@ -63,7 +62,7 @@ Fragments:
   - brainstorm-conventions: When the brainstorming agent should regenerate questions after a context-changing answer
 
 Config:
-  - flake.nix: Added new Python dependency
+  - run-all-template.sh: Added new service entry
 ```
 
 ### Step 3: Detect and apply non-trivial changes
@@ -111,13 +110,6 @@ If new agent directories or tool-specific paths were added to the manifest:
 2. If any are missing or point to wrong targets, fix them
 3. Report what was fixed
 
-#### 3d. flake.nix changes
-
-If `flake.nix` was updated:
-
-1. Inform user: "flake.nix was updated. You'll need to re-enter the Nix dev shell for changes to take effect."
-2. If currently in a Nix shell, suggest: "Run `exit` then `nix develop` to pick up the new dependencies."
-
 #### 3e. New skills or skill changes
 
 If any skill files were updated:
@@ -156,7 +148,6 @@ After applying all changes:
 
    Action needed:
      - Restart session to pick up skill changes
-     - Re-enter nix develop for flake.nix changes
    ```
 
 ## `/workflow-update check`

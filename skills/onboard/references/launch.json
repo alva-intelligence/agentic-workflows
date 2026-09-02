@@ -3,37 +3,42 @@
   "configurations": [
     {
       "name": "api",
-      "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "bash", "-c", "cd api && php artisan optimize:clear && php artisan optimize && php artisan serve --port=9191"],
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "php artisan optimize:clear && php artisan optimize && php artisan serve --port=9191"],
+      "cwd": "api",
       "port": 9191
     },
     {
       "name": "api-queue",
-      "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "bash", "-c", "cd api && php artisan queue:work database --timeout=3000 --tries=5 --queue=high,low,default,subscriptions"]
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["artisan", "queue:work", "database", "--timeout=3000", "--tries=5", "--queue=high,low,default,subscriptions"],
+      "cwd": "api"
     },
     {
       "name": "web",
-      "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "bash", "-c", "cd web && bun run dev"],
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "web",
       "port": 3000
     },
     {
       "name": "ai-service",
-      "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "bash", "-c", "cd ai-service && source .venv/bin/activate && fastapi dev"],
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "source .venv/bin/activate && fastapi dev"],
+      "cwd": "ai-service",
       "port": 8000
     },
     {
       "name": "data-service",
-      "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "bash", "-c", "cd data-service && source .venv/bin/activate && uvicorn app.main:app --reload --port 9999"],
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "source .venv/bin/activate && uvicorn app.main:app --reload --port 9999"],
+      "cwd": "data-service",
       "port": 9999
     },
     {
       "name": "mailhog",
-      "runtimeExecutable": "nix",
-      "runtimeArgs": ["develop", "--command", "mailhog"],
+      "runtimeExecutable": "mailhog",
+      "runtimeArgs": [],
       "port": 8025
     }
   ]

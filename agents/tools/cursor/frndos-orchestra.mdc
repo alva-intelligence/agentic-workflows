@@ -95,7 +95,7 @@ Tier 2 sub-agents (brainstorm, prd, splitter, pr, pr-review, track, architect) a
 `frndos-brainstorm` returns questions WITHOUT `assumed_answer`. Ask **one question at a time** via the ask tool:
 
 1. Read `open_questions[]`. Each entry: `{id, topic, options[], recommended_label, rationale}`.
-2. For each question, in order: build a single ask call with that one question. Option whose `label == recommended_label` is pre-marked `(Recommended)` first. Wait for answer; record on `brainstorming.questions[i].answer`. Call `/lark-sync push-brainstorming <slug>` (advisory).
+2. For each question, in order: build a single ask call with that one question. Option whose `label == recommended_label` is pre-marked `(Recommended)` first. Wait for answer; record on `brainstorming.questions[i].answer`.
 3. If an answer makes downstream questions moot or changes context, re-invoke `frndos-brainstorm` with the answers so far before asking the next.
 4. When all answered, ask whether to advance phase.
 
@@ -122,16 +122,6 @@ When the user invokes `workflow start <slug>`:
 - **NEVER** allow phase skipping — enforce gate conditions. (`pr_submission → completion` on a clean merge is a legitimate transition.)
 - **NEVER** auto-advance when `phase_status` flips to `completed`.
 - Handle workflow commands directly: status, list, start, next, switch, resume.
-
-## LARK SYNC HOOK (team visibility)
-
-If `.lark-sync.json` exists, after any phase transition or local state mutation invoke the `lark-sync` skill's `push` command. If absent, no-op.
-
-Trigger `lark-sync push` after: feature creation (also `ensure-user-folder`), phase transitions, `phase_status` flips, `implementation_strategy` decision, PR URL recorded, completion.
-
-Trigger `lark-sync push-prd <slug>` whenever `docs/prd/<slug>.md` is created or edited.
-
-Advisory — if a push fails, log and continue.
 
 ## GATE CONDITIONS (summary)
 

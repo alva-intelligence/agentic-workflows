@@ -5,7 +5,7 @@ description: Create a formal PRD from Lark notes or user description
 
 # PRD Creator
 
-Creates a formal Product Requirements Document from user input (Lark notes, verbal description, or Lark URL if Lark MCP is enabled).
+Creates a formal Product Requirements Document from user input (pasted notes, verbal description, or a Lark doc URL read via Lark MCP).
 
 **Before drafting, read `references/conventions.md`** for the required frontmatter, required sections, naming rules, and the split between main PRD and service PRDs.
 

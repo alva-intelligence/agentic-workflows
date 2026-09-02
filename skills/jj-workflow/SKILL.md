@@ -58,7 +58,7 @@ Initialize JJ colocated mode in all service repos. Can be run standalone or duri
    command -v jj &>/dev/null && echo "✓ jj available: $(jj --version)" || echo "✗ jj not found"
    ```
 2. If JJ not found, STOP:
-   > "JJ (Jujutsu) is not installed. Install with `brew install jj` or add it via Nix (`nix develop`), then retry."
+   > "JJ (Jujutsu) is not installed. Install with `brew install jj`, then retry."
 3. For each service directory that has `.git/` but NOT `.jj/`:
    ```bash
    for service in api web ai-service data-service; do
@@ -124,8 +124,7 @@ Create a new JJ workspace for parallel feature development.
    # Rule: if primary has it set up, mirror it. Don't silently drop tool state.
    for item in \
        .agentic-workflows .agents AGENTS.md CLAUDE.md AGENTS.local.md \
-       flake.nix run-all.sh docs .onboard-state.json .vscode \
-       .lark-sync.json skills-lock.json \
+       run-all.sh docs .onboard-state.json .vscode \
        .mcp.json \
        .cursor .opencode opencode.json \
        .amp .codex .aider .cline .continue .zed .gemini .windsurf .roo .kilocode; do

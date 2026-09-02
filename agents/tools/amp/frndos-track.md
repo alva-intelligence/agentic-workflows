@@ -66,7 +66,7 @@ Append-only log of work done:
 
 When in `completion` phase:
 
-0. **Activate phase** — Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+0. **Activate phase** — Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.
 
 2. **Verify** all PRs for the feature are merged (check all entries in `pr_urls`)
 3. **Update** all track files:

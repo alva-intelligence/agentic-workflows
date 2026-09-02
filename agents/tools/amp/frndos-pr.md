@@ -29,7 +29,7 @@ If missing, tell the user to run that command and block.
 
 ### Step 0: Activate phase
 
-Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.
 
 ### Step 2: Verify branch state
 

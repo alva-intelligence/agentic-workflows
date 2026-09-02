@@ -21,8 +21,6 @@ Every feature has a `phase_status` field on top of `phase`:
 
 Agents MUST flip `phase_status` from `idle` to `inprogress` when they begin their actual work. Orchestra sets `phase_status` to `idle` when entering a new phase.
 
-**Every `phase_status` flip MUST be followed by `/lark-sync push <slug>`** (advisory; log + continue on failure). Without this, the Lark task's `Phase status` custom field drifts from local state and the team's kanban view goes stale. Same rule applies to loki card mutations: any GUI mutation of `.workflow-state.json` fires `/lark-sync push <slug>` fire-and-forget.
-
 ### `agent_state` Semantics (CRITICAL)
 
 Every feature has `agent_state` and `agent_state_reason` fields. They surface the agent's current attention need to the loki GUI shell and orchestra so the user knows when to step in.
@@ -43,14 +41,11 @@ Every feature has `agent_state` and `agent_state_reason` fields. They surface th
 
 **Pairing rule (enforced by schema):** `agent_state_reason` MUST be a non-empty string whenever `agent_state` is non-null, and MUST be `null` when `agent_state` is `null`. Never set one without the other.
 
-**Lark sync:** every `agent_state` mutation MUST be followed by `/lark-sync push <slug>` (fire-and-forget, same rule as `phase_status`).
-
 ### Sandbox-Blocked Operations Are Advisories, Not Failures
 
-Auto mode (`https://code.claude.com/docs/en/permission-modes#eliminate-prompts-with-auto-mode`) wraps tool calls in a sandbox. Two classes of advisory blocks happen routinely in this workflow and MUST NOT be treated as fatal:
+Auto mode (`https://code.claude.com/docs/en/permission-modes#eliminate-prompts-with-auto-mode`) wraps tool calls in a sandbox. One class of advisory block happens routinely in this workflow and MUST NOT be treated as fatal:
 
-1. **Symlink-target writes through `docs/`, `.agentic-workflows/`, `.agents/`** in JJ secondary workspaces. These dirs symlink to the primary workspace (sibling path). The secondary's `.claude/settings.local.json` registers the primary in `additionalDirectories` — but stale settings, multi-hop symlinks, or pre-`/jj-workflow new` workspaces may still surface a sandbox block on the verify step (e.g. `stat`, `ls -la`, `cat`).
-2. **`/lark-sync push` and any `lark-cli api ...` network call** — already advisory by definition (see lark-sync skill).
+- **Symlink-target writes through `docs/`, `.agentic-workflows/`, `.agents/`** in JJ secondary workspaces. These dirs symlink to the primary workspace (sibling path). The secondary's `.claude/settings.local.json` registers the primary in `additionalDirectories` — but stale settings, multi-hop symlinks, or pre-`/jj-workflow new` workspaces may still surface a sandbox block on the verify step (e.g. `stat`, `ls -la`, `cat`).
 
 **Rule:** when a Bash/Edit/Write returns a sandbox-block error AND the canonical state confirms the write went through (`.workflow-state.json` updated, file exists per a separate read, `phase_status` mutation persisted), the agent MUST:
 

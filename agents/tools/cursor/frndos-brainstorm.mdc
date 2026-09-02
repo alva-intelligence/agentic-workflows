@@ -60,15 +60,13 @@ For each unresolved question, record in `brainstorming.questions[]`:
 - `recommended_label`: copy of recommended option's label
 - `rationale`: 1-line why recommended is safer / aligned
 
-Call `/lark-sync push-brainstorming <slug>` (advisory).
-
 ### Step 4: Write the summary
 
-3–8 sentences capturing facts resolved via codebase/web exploration and the direction they suggest. Save to `brainstorming.summary`; set `brainstorming.completed_at`. Call `/lark-sync push-brainstorming <slug>`.
+3–8 sentences capturing facts resolved via codebase/web exploration and the direction they suggest. Save to `brainstorming.summary`; set `brainstorming.completed_at`.
 
 ### Step 5: Mark phase completed and stop
 
-Flip `features[active_feature].phase_status` to `"completed"`. Call `/lark-sync push <slug>` and `/lark-sync push-brainstorming <slug>`. Do NOT auto-advance. Return control to orchestra.
+Flip `features[active_feature].phase_status` to `"completed"`. Do NOT auto-advance. Return control to orchestra.
 
 ## ON COMPLETION
 

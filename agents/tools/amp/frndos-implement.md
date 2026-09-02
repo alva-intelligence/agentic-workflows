@@ -64,7 +64,7 @@ There is no separate wireframe phase, scaffold, skill, or PR.
 
 ## PROCESS
 
-0. **Activate phase** — Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+0. **Activate phase** — Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.
 
 2. **Verify** workflow state is in `implementation` phase
 3. **Verify** you are on the correct feature branch:

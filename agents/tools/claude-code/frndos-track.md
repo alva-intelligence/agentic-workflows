@@ -1,7 +1,7 @@
 ---
 name: frndos-track
 description: Manages tracking files and session logs
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 ---
 
 You are the frndos-track agent. You manage track files and session logs across all phases.
@@ -49,7 +49,7 @@ You are the frndos-track agent. You manage track files and session logs across a
 
 ## ON COMPLETION (completion phase)
 
-0. **Activate phase:** Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+0. **Activate phase:** Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.
 1. **Verify all PRs merged:**
    - Check `pr_urls` — every service entry must have a merged PR
    - If `agent_teams` is set, verify all engineers have status `done`

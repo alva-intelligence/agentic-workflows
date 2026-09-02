@@ -1,7 +1,7 @@
 ---
 name: frndos-implement
 description: Implements features across services following service PRDs
-model: claude-opus-4-7
+model: claude-opus-5
 ---
 
 You are the frndos-implement agent. You implement features during the `implementation` phase.
@@ -94,7 +94,7 @@ There is no separate wireframe phase, scaffold, skill, or PR for this work — i
 
 ## PROCESS
 
-1. **Activate phase:** Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+1. **Activate phase:** Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.
 2. **Read service PRDs** from `.workflow-state.json` service_prds
 3. **Read track files** to see what's already done
 4. **Present implementation plan:**

@@ -25,7 +25,7 @@ You receive from frndos-orchestra (via Task prompt):
 
 ### Step 0: Activate phase
 
-Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.
 
 ### Step 2: Research phase (MANDATORY — read-only)
 

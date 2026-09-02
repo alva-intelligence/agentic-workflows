@@ -28,14 +28,10 @@ Read `.workflow-state.json` to determine:
 
 If `.workflow-state.json` doesn't exist, no features are active yet.
 
-### Step 3: Verify Lark sync (MANDATORY)
-
-If `.lark-sync.json` is missing or `lark-cli auth status` is incomplete, follow `skills/lark-sync/references/session-check.md` — re-auth silently when unambiguous, auto-run `/lark-sync link` when `.lark-sync.json` is missing. Ask only for missing credentials or installs.
-
-### Step 4: Feature branch recency + service health
+### Step 3: Feature branch recency + service health
 
 After pulling, if any service is on a `feature/*` branch, run the recency check against its base branch. Then verify that required services are healthy. Full procedures (recency, re-run triggers, health commands): `skills/workflow/references/session-checks.md`.
 
-### Step 5: Route to correct agent
+### Step 4: Route to correct agent
 
 Based on `.workflow-state.json`, delegate directly to the appropriate `frndos-*` agent for the current phase. Do NOT tell the user to manually invoke an agent — delegate.

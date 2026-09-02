@@ -185,14 +185,14 @@ Record the choice in `.onboard-state.json` as `"claude_ui": "loki"` or `"claude_
 
 **Platform gate:** If the user picks GUI but is on Linux/Windows, tell them "loki is macOS-only today. Falling back to terminal mode." and set `claude_ui: "terminal"` + `skipped_reasons.loki_install: "non-macOS platform"`. Detect OS via `uname -s` — `Darwin` means macOS, anything else falls back.
 
-**Multi-tool caveat:** If the user selected Claude Code **and** one or more terminal tools (Amp, OpenCode, Cursor), GUI mode still applies to Claude Code only. Record this explicitly in state: the GUI choice covers the Claude Code surface, and the terminal tools continue to use `/jj-workflow` if they want parallel features. They share the same `.workflow-state.json` and Lark tasklist, so team visibility is consistent either way.
+**Multi-tool caveat:** If the user selected Claude Code **and** one or more terminal tools (Amp, OpenCode, Cursor), GUI mode still applies to Claude Code only. Record this explicitly in state: the GUI choice covers the Claude Code surface, and the terminal tools continue to use `/jj-workflow` if they want parallel features. They share the same `.workflow-state.json`, so state is consistent either way.
 
 If user did NOT select Claude Code in 1.3, skip this question entirely.
 
 ### 1.5 Which AI provider subscriptions?
 
-- Anthropic: Claude Opus 4.6 (planning), Claude Sonnet 4.6 (coding)
-- OpenAI: GPT 5.3-codex (coding), GPT 5.4 (exploratory)
+- Anthropic: Claude Opus 5 (planning), Claude Sonnet 5 (coding)
+- OpenAI: GPT-5.3-Codex (coding), GPT-5.6 (exploratory)
 
 ### 1.6 Optional integrations
 
@@ -215,89 +215,13 @@ Neither is required. Workflow works without them.
 
 ## Step 2: Set Up Development Environment
 
-Use the ask tool:
-
-> "How do you want to set up your development environment?"
-> - **Nix** (recommended) — Reproducible, all versions pinned, one command gives you everything
-> - **Direct install** — Use homebrew/manual install on your Mac
-
-Record the choice in `.onboard-state.json` as `"env_method": "nix"` or `"env_method": "direct"`.
+Direct install on macOS via Homebrew. This is the only supported path — every tool is installed directly on the machine.
 
 ---
 
-### Option A: Nix
+### Install and verify toolchain
 
-#### A.1 Check if Nix is installed and flakes are enabled
-
-```bash
-command -v nix &>/dev/null && echo "✓ Nix installed: $(nix --version)" || echo "✗ Nix not found"
-```
-
-If Nix IS installed, ensure flakes are enabled (idempotent):
-
-```bash
-mkdir -p ~/.config/nix
-grep -q 'experimental-features' ~/.config/nix/nix.conf 2>/dev/null || echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
-```
-
-If Nix is installed and flakes work, skip to A.3.
-
-#### A.2 If Nix is NOT installed — **STOP, wait for user**
-
-Nix requires `sudo`. The agent CANNOT install it headlessly. Use the ask tool:
-
-> "Nix is not installed. Please run this in a separate terminal:
-> ```
-> curl -L https://nixos.org/nix/install | sh
-> ```
-> **Let me know when the installation finishes.**"
-
-**STOP AND WAIT.** Use the ask tool:
-> "Have you installed Nix?"
-> - Yes, it's installed
-> - Not yet, I need more time
-
-After confirmation, enable flakes:
-```bash
-mkdir -p ~/.config/nix
-grep -q 'experimental-features' ~/.config/nix/nix.conf 2>/dev/null || echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
-```
-
-Verify (use full path if PATH hasn't refreshed):
-```bash
-NIX_CMD=$(command -v nix 2>/dev/null || echo "/nix/var/nix/profiles/default/bin/nix")
-$NIX_CMD --version
-```
-
-#### A.3 Enter the Nix dev shell
-
-The agent runs this directly:
-```bash
-NIX_CMD=$(command -v nix 2>/dev/null || echo "/nix/var/nix/profiles/default/bin/nix")
-$NIX_CMD develop
-```
-
-**First time may take 5-15 minutes** (downloading packages). Use a long timeout (600s). DO NOT panic or retry.
-
-After completion, all tools are in PATH. All subsequent commands run directly — no wrappers needed.
-
-#### A.4 Verify tools
-
-```bash
-php --version && composer --version && bun --version && node --version && python3 --version && uv --version && psql --version && redis-cli --version
-```
-
-If anything is missing, fix `flake.nix` — do NOT install manually.
-
-#### A.5 All subsequent commands run in this shell
-
-> **Do NOT use brew, apt, pip install --global, npm install -g.** Everything comes from Nix.
-
----
-
-### Option B: Direct Install (Homebrew)
-
-#### B.1 Check what's installed and version status
+#### 2.1 Check what’s installed and version status
 
 First check if `brew` is available:
 ```bash
@@ -316,7 +240,7 @@ echo "=== PostgreSQL (keep if >= 16) ==="
 command -v psql &>/dev/null && echo "✓ psql: $(psql --version 2>&1)" || echo "✗ psql: NOT FOUND"
 ```
 
-#### B.2 Install or upgrade tools
+#### 2.2 Install or upgrade tools
 
 The agent checks each tool and takes the right action. **Do this directly — do NOT ask user to run commands.**
 
@@ -371,7 +295,7 @@ fi
 | git | `command -v git` | Missing → `brew install git`. Installed → keep |
 | gh | `command -v gh` | Missing → `brew install gh`. Installed → keep |
 
-#### B.3 Verify all versions after install
+#### 2.3 Verify all versions after install
 
 ```bash
 php -v 2>&1 | grep -q "PHP 8.5" && echo "✓ PHP 8.5" || echo "✗ PHP — need 8.5"
@@ -387,7 +311,7 @@ command -v redis-cli &>/dev/null && echo "✓ Redis" || echo "✗ Redis missing"
 
 All pinned versions must match. If anything fails, fix before continuing.
 
-#### B.4 Start database services (if not already running)
+#### 2.4 Start database services (if not already running)
 
 ```bash
 # Start PostgreSQL (use whatever version is installed)
@@ -401,14 +325,14 @@ pg_isready -h localhost -p 5432 && echo "✓ PostgreSQL running" || echo "✗ Po
 redis-cli ping && echo "✓ Redis running" || echo "✗ Redis not running"
 ```
 
-#### B.4 Install pgvector extension
+#### 2.5 Install pgvector extension
 
 ```bash
 # pgvector for AI service vector search
 psql -h localhost -p 5432 -d postgres -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>/dev/null || echo "pgvector may need manual install: brew install pgvector"
 ```
 
-#### B.5 Verify all tools
+#### 2.6 Verify all tools
 
 ```bash
 php --version && composer --version && bun --version && node --version && python3 --version && uv --version && psql --version && redis-cli --version
@@ -418,9 +342,9 @@ All tools must be available. If any are missing, troubleshoot before continuing.
 
 ---
 
-### After either option — record and continue
+### Record and continue
 
-Save the environment method in `.onboard-state.json` and proceed to Step 2.5. All subsequent steps (clone, deps, .env, DB) work the same regardless of Nix or direct install.
+Mark `steps.prerequisites` as `"completed"` in `.onboard-state.json` and proceed to Step 2.5.
 
 ## Step 2.5: JJ (Jujutsu) Setup — Terminal-based harnesses only
 
@@ -437,7 +361,7 @@ JJ enables parallel feature development via isolated workspaces — useful when 
    command -v jj &>/dev/null && echo "✓ jj available: $(jj --version)" || echo "✗ jj not found"
    ```
 
-2. **If JJ is found** (e.g., from Nix flake or pre-installed):
+2. **If JJ is found** (pre-installed or via `brew install jj`):
    - Record `jj_available: true` in `.onboard-state.json`
    - Tell user: "JJ detected. After onboarding, you can use `/jj-workflow init` to enable colocated mode in service repos, then `/jj-workflow new <slug>` to create parallel workspaces for simultaneous feature development."
    - **Do NOT run `jj git init --colocate` yet** — repos haven't been cloned. The user will run `/jj-workflow init` after clone.
@@ -471,13 +395,13 @@ Based on CLI choice and subscriptions from Step 1:
 
 **Claude Code:**
 ```bash
-echo "OK" | claude -p --model claude-opus-4-7 2>&1 | head -1
-echo "OK" | claude -p --model claude-sonnet-4-6 2>&1 | head -1
+echo "OK" | claude -p --model claude-opus-5 2>&1 | head -1
+echo "OK" | claude -p --model claude-sonnet-5 2>&1 | head -1
 ```
 
 **OpenCode:**
 ```bash
-opencode run -m anthropic/claude-opus-4-7 "respond with just OK" 2>&1 | head -5
+opencode run -m anthropic/claude-opus-5 "respond with just OK" 2>&1 | head -5
 ```
 
 **Amp:**
@@ -508,7 +432,7 @@ Only clone services the user selected. Skip if directory already exists.
 
 ## Step 5: Install Dependencies
 
-**The agent MUST run these commands directly** — you are already inside `nix develop` from Step 2.3, so all tools (php, composer, bun, python3, uv) are available. No `nix develop --command` wrappers needed.
+**The agent MUST run these commands directly** — all tools (php, composer, bun, python3, uv) were installed in Step 2 and are on `PATH`.
 
 **Run sequentially, one service at a time. Do NOT ask user to run these manually.**
 
@@ -606,42 +530,42 @@ Use the ask tool:
 
 ## Step 7: Initialize Local Databases & Services
 
-### 7.1 Initialize PostgreSQL data directory (one-time)
+### 7.1 Ensure PostgreSQL is running
 
-PostgreSQL from nix needs a local data directory. This is a one-time setup:
+Step 2.4 already started PostgreSQL via `brew services`. Verify, and fall back to a workspace-local data directory if the brew service is unavailable:
 
 ```bash
-NIX_CMD=$(command -v nix 2>/dev/null || echo "/nix/var/nix/profiles/default/bin/nix")
-
-# Initialize PostgreSQL data directory (skip if already exists)
-if [ ! -d ".pgdata" ]; then
-  $NIX_CMD develop --command bash -c "initdb -D .pgdata"
-  echo "✓ PostgreSQL data directory created at .pgdata/"
+if pg_isready -h localhost -p 5432 &>/dev/null; then
+  echo "✓ PostgreSQL running (brew service)"
+else
+  # Fallback: workspace-local data directory (one-time init)
+  if [ ! -d ".pgdata" ]; then
+    initdb -D .pgdata
+    echo "✓ PostgreSQL data directory created at .pgdata/"
+  fi
+  mkdir -p .logs
+  pg_ctl -D .pgdata -l .logs/postgresql.log start
+  sleep 2
+  pg_isready -h localhost -p 5432
 fi
 ```
 
-Then start PostgreSQL and enable pgvector:
+Enable pgvector (idempotent, for AI service vector search):
 
 ```bash
-# Start PostgreSQL in background
-$NIX_CMD develop --command bash -c "pg_ctl -D .pgdata -l .logs/postgresql.log start"
-
-# Wait for it to be ready
-sleep 2
-$NIX_CMD develop --command bash -c "pg_isready -h localhost -p 5432"
-
-# Enable pgvector extension (one-time, for AI service vector search)
-$NIX_CMD develop --command bash -c "psql -h localhost -p 5432 -d postgres -c 'CREATE EXTENSION IF NOT EXISTS vector;'" 2>/dev/null || true
+psql -h localhost -p 5432 -d postgres -c 'CREATE EXTENSION IF NOT EXISTS vector;' 2>/dev/null || echo "pgvector may need manual install: brew install pgvector"
 ```
 
-### 7.2 Start Redis
+### 7.2 Ensure Redis is running
 
 ```bash
-# Start Redis in background
-$NIX_CMD develop --command bash -c "redis-server --daemonize yes --logfile .logs/redis.log"
-
-# Verify
-$NIX_CMD develop --command bash -c "redis-cli ping"
+if redis-cli ping &>/dev/null; then
+  echo "✓ Redis running"
+else
+  mkdir -p .logs
+  redis-server --daemonize yes --logfile .logs/redis.log
+  redis-cli ping
+fi
 ```
 
 ### 7.3 Restore database dump — **STOP, ask user**
@@ -734,7 +658,7 @@ Configure project settings — copy the base template, then modify based on sess
 cp .agents/skills/onboard/references/claude-settings.json .claude/settings.json
 ```
 
-> **Auto-mode coverage:** the base template ships with `permissions.allow` covering every command the workflow needs (git, gh, jj, lark-cli, jq, scoped Edit/Write to `docs/` + state files), a `permissions.deny` blocklist for destructive commands, and `autoMode.environment` hints that mark Lark as trusted infrastructure and JJ secondary-workspace symlinks as in-scope. This means the workflow runs hands-off under Claude Code's auto mode (`https://code.claude.com/docs/en/permission-modes#eliminate-prompts-with-auto-mode`) without sandbox prompts breaking sub-agents. Users who want to TIGHTEN beyond the defaults should edit `.claude/settings.json` after install; users who want personal additions should put them in `.claude/settings.local.json` (gitignored).
+> **Auto-mode coverage:** the base template ships with `permissions.allow` covering every command the workflow needs (git, gh, jj, jq, scoped Edit/Write to `docs/` + state files), a `permissions.deny` blocklist for destructive commands, and `autoMode.environment` hints that mark Lark docs as a read-only source and JJ secondary-workspace symlinks as in-scope. This means the workflow runs hands-off under Claude Code's auto mode (`https://code.claude.com/docs/en/permission-modes#eliminate-prompts-with-auto-mode`) without sandbox prompts breaking sub-agents. Users who want to TIGHTEN beyond the defaults should edit `.claude/settings.json` after install; users who want personal additions should put them in `.claude/settings.local.json` (gitignored).
 
 **If user chose "Team Session" (`claude_session_mode: "team"`) in Step 1.4:**
 - Read `.claude/settings.json`
@@ -772,17 +696,9 @@ ln -sf ../.agentic-workflows/agents/amp .amp/agents
 
 For tools that support `launch.json` (Claude Code Desktop), generate the dev server config so the agent can start/stop/preview services automatically.
 
-**Check `env_method` from `.onboard-state.json`** to determine the format:
-
-**If Nix:**
 1. Copy template: `cp .agents/skills/onboard/references/launch.json .claude/launch.json`
 2. Remove entries for services the user didn't select
-3. Done — commands are wrapped with `nix develop --command`
-
-**If Direct install:**
-1. Copy template: `cp .agents/skills/onboard/references/launch-direct.json .claude/launch.json`
-2. Remove entries for services the user didn't select
-3. Done — commands run directly (tools in system PATH)
+3. Done — commands run directly (tools in system `PATH`)
 
 The template configures:
 
@@ -797,13 +713,13 @@ The template configures:
 | ai-service | `fastapi dev` | `ai-service/` | 8000 |
 | data-service | `uvicorn app.main:app --reload --port 9999` | `data-service/` | 9999 |
 
-All commands are wrapped with `nix develop --command` so they work even outside the nix shell. Infrastructure services (PostgreSQL, Redis) should start before app services.
+All commands run directly against tools on `PATH`. Infrastructure services (PostgreSQL, Redis) should start before app services.
 
 ## Step 9.5: Install loki (only if `claude_ui == "loki"`)
 
 **Skip this step unless Claude Code was selected AND the user chose GUI in Step 1.4.5.**
 
-loki is the native macOS GUI shell for the agentic workflow when Claude Code is the chosen tool. It runs the Claude Code side of the workspace — kanban (features grouped by workflow phase via `workflow/phases.json.kanban_lanes`), per-card git worktree, chat/diff/terminal/LSP views, and a Docs pane that reads `docs/prd/*.md` with backlinks and a "Sync to Lark wiki" button that calls `/lark-sync push-prd`.
+loki is the native macOS GUI shell for the agentic workflow when Claude Code is the chosen tool. It runs the Claude Code side of the workspace — kanban (features grouped by workflow phase via `workflow/phases.json.kanban_lanes`), per-card git worktree, chat/diff/terminal/LSP views, and and a Docs pane that reads `docs/prd/*.md` with backlinks.
 
 ### 9.5.1 Re-verify macOS
 
@@ -884,7 +800,6 @@ If "I'm having trouble": fall back to terminal as above.
 When `claude_ui == "loki"` and the marker is in place:
 - `/jj-workflow new/list/cleanup/init` all print a redirect message and exit (no action). Parallel features come from adding cards in loki.
 - `/workflow start <slug>` still works from the terminal — the agent and the GUI share `.workflow-state.json` as the source of truth. Whichever side creates a feature first, the other sees it on next poll / session.
-- Lark sync behavior is unchanged — the orchestra hooks still run on `/workflow start` and `/workflow next`, and loki's "Sync to Lark wiki" button in the Docs pane calls `/lark-sync push-prd` for the selected PRD.
 - Uninstalling loki later: `rm -rf .loki/` in the workspace, then `/jj-workflow init` becomes usable again (re-run onboard Step 2.5 if JJ was never installed).
 
 ## Step 10: Install Community Skills
@@ -971,7 +886,7 @@ If **"No"**:
 
 Only configure MCPs the user selected in Step 1.5. For each one that needs credentials, **STOP and WAIT** for the token.
 
-**Lark MCP** (if selected):
+**Lark MCP** (if selected) — read-only: lets `/prd` pull a PRD straight out of a Lark doc URL. Config shape in `references/mcp-configs.md`.
 
 Use the ask tool:
 > "Lark MCP needs App ID and App Secret. Do you have them?"

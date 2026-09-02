@@ -5,7 +5,7 @@ description: Interactive wizard to create a new agentic workspace — walks thro
 
 # Setup New Agentic Workspace
 
-This skill guides you through creating a brand new agentic workspace from the `agentic-workflows` framework. It asks questions about your project, then generates all the configuration files — agents, skills, fragments, schemas, flake.nix, and manifest.
+This skill guides you through creating a brand new agentic workspace from the `agentic-workflows` framework. It asks questions about your project, then generates all the configuration files — agents, skills, fragments, schemas, and manifest.
 
 ## Interaction Model — READ THIS FIRST
 
@@ -44,7 +44,6 @@ Read the existing agentic-workflows repo to understand the framework structure:
 3. Read `workflow/phases.json`, `workflow/gates.json`, `workflow/state-schema.json`
 4. Read `skills/onboard/SKILL.md` as a reference for how skills are structured
 5. Read `agents/tools/claude-code/frndos-orchestra.md` as a reference for agent structure
-6. Read `flake.nix` for dev environment structure
 
 This gives you the full template to adapt from.
 
@@ -148,8 +147,8 @@ Present a table based on their phase selection:
 ### 3.1 Agent models
 
 > "What models for each agent?"
-> - **Opus 4.6** — Deep reasoning, code generation, multi-file work
-> - **Sonnet 4.6** — Lighter tasks, PR management, status tracking
+> - **Opus 5** — Deep reasoning, code generation, multi-file work
+> - **Sonnet 5** — Lighter tasks, PR management, status tracking
 >
 > "Default recommendation: Opus for creative/implementation agents, Sonnet for mechanical/PR agents. Want to customize?"
 
@@ -191,25 +190,23 @@ Present a table based on their phase selection:
 > |-----|---------|-------------|-------------------|
 > | Context7 | `@upstash/context7-mcp` | Library docs lookup | No |
 > | GitHub | `@modelcontextprotocol/server-github` | PR/issue management | Yes (PAT) |
-> | Lark (CLI, not MCP) | `@larksuite/cli` | Read/write Lark docs + tasks via `/lark-sync` skill | Yes (App ID/Secret) |
+> | Lark | `@larksuite/lark-mcp` | Read PRDs from Lark doc URLs | Yes (App ID/Secret) |
 > | Figma | `@anthropics/figma-mcp` | Design specs from Figma | Yes (PAT) |
 >
 > "List the ones you need. You can also add custom MCPs."
 
 ## Step 5: Dev Environment — **STOP, ask**
 
-### 5.1 Nix flake
+### 5.1 Toolchain
 
-> "Do you want a `flake.nix` for reproducible dev environments?"
-> - Yes — I'll ask what packages to include
-> - No — Users install tools manually
+Tools are installed directly on the developer machine (Homebrew on macOS) — there is no Nix layer.
 
-If yes:
+> "List the languages, tools, and databases you need, with pinned versions. Examples:"
+> - Languages: `python@3.12`, `node@22`, `php@8.5`, `go`
+> - Databases: `postgresql@18`, `redis`, `mongodb-community`
+> - Tools: `curl`, `gh`, `git`, `jq`, `jj`
 
-> "List the languages, tools, and databases you need. Examples:"
-> - Languages: `python312`, `nodejs_22`, `php85`, `go_1_23`
-> - Databases: `postgresql_18`, `redis`, `mongodb`
-> - Tools: `curl`, `gh`, `git`, `jq`, `jujutsu`
+These become the install/verify tables in the generated `onboard/SKILL.md` Step 2.
 
 ### 5.2 Branch conventions
 
@@ -278,7 +275,7 @@ For each skill the user selected, create/update files in `skills/`:
 
 ## Step 11: Generate Config Files
 
-1. **`flake.nix`** — Build from user's package list. Include shellHook with version display and health checks for their services.
+1. **`onboard/SKILL.md` Step 2** — Build the install/verify tables from the user's pinned package list. Include version checks and health checks for their services.
 2. **`AGENTS.md.template`** — Update fragment includes to match what was generated. Remove includes for dropped fragments.
 
 ## Step 12: Generate Templates
@@ -327,7 +324,6 @@ Files created/modified:
   skills/               — <count> skills
   workflow/             — phases, gates, state schema
   templates/            — <count> templates
-  flake.nix             — dev environment
   manifest.json         — file registry with hashes
 
 To use this workspace:

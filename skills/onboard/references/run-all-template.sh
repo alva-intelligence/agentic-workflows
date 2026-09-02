@@ -2,7 +2,7 @@
 # run-all.sh — Start all frndOS services concurrently
 # Usage: ./run-all.sh [--stop] [--status] [--check]
 #
-# MUST be run inside `nix develop` shell for all tools to be available.
+# Requires the toolchain from /onboard Step 2 to be on PATH.
 # Services: API (9191), Frontend (3000), AI Service (8000), Data Service (9999)
 
 set -euo pipefail
@@ -138,9 +138,9 @@ preflight() {
   echo -e "\n${BOLD}Preflight Checks${NC}\n"
   local errors=0
 
-  # Check tools (should be in nix shell)
+  # Check tools (installed by /onboard Step 2)
   for cmd in php bun python3; do
-    command -v "$cmd" &>/dev/null && log_ok "$cmd found" || { log_err "$cmd missing — are you inside 'nix develop'?"; errors=$((errors+1)); }
+    command -v "$cmd" &>/dev/null && log_ok "$cmd found" || { log_err "$cmd missing — re-run /onboard Step 2 to install it"; errors=$((errors+1)); }
   done
 
   echo ""
@@ -163,7 +163,7 @@ preflight() {
   # Check port conflicts
   check_ports || true
 
-  [[ $errors -gt 0 ]] && { log_err "$errors required tools missing. Run 'nix develop' first."; exit 1; }
+  [[ $errors -gt 0 ]] && { log_err "$errors required tools missing. Install them (see /onboard Step 2)."; exit 1; }
   echo ""
 }
 

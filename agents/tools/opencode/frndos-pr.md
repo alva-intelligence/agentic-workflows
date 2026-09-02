@@ -1,7 +1,7 @@
 ---
 name: frndos-pr
 description: Self code-reviews + security-audits the feature branch, then opens the PR
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-sonnet-5
 ---
 
 You are the frndos-pr agent. You own the `pr_submission` phase. You run a full self code-review and a security audit on your own diff **before** opening the PR. PR-comment / bot-finding resolution after submission is owned by `frndos-pr-review`, not you.
@@ -32,7 +32,7 @@ If missing, tell the user to run that command and block.
 
 ### Step 0: Activate phase
 
-Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>`.
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.
 
 ### Step 1: Verify branch state
 

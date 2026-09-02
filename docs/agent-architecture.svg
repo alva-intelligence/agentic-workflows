@@ -15,7 +15,7 @@
   </defs>
 
   <text x="550" y="28" text-anchor="middle" font-size="20" font-weight="700" fill="#1e1e1e">frndOS Agent Architecture</text>
-  <text x="550" y="48" text-anchor="middle" font-size="12" fill="#757575">9 agents · 9 skills · Lark sync · jj workspaces · Agent Teams</text>
+  <text x="550" y="48" text-anchor="middle" font-size="12" fill="#757575">10 agents · 8 skills · jj workspaces · Agent Teams</text>
 
   <!-- Orchestration zone -->
   <rect x="230" y="60" width="490" height="80" rx="12" fill="#e5dbff" stroke="#9c36b5" stroke-width="1" opacity="0.35"/>
@@ -31,10 +31,10 @@
   <rect x="260" y="80" width="250" height="44" rx="10" fill="#d0bfff" stroke="#9c36b5" stroke-width="2" filter="url(#shadow)"/>
   <text x="385" y="107" text-anchor="middle" font-size="16" font-weight="700" fill="#1e1e1e">frndos-orchestra</text>
 
-  <!-- Lark -->
+  <!-- Lark (read-only PRD source) -->
   <rect x="790" y="68" width="150" height="60" rx="10" fill="#c3fae8" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
-  <text x="865" y="93" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">Lark Sync</text>
-  <text x="865" y="110" text-anchor="middle" font-size="10" fill="#15803d">tasklist + wiki + docs</text>
+  <text x="865" y="93" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">Lark MCP</text>
+  <text x="865" y="110" text-anchor="middle" font-size="10" fill="#15803d">read PRD doc (input)</text>
   <line x1="790" y1="98" x2="740" y2="98" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-green)"/>
 
   <!-- Delegation arrows -->
@@ -85,7 +85,7 @@
 
   <!-- Skills zone -->
   <rect x="15" y="295" width="1075" height="68" rx="12" fill="#dbe4ff" stroke="#1971c2" stroke-width="1" opacity="0.3"/>
-  <text x="27" y="308" font-size="10" fill="#2563eb" font-weight="600">SKILLS LAYER (9 skills)</text>
+  <text x="27" y="308" font-size="10" fill="#2563eb" font-weight="600">SKILLS LAYER (8 skills)</text>
 
   <rect x="22" y="318" width="90" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
   <text x="67" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/onboard</text>
@@ -99,12 +99,10 @@
   <text x="436" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/wireframe</text>
   <rect x="492" y="318" width="105" height="28" rx="6" fill="#c3fae8" stroke="#2f9e44" stroke-width="1"/>
   <text x="544" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">/jj-workflow</text>
-  <rect x="605" y="318" width="95" height="28" rx="6" fill="#c3fae8" stroke="#2f9e44" stroke-width="1"/>
-  <text x="652" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">/lark-sync</text>
-  <rect x="708" y="318" width="130" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="773" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/setup-workspace</text>
-  <rect x="846" y="318" width="130" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="911" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/workflow-update</text>
+  <rect x="605" y="318" width="130" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
+  <text x="670" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/setup-workspace</text>
+  <rect x="743" y="318" width="130" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
+  <text x="808" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/workflow-update</text>
 
   <!-- Tools zone -->
   <rect x="15" y="382" width="1075" height="52" rx="12" fill="#fff3bf" stroke="#f08c00" stroke-width="1" opacity="0.3"/>

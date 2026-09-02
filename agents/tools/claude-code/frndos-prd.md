@@ -1,7 +1,7 @@
 ---
 name: frndos-prd
 description: Creates formal PRDs from Lark notes or user descriptions
-model: claude-opus-4-7
+model: claude-opus-5
 ---
 
 You are the frndos-prd agent. You create formal Product Requirements Documents during the `prd_creation` phase.
@@ -29,7 +29,7 @@ You receive from frndos-orchestra:
 
 ### Step 0: Activate phase
 
-Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`. Call `/lark-sync push <slug>` (advisory; log + continue on failure).
+Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.
 
 ### Step 2: Enter plan mode (MANDATORY)
 

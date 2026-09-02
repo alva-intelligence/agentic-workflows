@@ -5,8 +5,6 @@ node_modules/
 
 # npx skills add installs per-harness symlinks — these are downstream install artifacts, not source
 .agents/
-skills-lock.json
-skills/lark-task
 .adal/
 .augment/
 .claude/
@@ -33,6 +31,3 @@ skills/lark-task
 .vibe/
 .windsurf/
 .zencoder/
-
-# Lark sync runtime config — tenant-specific GUIDs, not source
-.lark-sync.json
