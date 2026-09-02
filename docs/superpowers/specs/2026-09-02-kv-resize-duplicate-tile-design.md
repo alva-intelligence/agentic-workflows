@@ -129,7 +129,9 @@ is one request and the row exists immediately, so there is no provisional id
 parked in the panel and no crop window to remap. Server allocation is then
 strictly better: no cross-tab race at all.
 
-Algorithm, inside a transaction:
+Algorithm (deliberately **not** wrapped in a transaction — in PostgreSQL a
+unique violation aborts the enclosing transaction, which would poison the retry
+below; a single insert needs no atomicity beyond its own):
 
 1. Load `platform_id` for live rows matching `parent_generation_id` **and**
    the source's `width` and `height`. Those are real columns, so this needs
@@ -232,8 +234,12 @@ existing `onScrollToPlatform` seam. Without it the only feedback is a row
 appearing somewhere off-screen, which for an operation whose result is
 initially identical to its source reads as "nothing happened".
 
-A PostHog event `kv_resize_tile_duplicated` ships with the feature, per the
-convention that a web feature is not done without its events.
+Two PostHog events ship with the feature, per the convention that a mutation's
+funnel moments come in success and failure:
+`kv_generator.resize_tile_duplicated` and
+`kv_generator.resize_tile_duplicate_failed`. Those exact strings are the ones to
+use in the taxonomy doc — the `kv_generator.` prefix matches every sibling event
+in the module.
 
 ### Targeted fixes in code this work touches
 
