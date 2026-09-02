@@ -1200,8 +1200,18 @@ Append to `web/src/components/studio/kv-generator/KvResizePanel.test.tsx`, follo
       />
     );
 
+    // Scope to the preset's own row and assert no Duplicate control inside it.
+    // Do NOT compare against a label string built from the platform id: the
+    // aria-label uses `p.label` ("Instagram Post", title case), so
+    // queryByLabelText("Duplicate instagram-post resize") can never match and
+    // the assertion passes vacuously even when the bug IS present. Scoping to
+    // the row also survives a future label rename.
+    const presetRow = screen().getByText("Instagram Post").closest("li");
+    expect(presetRow).not.toBeNull();
     expect(
-      screen().queryByLabelText("Duplicate instagram-post resize")
+      within(presetRow as HTMLElement).queryByRole("button", {
+        name: /^Duplicate/,
+      })
     ).toBeNull();
 
     const button = screen().getByLabelText("Duplicate 100 × 200 resize");
