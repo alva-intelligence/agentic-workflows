@@ -19,6 +19,19 @@ Also check for `.loki/marker.json`. If present, loki (the Claude Code GUI) is ma
 
 Run the update-check script and sync the current branch. Detailed procedure (including dependency bootstraps and conflict handling): `skills/workflow/references/session-checks.md` → "Update check + sync".
 
+**After any bootstrap or update-check, re-apply the local-only wiring.** `.agents/` and
+`.claude/` are gitignored install artifacts (`.gitignore:8-11`) that `local-bootstrap.sh` and
+`update-check.sh` overwrite, and `AGENTS.md` itself is reassembled from `agents/fragments/`.
+Every local patch to a skill, hook or settings entry is lost unless it is restored from its
+tracked source. Three tracked scripts do that — run all three, each is idempotent and each
+takes `--check`:
+
+| Script | Restores |
+|---|---|
+| `scripts/local-wire-orchestration.sh` | `orchestration/` registered as the fifth service |
+| `scripts/local-worktree-mode.sh` | `/jj-workflow` delegating to git worktrees (ledger `W1`) |
+| `scripts/local-align-wire.sh` | `skills/align`, `skills/workflow`, `skills/prd-split`, the `align-guard` hook and its `settings.json` entry (ledger `W16`, `W17`) |
+
 ### Step 2: Load workflow state
 
 Read `.workflow-state.json` to determine:
@@ -32,7 +45,13 @@ If `.workflow-state.json` doesn't exist, no features are active yet.
 
 If `.lark-sync.json` is missing or `lark-cli auth status` is incomplete, follow `skills/lark-sync/references/session-check.md` — re-auth silently when unambiguous, auto-run `/lark-sync link` when `.lark-sync.json` is missing. Ask only for missing credentials or installs.
 
-### Step 4: Feature branch recency + service health
+### Step 4: Workspace alignment + feature branch recency + service health
+
+**First, run `./scripts/local-align.sh` (read-only), or `/align`.** It exits 1 and prints a
+table when any service is on the wrong branch for the active feature. Show the table and
+resolve the drift before starting work — `--apply` moves the movable repos; anything marked
+`BLOCKED` is resolved by hand, never worked around. One feature means one branch name in every
+in-scope service and the default branch in every uninvolved one.
 
 After pulling, if any service is on a `feature/*` branch, run the recency check against its base branch. Then verify that required services are healthy. Full procedures (recency, re-run triggers, health commands): `skills/workflow/references/session-checks.md`.
 

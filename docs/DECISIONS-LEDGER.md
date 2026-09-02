@@ -722,3 +722,49 @@ so nothing could have enforced a scope even if something had tried.
   `orch(1) → api(2) → data-service(3) → workspace-root(4)` while
   `docs/prd/local-pipeline-e2e.workspace-root.md:117` and data-service's PRD still carry the
   pre-`FR-30` order. Alignment is about branches, not about documents agreeing.
+
+---
+
+## 2026-09-02 — `W17`: `/align` becomes a skill, and `W16`'s wiring was patching the wrong layer
+
+`W16` shipped a working mechanism into the wrong files. Three separate layers of this workspace
+are gitignored install artifacts, and `W16` edited all three as if they were sources:
+
+| Edited by `W16` | Actually generated from | Overwritten by |
+|---|---|---|
+| `.agents/skills/workflow/SKILL.md`, `.agents/skills/prd-split/SKILL.md` | tracked `skills/`, plus a skills re-install | bootstrap, `npx skills add` |
+| `.claude/hooks/align-guard.sh`, `.claude/settings.json` | nothing — authored in place, untracked | bootstrap |
+| `AGENTS.md` | `agents/fragments/` via `generate-agents.sh` — which **prefers the `.agentic-workflows/` cache over tracked `agents/`** | any regen |
+
+`W16d` added a restore script, but it carried its own copy of the hook and the skill patches as
+heredocs, so the source of truth was the restore script rather than a tracked file.
+
+**The error this exposed, measured rather than reasoned.** The first fix copied tracked
+`agents/fragments/*.core.md` over the cached ones. That reverted two other wire scripts' work in
+the same regen: Step 0 went back to the legacy *"secondary JJ workspace"* wording that `W1`
+replaced, and Step 0.5 lost `orchestration/` from the service-directory list that
+`local-wire-orchestration.sh` adds. Both were restored by re-running those two scripts. The
+lesson is a rule, not an anecdote: **a file that several scripts patch cannot be repaired by
+copying — only by patching.**
+
+| # | What changed | Supersedes | Why | Cost |
+|---|---|---|---|---|
+| W17 | **`skills/align/SKILL.md`** — new tracked skill, `/align`. Four commands: bare (read-only table), `apply`, `<slug>` (check another feature), `wire` (restore the wiring). Documents every `STATE` value the script emits, what each `BLOCKED` reason means, and the standing rule that a blocked repo is reported, never worked around. | Nothing — `W16` had a script and no skill, so refreshing meant remembering a path. | Fahmi asked for a refresh he can invoke by name on every context switch. A skill is also the only form of this that a subagent inherits. | The skill and `AGENTS.md` now both describe the same rules; they are one regen apart from disagreeing. |
+| W17a | **Repair strategy split by ownership.** `skills/align/` and `scripts/hooks/align-guard.sh` are **copied** over their install copies — wholly ours, nothing upstream to clobber. `/workflow`, `/prd-split` and the two cached AGENTS.md fragments are **patched in place**, marker-guarded, by `scripts/hooks/patch-workflow-skill.py`, `scripts/hooks/patch-prdsplit-skill.py` and inline blocks. | `W16d`'s wholesale-copy design in full, and its heredoc copies of the hook and skill patches. | Measured: copying reverted `W1`'s worktree wording and `local-wire-orchestration.sh`'s fifth-service registration in one regen. Patching preserves upstream changes and other scripts' patches; copying cannot. | Two patch scripts to keep anchored. Each prints `warn: anchor not found` to stderr rather than failing silently, and each is a no-op once the marker is present — verified against pristine upstream copies of both skills, then re-run to confirm idempotency. |
+| W17b | **`scripts/hooks/align-guard.sh` is now the tracked source**; `.claude/hooks/align-guard.sh` is a copy the wire script installs. The tracked file carries the "edit this, not the copy" banner. | `W16b`'s arrangement, where the only copy of the hook lived in the gitignored `.claude/` tree and a duplicate lived inside the wire script. | A guard whose only copy is gitignored disappears on the next bootstrap and is invisible to review. | None. Removes the duplication `W16d` accepted. |
+| W17c | **`agents/fragments/session-protocol.core.md` and `workflow-rules.core.md`** carry the alignment text in tracked form as well, so a regen from tracked (cache absent) still produces it. | Nothing. | A fresh clone has no `.agentic-workflows/` cache and falls back to `agents/`. | Tracked fragments still lack `W1`'s and `local-wire-orchestration.sh`'s patches, which those scripts apply only to the cache. A cache-less regen therefore produces alignment text **without** the worktree wording or the fifth service. Pre-existing, not introduced here — and now written down. |
+
+### Known gaps
+
+- **Round-trip verified, upstream drift not.** Moving the install copies aside and restoring
+  upstream's `workflow`/`prd-split` was simulated with `git show HEAD:`, so the anchors are
+  known good against *today's* upstream. A future upstream edit to any anchored line makes the
+  patch a no-op with a stderr warning nobody may read. The anchors are: `/workflow switch`
+  step 6's "inform user" sentence, the `pr_urls` bullet in `/workflow status`, the
+  `"branch": null,` block in `/workflow start`, and `/prd-split` step 9's first sentence.
+- **`AGENTS.md` and `skills/align/SKILL.md` state the same rules twice.** No mechanism keeps
+  them in sync. The skill is the longer, more operational version.
+- **The guard is still blind to Bash-driven writes** — unchanged from `W16b`, and stated in
+  the skill's own text so it is at least not a surprise.
+- **`/align` cannot see sibling worktrees.** `.workflow-state.json` `workspaces` lists `2` and
+  `data`; the skill runs against one workspace root.

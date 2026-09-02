@@ -70,7 +70,14 @@ Conversely, a sandbox block on a write that did NOT persist (state inspection sh
 4. **CHECK `.workflow-state.json` before ANY work.**
 5. **UPDATE `.workflow-state.json` after every state change** — phase entry, `phase_status` flip, transition.
 6. **CHECK current git branch matches the expected branch for the phase** before doing any work.
-7. **Wait for user before advancing.** When `phase_status` becomes `completed`, present the outcome and ask whether to advance.
+   Mechanically: `/align`, or `./scripts/local-align.sh`. The `align-guard` PreToolUse hook
+   (`.claude/hooks/align-guard.sh`) blocks Edit/Write into any service repo that is on the
+   wrong branch. If it fires, either align or start a separate feature — do not disable it
+   silently. `FRNDOS_ALIGN_OFF=1` is the escape hatch and using it must be stated out loud.
+7. **Work that is unrelated to the active feature gets its own slug.** `/workflow start <slug>`
+   (or `/jj-workflow new <slug>` for a parallel worktree), then align. Never an ad-hoc branch
+   created in one repo — that is exactly how five repos ended up on five unrelated branches.
+8. **Wait for user before advancing.** When `phase_status` becomes `completed`, present the outcome and ask whether to advance.
 
 ### Branch per Phase
 
