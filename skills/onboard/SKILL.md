@@ -626,6 +626,18 @@ cd data-service && source .venv/bin/activate && pip install -r requirements.txt 
 cd orchestration && source .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt && deactivate; cd ..
 ```
 
+> **Orchestration — confirm `prefect` actually landed.** It is the only service whose CLI the rest
+> of onboarding calls by path, and nothing later installs it:
+>
+> ```bash
+> orchestration/.venv/bin/prefect version | head -3
+> ```
+>
+> `orchestration/requirements.txt:1` pins `prefect>=3.0.0` — an **open upper bound**, so a fresh
+> install takes the newest 3.x and two machines onboarded a month apart will not match. Measured
+> 2026-09-02: `3.8.3` on Python 3.12.13. If this line errors, Step 6b.2 and every command in Step
+> 7.5 will fail with command-not-found.
+
 **IMPORTANT:**
 - **Do NOT run `cp .env.example .env`** — the user will drop real .env files in Step 6.
 - **Do NOT run `php artisan key:generate`** yet — needs real .env first.
@@ -734,10 +746,11 @@ cd orchestration
 PREFECT_PROFILE=frndos_prefect .venv/bin/prefect deployment ls
 ```
 
-> `prefect` is installed **into `orchestration/.venv`** by `requirements.txt` (Step 5.2) — there is
-> no global `prefect` on a fresh machine. Every Prefect command in this skill is written as
-> `.venv/bin/prefect` for that reason. A bare `prefect` will fail with command-not-found unless the
-> user happens to have activated the venv.
+> `prefect` is installed **into `orchestration/.venv`** by `requirements.txt` (Step 5.2). Every
+> Prefect command in this skill is written as `.venv/bin/prefect` for that reason. On a fresh
+> machine a bare `prefect` fails with command-not-found; on a machine that already does data work
+> it may resolve to a **different install at a different version** — see the ⚠️ in Step 7.5.1.
+> Either way, the bare name is not the program this skill means.
 
 The second command should list `webhook-sync` and `webhook-delete`. Any output means the profile
 works.
@@ -1066,9 +1079,46 @@ Record `steps.ch_local` in `.onboard-state.json`.
 
 Skip if the user did not select Orchestration.
 
-#### 7.5.1 Confirm the `local` Prefect profile
+**Prerequisite: 7.4 must have produced a running local ClickHouse on `:8123`.** Every flow, the
+smoke test included, resolves ClickHouse from Secret blocks and writes to it. Prefect alone starts,
+but nothing it runs will complete.
 
-`~/.prefect/profiles.toml` from Step 6b already carries a `local` profile alongside
+**The whole path, so a new developer can see the shape before walking it.** Five sub-steps, two
+terminals, roughly 15 minutes:
+
+```
+7.5.1  confirm .venv/bin/prefect exists, and the `local` profile   (agent can run)
+7.5.2  Terminal 1:  prefect server start          → http://127.0.0.1:4200   (leave running)
+7.5.3  Terminal 2:  create 5 Secret blocks        → pure-local values, NO secrets needed
+7.5.4  Terminal 2:  set the staging_date_cutoff Variable
+7.5.5  Terminal 2:  work-pool → register deployments → worker start  (leave running)
+7.5.6  Terminal 3:  prefect deployment run testing-worker/smoke-testing
+```
+
+Terminals 1 and 2's worker both stay running. 7.5.3 and 7.5.5–7.5.6 are **user-run** — the commands
+are denied to the agent on purpose, each with the reason stated where it appears.
+
+#### 7.5.1 Prefect — confirm the install, then the `local` profile
+
+**Install.** This step installs nothing. Prefect is **not** a system package and has no Homebrew
+row: it arrives in `orchestration/.venv` from `requirements.txt` at Step 5.2. Confirm it first —
+every command in 7.5 calls it by path:
+
+```bash
+cd orchestration && .venv/bin/prefect version | head -3
+```
+
+Expect `Version: 3.x` and a `Python version` matching the interpreter Step 5.1 resolved. If it
+errors, go back to Step 5.2; nothing below can work.
+
+> ⚠️ **A global `prefect` may already exist, and it is not this one.** Measured 2026-09-02 on the
+> authoring machine: `~/.local/bin/prefect` is **3.8.0**, `orchestration/.venv/bin/prefect` is
+> **3.8.3** — two installs, two versions, and the global one answers to whatever
+> `~/.prefect/profiles.toml` currently defaults to. That default is `local`, which fails safe, but
+> the divergence is real and silent. **Always `.venv/bin/prefect`.** A bare `prefect` is a
+> different program reading the same profiles file.
+
+**Profile.** `~/.prefect/profiles.toml` from Step 6b already carries a `local` profile alongside
 `frndos_prefect`. Confirm it, don't create it:
 
 ```bash
@@ -1101,8 +1151,37 @@ to the port-conflict check in `references/service-registry.md` when this step is
 #### 7.5.3 Terminal 2 — Secret blocks
 
 The flows read **every** credential from Prefect `Secret` blocks, not a `.env`. Create them on the
-**local** server via the UI at `http://127.0.0.1:4200` → Blocks → Secret. Values come from the
-Lark `secrets` folder → `all env` (a zip holding the filled-in block YAML). Ask **fahmi**.
+**local** server via the UI at `http://127.0.0.1:4200` → Blocks → Secret.
+
+> **The server from 7.5.2 must be running before this step and before any flow run.**
+> `Secret.load(...)` is an **API call** to `127.0.0.1:4200`, not a file read — with the server down
+> it fails and the caller sees an empty value, which reads as a missing block rather than a stopped
+> server.
+
+**Pure local — five blocks, no secrets, nothing to ask anyone for.** This is the default for a new
+developer: it points every flow at the ClickHouse 7.4 just started on this machine.
+
+| Block | Value | Why |
+|---|---|---|
+| `clickhouse-host` | `localhost` | `get_client()` passes a bare hostname straight through and defaults `secure=False` (`integrations/clickhouse.py:137-147`). A `https://…` URL is parsed; `localhost` is not. |
+| `clickhouse-port` | `8123` | The HTTP port 7.4.2 starts |
+| `clickhouse-user` | `default` | The OSS server's superuser, no password |
+| `clickhouse-pass` | *(empty string)* | Create the block with an empty value — do not skip it, `get_client()` loads it unconditionally |
+| `environment` | `local` | `resolve_environment()` returns this verbatim, and `local` is what the creative-assets S3 upload guard checks before short-circuiting |
+
+That set is enough for **7.5.6's smoke test** — it needs only `get_client()` and
+`resolve_environment()` — and for any transform that does not call an external API.
+
+> `clickhouse-host-staging` is loaded **instead of** `clickhouse-host` whenever either staging signal
+> fires (`_is_staging()`, an OR of the deployment's `FRND_ENVIRONMENT` and the callback sniff). For a
+> pure-local estate set it to `localhost` too, so a stray staging signal cannot reach a real cluster.
+
+**Mirroring the estate instead.** Only if the user needs real API calls — `openai-key` for organic
+sentiment, `data-service-callback-token` for the callback, the four `aws-*` for the creative-assets
+S3 mirror, `github-pat` for cloud deployments, `rapid-api-key` for KOL enrichment. Those values come
+from the Lark `secrets` folder → `all env` (a zip holding the filled-in block YAML). Ask **fahmi**.
+`meta-access-token` and `tiktok-ads-token` appear in that folder but **no flow loads them** — skip.
+Never print, log or commit a block value.
 
 > **The agent cannot do this step.** `prefect block create` and `prefect block delete` are denied,
 > and no script creates local blocks — `scripts/setup_prefect_blocks.py` and
@@ -1110,19 +1189,13 @@ Lark `secrets` folder → `all env` (a zip holding the filled-in block YAML). As
 > but **have never existed**. The only block script in the repo is `scripts/setup_staging_blocks.py`,
 > which creates `-staging` siblings on a remote estate and is not the local path. UI or nothing.
 
-Minimum set to run an organic transform end to end:
+**Confirm what landed** — read-only, the agent can run this:
 
-| Block | Value |
-|---|---|
-| `clickhouse-host`, `clickhouse-port`, `clickhouse-user`, `clickhouse-pass` | The ClickHouse the transform reads raw from and writes marts to |
-| `clickhouse-host-staging` | For pure local, set equal to `clickhouse-host` |
-| `environment` | `local` |
-| `openai-key` | Sentiment classification (organic paths only) |
+```bash
+cd orchestration && PREFECT_PROFILE=local .venv/bin/prefect block ls
+```
 
-`data-service-callback-token`, the four `aws-*` blocks, `github-pat` and `rapid-api-key` are only
-needed for the callback, the creative-assets S3 mirror, cloud deployments and KOL enrichment
-respectively. `meta-access-token` and `tiktok-ads-token` appear in Lark but **no flow loads them** —
-skip. Never print, log or commit a block value.
+Expect the five names above. `block ls` prints names and types only, never values.
 
 #### 7.5.4 The `staging_date_cutoff` Variable
 
@@ -1148,6 +1221,11 @@ PREFECT_PROFILE=local .venv/bin/python scripts/register_paid_deployments.py --en
 PREFECT_PROFILE=local .venv/bin/prefect worker start --pool local-pool   # leave running
 ```
 
+> **On a local server the worker runs the code on your disk.** `_make_source()` in that script
+> switches on `PREFECT_API_URL`: remote → a fresh `GitRepository` pinned to the environment's branch;
+> **local (`localhost`/`127.0.0.1`) → the repo root path**, so there is no clone, no branch pin, and
+> an edit to a flow is live on the next run. That is what makes a local estate worth standing up.
+
 > ⚠️ **The agent must not run the middle line.** `Bash(*register_paid_deployments*)` is denied on
 > purpose: the script takes `--env` and the active profile decides *which server* it writes to, so
 > the same command that registers six local deployments will register them against
@@ -1155,14 +1233,43 @@ PREFECT_PROFILE=local .venv/bin/prefect worker start --pool local-pool   # leave
 > unsuffixed deployment names the local worker expects; it does **not** mean production. Have the
 > user confirm the `PREFECT_PROFILE=local` prefix is present before they run it.
 
-#### 7.5.6 Smoke test
+#### 7.5.6 Smoke test — **user runs this**
 
 ```bash
+# Terminal 3, with the server (7.5.2) and the worker (7.5.5) both still running
+cd orchestration
 PREFECT_PROFILE=local .venv/bin/prefect deployment run testing-worker/smoke-testing
 ```
 
-Completing means the worker can reach ClickHouse with the blocks from 7.5.3. Watch it at
-`http://127.0.0.1:4200`. Record `steps.ch_local` in `.onboard-state.json`.
+> ⚠️ **The agent must not run this.** `prefect deployment run` is denied in both invocation forms —
+> the deployment it triggers is chosen by name, and the *profile* decides which server hears it, so
+> the same line fires a local test or a production flow depending on a prefix. Hand it to the user.
+
+A `Completed` run proves the whole chain in one shot: the worker picked up a deployment, resolved
+Prefect Secrets, connected to ClickHouse and wrote to it. It creates its own database
+`smoke_prefect_testing` and appends one row per run to `smoke_prefect_testing.smoke_test`, stamped
+with the environment label — so it is safe to re-run and touches nothing else. Watch it at
+`http://127.0.0.1:4200`.
+
+Read the result back — the agent can run this:
+
+```bash
+curl -s 'http://localhost:8123/' --data-binary \
+  'SELECT count() FROM smoke_prefect_testing.smoke_test'
+```
+
+**If it fails:**
+
+| Symptom | Cause |
+|---|---|
+| run sits in `Pending`/`Scheduled` forever | no worker polling `local-pool` — 7.5.5's third line stopped |
+| `Secret.load` / connection error | the 7.5.2 server is down, or a block from 7.5.3 is missing |
+| ClickHouse connection refused | 7.4's local server is not running on `:8123` |
+| deployment not found | 7.5.5's registration ran against a different profile — re-run it with `PREFECT_PROFILE=local` |
+
+Record `steps.prefect_setup` in `.onboard-state.json` — **this step's key, not `ch_local`**, which
+belongs to 7.4. If 6b left it `"pending"` because the shared-estate profile never arrived, a working
+local estate is enough to set it `"completed"`; note in `steps.notes` that it is local-only.
 
 ### 7.6 Seed the local raw layer — **Orchestration only, optional**
 

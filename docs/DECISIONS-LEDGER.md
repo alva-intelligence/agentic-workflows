@@ -324,3 +324,67 @@ workspaces pick it up; anyone cloning fresh and running `local-bootstrap.sh` get
 branch also moves orchestration's base and PR target from `main` to `staging` across 23 files, which is a
 workflow change for that repo, not a documentation tweak. Testing on a second machine needs the branch,
 not `main`.
+
+## 2026-09-02 — `F8`: Prefect installation becomes an explicit, verified step
+
+`F6` made ClickHouse a real step — install, start, migrate, seed. Prefect never got the first of
+those. Its install was implicit in Step 5.2's `pip install -r requirements.txt` and mentioned only
+inside a blockquote in 6b.2, so the first *named* Prefect action in the skill was "confirm the
+profile" — a step that fails with command-not-found if the venv install did not land, pointing the
+reader at the profiles file when the fault is the venv.
+
+| # | What changed | Supersedes | Why | Cost |
+|---|---|---|---|---|
+| F8 | **Step 5.2 gains an orchestration-only verify block** — `orchestration/.venv/bin/prefect version` — stating that `requirements.txt:1` pins `prefect>=3.0.0` with an **open upper bound**, and recording the measured result (`3.8.3` on Python 3.12.13, 2026-09-02). | Nothing. Step 5.2 previously installed and verified nothing per-service. | An open upper bound means two machines onboarded a month apart get different Prefect versions from the identical command, and nothing in onboarding ever said so. Prefect is also the only service CLI the skill calls by path, so a silent install failure surfaces two steps later as a profile error. | One more command in Step 5.2. The pin itself is **not** changed — that is `frnd-orchestration`'s file and a different repo's decision. |
+| F8a | **7.5.1 is renamed `Prefect — confirm the install, then the local profile`** and gains an install-confirmation half ahead of the profile half. States plainly that Prefect is not a system package, has no Homebrew row, and that 7.5 installs nothing. | `F3`/`F5`'s `7.5.1 Confirm the local Prefect profile`. | Mirrors 7.4.1, which does exactly this for the ClickHouse client. The asymmetry was the gap: ClickHouse's install is a named sub-step with two modes, Prefect's was a blockquote 300 lines earlier. **No renumbering** — 7.5.2–7.5.6 keep their numbers, so 6b's forward pointer at 7.5.3 and both `launch*.json` comments stay valid. | 7.5.1 now does two things under one heading. Accepted to avoid renumbering six sub-steps and every reference to them. |
+| F8b | **The claim "there is no global `prefect` on a fresh machine" is corrected, not deleted.** 6b.2 now says a bare `prefect` fails on a fresh machine but may resolve to a *different install at a different version* on a machine that already does data work, and points at 7.5.1's ⚠️. | 6b.2's blockquote as written in `F2b`. | Measured, not assumed: `~/.local/bin/prefect` is **3.8.0** and `orchestration/.venv/bin/prefect` is **3.8.3** on the authoring machine — two installs, both reading the same `~/.prefect/profiles.toml`. The original sentence is true of a fresh machine and false of the machine most likely to select Orchestration. | Seventh stale claim corrected on this branch, and the first one that was **this branch's own**. The global default profile is `local`, so the failure mode is a wrong-version CLI rather than a wrong-estate one — but that is luck, not design. |
+
+### Known gaps after F8
+
+- **The repo-side local runtime is still not in the framework.** `frndos/scripts/local-seed-raw.py`
+  (826 lines) and `local-run-pipeline.sh` (86 lines) remain gitignored at the workspace root. `F3b`'s
+  gap 10 names `frnd-orchestration/scripts/seed_local_raw.py` as the destination; putting them in the
+  framework instead is a **different decision** and is not taken here. See the fork put to Fahmi
+  2026-09-02.
+- **`local-run-pipeline.sh` needs the local Prefect server running** even though it triggers flows
+  in-process: `PREFECT_PROFILE=local` sets `PREFECT_API_URL=127.0.0.1:4200`, so its
+  `Secret.load('clickhouse-host')` guard returns empty with the server down and the script refuses
+  with `clickhouse-host block is ''`. That reads as a bad block and is a stopped server. Not
+  documented anywhere in the skill yet.
+- **`D7` and `D8` from `F7` are untouched** — 7.5.6's smoke test is still unlabelled while calling a
+  denied command, and 7.5 still records `steps.ch_local` rather than its own `steps.prefect_setup`.
+- **The venv Python measured here is 3.12.13**, not the 3.14.6 `F5b` measured. Different trees:
+  `F5b` measured a freshly bootstrapped test workspace, this measured `frndos/orchestration`. Both
+  observations stand; the resolver in Step 5.1 is what makes them differ.
+
+## 2026-09-02 — `F9`: Step 7.5 becomes runnable by a developer who has nothing
+
+`F8` made the install explicit. The rest of 7.5 still assumed a developer who could already get
+Secret-block values from Lark — so the first thing a new hire hit, two sub-steps in, was "ask fahmi
+and wait". For a **pure local** estate none of those values are secret, and nobody had written that
+down.
+
+| # | What changed | Supersedes | Why | Cost |
+|---|---|---|---|---|
+| F9 | **7.5 opens with a prerequisite line and a six-line map of the whole path** — which terminal, which sub-step is user-run, roughly 15 minutes. | `F3`/`F5`'s 7.5, which began at 7.5.1 with no overview. | A developer could not see, before starting, that two processes stay running and that three sub-steps are handed back to them. The prerequisite is the sharper half: **7.4's local ClickHouse must be up first**, because every flow — the smoke test included — resolves ClickHouse from blocks and writes to it. Prefect starts fine without it and then nothing completes. | The map duplicates the sub-step headings; if 7.5 is ever renumbered again, two places change. |
+| F9a | **7.5.3 gains a five-block "pure local" table with concrete values** — `clickhouse-host: localhost`, `clickhouse-port: 8123`, `clickhouse-user: default`, `clickhouse-pass:` *(empty)*, `environment: local` — declared sufficient for the 7.5.6 smoke test, with the Lark path demoted to "only if you need real API calls". | 7.5.3's "Minimum set to run an organic transform end to end" table, deleted; its content is split across the two new tables. | Verified in the code, not assumed: `get_client()` (`integrations/clickhouse.py:137-147`) passes a bare hostname through unchanged and defaults `secure=False`, and `resolve_environment()` (`:122-134`) returns the `environment` block verbatim. `testing_worker_flow` loads exactly those two functions. So a local developer needs **zero credentials** — the old table implied they needed Lark access to do anything. | The values are now hardcoded in the skill; if the local server's port or default user ever changes, the table is wrong rather than vague. `clickhouse-pass` must be created **empty rather than skipped** — `get_client()` loads it unconditionally — and that is easy to get wrong in a UI. |
+| F9b | **The "server must be running" rule is stated where it bites.** `Secret.load(...)` is an API call to `127.0.0.1:4200`, not a file read. | Nothing — it was named only in `F8`'s gap list. | With the server down the call fails and the caller reads an empty value, so every symptom points at a missing block. This is exactly how `local-run-pipeline.sh` reports `clickhouse-host block is ''` when the real fault is a stopped server. | Stated in 7.5.3 only. The workspace-root run script that shows the same symptom is still not covered by this skill. |
+| F9c | **7.5.5 now says what a local deployment source *is*.** `_make_source()` switches on `PREFECT_API_URL`: remote → a fresh `GitRepository` pinned to the environment's branch; **local → the repo root path**, so no clone, no branch pin, and a flow edit is live on the next run. | Nothing. | It is the reason a local estate is worth 15 minutes, and it was invisible. It also quietly answers a question `F1a` got wrong from a different direction: on a local server, branch is irrelevant because the worker reads your disk. | One more paragraph in an already long sub-step. |
+| F9d | **`D7` and `D8` from `F7` are closed.** 7.5.6 is labelled **user runs this** with the reason inline, and it now records `steps.prefect_setup` — its own key — instead of `steps.ch_local`. | `F7`'s `D7`/`D8` rows, both `open`; and `F8`'s gap list, which said both were untouched. | `prefect deployment run` is denied in both forms and 7.5.6 called it with no label — the same defect `F3a` and `F6d` had already fixed twice elsewhere, left unfixed here. The key mix-up meant a completed Prefect setup was recorded as a completed ClickHouse setup. | Two of the twelve `F7` defects close. **The six ⛔ rows (`D1`–`D6`) remain open and the branch is still not merge-ready.** |
+| F9e | **7.5.6 gains a read-back and a four-row failure table.** `curl` the smoke row count (agent-runnable, read-only); symptoms mapped to causes: run stuck `Pending` → no worker; `Secret.load` error → server down or block missing; connection refused → ClickHouse down; deployment not found → registered under a different profile. | Nothing — 7.5.6 previously ended at "watch it in the UI". | Every one of those four is a failure I hit or could reproduce from the code path. A new developer with no local Prefect experience reads "Pending" as "working". | The table is written from the code and from three of the four observed live; "deployment not found" is derived from `_make_source`'s profile switch, not observed. |
+
+### Known gaps after F9
+
+- **Not executed end to end on a clean machine.** The local estate on the authoring machine was built
+  2026-07-27 and already holds 13 blocks, `local-pool`, six deployments and 334 flow runs — so 7.5
+  was verified *against* a working estate, not *by* creating one. The `smoke-testing` deployment's
+  last run there was 2026-07-27 and it Completed.
+- **`prefect>=3.0.0`'s open upper bound still stands** (`F8`). 7.5's UI instructions assume the Blocks
+  page layout of 3.8.x.
+- **The `clickhouse-pass` empty-block trap is documented, not enforced.** Nothing verifies the five
+  blocks exist before 7.5.5; `block ls` is offered but not gated.
+- **`D1`–`D6` are untouched**, and `D9`–`D12` with them. This row closes `D7` and `D8` only.
+- **The workspace-root runtime is still out of scope**: `local-seed-raw.py` and
+  `local-run-pipeline.sh` remain gitignored at the workspace root. Per the 2026-09-02 comparison of
+  all five services, they belong in `frnd-orchestration`, not here — four of five services seed from
+  their own repo and orchestration is the only outlier.
