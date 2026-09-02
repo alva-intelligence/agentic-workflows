@@ -1409,11 +1409,18 @@ suite in the same process has already touched that prototype. It is purely a
 cross-suite import-order artifact in `node_modules` — the file is 27/27 green
 alone, and nothing in this feature is involved.
 
-- [ ] **web build**
+- [ ] **web build** — via node, NOT `bun run build`
 
 ```bash
-cd web && bun run build
+cd web && node ./node_modules/next/dist/bin/next build
 ```
+
+`bun run build` currently dies with `Failed to load external module
+next/dist/compiled/next-server/app-page-turbo.runtime.prod.js: TypeError:
+Expected CommonJS module to have a function wrapper`, which Bun's own message
+attributes to a Bun bug. It is a bun↔Next toolchain incompatibility in loading
+Next's compiled server runtime — it names none of this project's files, and the
+same tree builds clean under node. Do not read it as a regression.
 
 - [ ] **End-to-end, in the browser**
 
