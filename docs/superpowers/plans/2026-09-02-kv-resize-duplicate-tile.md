@@ -927,7 +927,7 @@ git commit -m "feat(web): ordinal in the custom resize size id and label"
 
 **Interfaces:**
 - Consumes: the `duplicate` endpoint from Task 3.
-- Produces: `duplicateResizeExport(fileId: string, exportId: string): Promise<KvResizeExport>`; `trackKvResizeTileDuplicated(p: { export_id: string; source_export_id: string; platform_id: string; ordinal: number }): void`; a `duplicate` mutation on the object `useResizeExports` returns, callable as `duplicate.mutate({ exportId })`.
+- Produces: `duplicateResizeExport(fileId: string, exportId: string): Promise<KvResizeExport>`; `trackKvResizeTileDuplicated(p: { export_id: string; source_export_id: string; platform_id: string; ordinal: number }): void`; `trackKvResizeTileDuplicateFailed(p: { source_export_id: string; error_reason: string; http_status: number | null }): void`; a `duplicate` mutation on the object `useResizeExports` returns, callable as `duplicate.mutate({ exportId })` and also as `duplicate.mutate(vars, { onSuccess })`.
 
 - [ ] **Step 1: Add the API call**
 
@@ -964,7 +964,25 @@ export interface KvResizeTileDuplicatedProps {
 
 export const trackKvResizeTileDuplicated = (p: KvResizeTileDuplicatedProps) =>
   safeCapture("kv_generator.resize_tile_duplicated", p);
+
+export interface KvResizeTileDuplicateFailedProps {
+  source_export_id: string;
+  error_reason: string;
+  http_status: number | null;
+}
+
+/** The other half of the pair. A duplicate can only fail on a guard (422 for a
+ *  preset source or a non-layer-composed parent) or on ordinal exhaustion, and
+ *  a success-only event would make those invisible — the same reason
+ *  `trackKvResizeRegenerateFailed` exists beside its success event. */
+export const trackKvResizeTileDuplicateFailed = (
+  p: KvResizeTileDuplicateFailedProps,
+) => safeCapture("kv_generator.resize_tile_duplicate_failed", p);
 ```
+
+Both halves are required, not optional: this project's analytics convention is
+that a mutation's funnel moments come in success **and** failure, and the
+`regenerate` mutation right above yours already models it.
 
 - [ ] **Step 3: Add the mutation**
 
@@ -993,8 +1011,21 @@ In `web/src/lib/studio/kv/useResizeExports.ts`, after the `regenerate` mutation.
         ordinal: parseCustomSizeId(row.platformId)?.ordinal ?? 1,
       });
     },
+    onError: (error, vars) => {
+      trackKvResizeTileDuplicateFailed({
+        source_export_id: vars.exportId,
+        error_reason: error instanceof Error ? error.message : "unknown",
+        http_status:
+          (error as { response?: { status?: number } }).response?.status ??
+          null,
+      });
+    },
   });
 ```
+
+Do **not** hand-pass `user_id`, `workspace_id`, `brand_id` or any other base
+context onto either event — PostHog super properties attach all of it
+automatically, and passing it manually is a review finding here.
 
 Then add `duplicate` to the returned object, after `regenerate`.
 
