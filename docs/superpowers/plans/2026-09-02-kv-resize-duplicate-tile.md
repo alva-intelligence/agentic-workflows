@@ -20,7 +20,14 @@
 - The duplicate copies `overlays`, `crop_window`, `additional_prompt`. It does **not** copy `metadata`.
 - No chat marker is written for a duplicate.
 - Only custom-size tiles can be duplicated. Preset tiles are out of scope.
-- api Feature tests need a scratch PostgreSQL — SQLite cannot run this repo's migrations. Pass test **paths**, not `--filter`.
+- api Feature tests need a scratch PostgreSQL — SQLite cannot run this repo's
+  migrations (`DROP SEQUENCE` is Postgres-only), and `phpunit.xml` pins
+  `DB_CONNECTION=sqlite`. A shell env var DOES override that pin (verified), so
+  every Feature-test command in this plan is prefixed
+  `DB_CONNECTION=pgsql DB_DATABASE=frnd_dup_tile_test TELESCOPE_ENABLED=false`.
+  The scratch database `frnd_dup_tile_test` already exists. **Never** point a
+  Feature test at `frnd` — that is the live dev database and `RefreshDatabase`
+  would wipe it. Pass test **paths**, not `--filter`.
 - web tests run with `bun test <path>` per file. Never run it on a directory.
 
 ---
@@ -318,7 +325,7 @@ it('dispatches no job — a layer-composed tile needs no render', function () {
 - [ ] **Step 2: Run the test to verify it fails**
 
 ```bash
-cd api && ./vendor/bin/pest tests/Feature/Studio/KvResizeExportDuplicateTest.php
+cd api && DB_CONNECTION=pgsql DB_DATABASE=frnd_dup_tile_test TELESCOPE_ENABLED=false ./vendor/bin/pest tests/Feature/Studio/KvResizeExportDuplicateTest.php
 ```
 
 Expected: FAIL — `Call to undefined method ...::duplicate()`.
@@ -434,7 +441,7 @@ Add these two methods to the class, after `createBatch`:
 - [ ] **Step 4: Run the test to verify it passes**
 
 ```bash
-cd api && ./vendor/bin/pest tests/Feature/Studio/KvResizeExportDuplicateTest.php
+cd api && DB_CONNECTION=pgsql DB_DATABASE=frnd_dup_tile_test TELESCOPE_ENABLED=false ./vendor/bin/pest tests/Feature/Studio/KvResizeExportDuplicateTest.php
 ```
 
 Expected: PASS, all eight cases.
@@ -546,7 +553,7 @@ it('spends no credits', function () {
 - [ ] **Step 2: Run the test to verify it fails**
 
 ```bash
-cd api && ./vendor/bin/pest tests/Feature/Studio/KvResizeExportDuplicateTest.php
+cd api && DB_CONNECTION=pgsql DB_DATABASE=frnd_dup_tile_test TELESCOPE_ENABLED=false ./vendor/bin/pest tests/Feature/Studio/KvResizeExportDuplicateTest.php
 ```
 
 Expected: FAIL — 404, the route does not exist yet.
@@ -613,7 +620,7 @@ In `api/routes/api.php`, directly after the `resize-exports/{export}/regenerate`
 - [ ] **Step 5: Run the test to verify it passes**
 
 ```bash
-cd api && ./vendor/bin/pest tests/Feature/Studio/KvResizeExportDuplicateTest.php
+cd api && DB_CONNECTION=pgsql DB_DATABASE=frnd_dup_tile_test TELESCOPE_ENABLED=false ./vendor/bin/pest tests/Feature/Studio/KvResizeExportDuplicateTest.php
 ```
 
 Expected: PASS, all fourteen cases (Task 2's eight plus these six).
@@ -621,7 +628,7 @@ Expected: PASS, all fourteen cases (Task 2's eight plus these six).
 - [ ] **Step 6: Check the existing suite still passes**
 
 ```bash
-cd api && ./vendor/bin/pest tests/Feature/Studio/KvResizeExportControllerTest.php tests/Unit/Support/Studio/CustomResizeSizeTest.php
+cd api && DB_CONNECTION=pgsql DB_DATABASE=frnd_dup_tile_test TELESCOPE_ENABLED=false ./vendor/bin/pest tests/Feature/Studio/KvResizeExportControllerTest.php tests/Unit/Support/Studio/CustomResizeSizeTest.php
 ```
 
 Expected: PASS. A failure here means the `parse()` shape change leaked.
@@ -699,7 +706,7 @@ it('names custom entries by size and ordinal, and leaves presets alone', functio
 - [ ] **Step 2: Run the test to verify it fails**
 
 ```bash
-cd api && ./vendor/bin/pest tests/Feature/Studio/KvResizeExportZipTest.php
+cd api && DB_CONNECTION=pgsql DB_DATABASE=frnd_dup_tile_test TELESCOPE_ENABLED=false ./vendor/bin/pest tests/Feature/Studio/KvResizeExportZipTest.php
 ```
 
 Expected: FAIL — entries come back as `custom-100x200-100x200.png` and `custom-100x200-2-100x200.png`.
@@ -741,7 +748,7 @@ Note the custom branch reuses `id()` minus its `custom-` prefix — so write it 
 - [ ] **Step 4: Run the test to verify it passes**
 
 ```bash
-cd api && ./vendor/bin/pest tests/Feature/Studio/KvResizeExportZipTest.php
+cd api && DB_CONNECTION=pgsql DB_DATABASE=frnd_dup_tile_test TELESCOPE_ENABLED=false ./vendor/bin/pest tests/Feature/Studio/KvResizeExportZipTest.php
 ```
 
 Expected: PASS.
@@ -1312,7 +1319,7 @@ git commit -m "fix(web): label custom resize tiles on the share page"
 - [ ] **api suites**
 
 ```bash
-cd api && ./vendor/bin/pest tests/Unit/Support/Studio/CustomResizeSizeTest.php tests/Feature/Studio/KvResizeExportDuplicateTest.php tests/Feature/Studio/KvResizeExportControllerTest.php tests/Feature/Studio/KvResizeExportZipTest.php
+cd api && DB_CONNECTION=pgsql DB_DATABASE=frnd_dup_tile_test TELESCOPE_ENABLED=false ./vendor/bin/pest tests/Unit/Support/Studio/CustomResizeSizeTest.php tests/Feature/Studio/KvResizeExportDuplicateTest.php tests/Feature/Studio/KvResizeExportControllerTest.php tests/Feature/Studio/KvResizeExportZipTest.php
 ```
 
 - [ ] **web suites** (per file, never a directory)
