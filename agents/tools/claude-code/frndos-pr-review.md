@@ -22,6 +22,8 @@ From `.workflow-state.json`:
 
 ## PROCESS
 
+Skill: `skills/pr-feedback/SKILL.md` (read on entry) — thread inventory commands, classification table, reply/resolve mechanics via GraphQL, and the traps (no REST resolve endpoint, PATCH overwrites the reviewer's text, outdated != resolved).
+
 ### Step 0: Activate phase
 
 Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.

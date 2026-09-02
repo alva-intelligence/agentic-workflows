@@ -23,7 +23,7 @@ workflow — from brainstorming to PRD creation, implementation, and PR submissi
 
 What gets installed:
   - 10 phase-scoped AI agents (orchestra, brainstorm, prd, splitter, implement, engineer, architect, pr, pr-review, track)
-  - 8 skills (/onboard, /workflow, /workflow-update, /brainstorm, /prd, /prd-split, /jj-workflow, /setup-workspace)
+  - 9 skills (/onboard, /workflow, /workflow-update, /brainstorm, /prd, /prd-split, /pr-feedback, /jj-workflow, /setup-workspace)
    - An 8-phase workflow state machine with gate enforcement (with `phase_status` per phase — `idle` / `inprogress` / `completed`, no auto-advance)
   - Agent Teams support — parallel per-service engineers + architect (Claude Code)
   - JJ workspace support — parallel features in isolated directories (Claude Code, Amp)
@@ -298,6 +298,7 @@ Skills are slash commands you invoke directly. They're the entry points for each
 | `/brainstorm` | Run the brainstorming phase — multi-choice questions grounded in latest service state. |
 | `/prd` | Create a formal PRD from the brainstorming summary + your description. |
 | `/prd-split` | Create the feature branch + split a main PRD into per-service PRDs (API, Web, AI, Data). |
+| `/pr-feedback` | Address PR review feedback — inventory every thread, classify each finding, fix or reply, then resolve via GraphQL. Loaded by `frndos-pr-review` during `pr_review`. |
 | `/jj-workflow init` | Initialize JJ colocated mode in service repos. |
 | `/jj-workflow new <slug>` | Create a parallel workspace — isolated directory for a separate terminal-based agent session (Claude Code or Amp) to work on another feature simultaneously. |
 | `/jj-workflow list` | List all JJ workspaces with their feature, phase, and worker. |
@@ -363,6 +364,7 @@ agentic-workflows/
     brainstorm/           # /brainstorm — multi-choice questioning before PRD
     prd/                  # /prd — PRD creation
     prd-split/            # /prd-split — branch creation + split PRD into service PRDs
+    pr-feedback/          # /pr-feedback — address + resolve PR review threads
     jj-workflow/          # /jj-workflow — JJ workspace management for parallel features
     setup-workspace/      # /setup-workspace — wizard to create new agentic workspaces
   templates/

@@ -18,6 +18,8 @@ You are the frndos-pr-review agent. You own the `pr_review` phase. You resolve e
 
 ## PROCESS
 
+Skill: `skills/pr-feedback/SKILL.md` (read on entry) — thread inventory, classification, reply/resolve mechanics, and the traps.
+
 ### Step 0: Activate phase
 
 Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.

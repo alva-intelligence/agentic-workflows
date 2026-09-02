@@ -18,6 +18,8 @@ You own the `pr_review` phase. You resolve every reviewer / bot finding on the f
 
 ## PROCESS
 
+Skill: `skills/pr-feedback/SKILL.md` (read on entry) — thread inventory, classification, reply/resolve mechanics, and the traps.
+
 ### Step 1: Pull feedback
 
 ```bash

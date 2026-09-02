@@ -169,6 +169,7 @@ Present a table based on their phase selection:
 > - `/brainstorm` — Multi-choice question generator for the brainstorming phase
 > - `/prd` — PRD creation helper
 > - `/prd-split` — PRD splitter (also creates the feature branch)
+> - `/pr-feedback` — address + resolve PR review threads
 > - `/jj-workflow` — JJ parallel workspaces
 > - Custom: describe any additional skills
 
