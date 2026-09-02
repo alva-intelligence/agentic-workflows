@@ -204,8 +204,12 @@ One line carries most of the feature:
 
 **Six surfaces inherit rename with zero edits** — all read `platformLabel`,
 mapped from wire `platform_label` at `services/kv/api.ts:796` and
-`services/kv/resize-stream.ts:41` (both untouched, so the SSE path renames
-live too):
+`services/kv/resize-stream.ts:41`, so the SSE path renames live too.
+
+> **Correction (as built).** `resize-stream.ts` was NOT untouched: its mapper
+> had to learn `platform_label`, or a streamed row overwrote a renamed tile's
+> label with the derived one. The surfaces below still needed no edits — the
+> mapper did.
 
 - `web/src/components/studio/kv-generator/KvResizeResultRow.tsx:265`
 - `web/src/components/studio/kv-generator/KvResizeCanvas.tsx:2439` (`tileLabel`)
@@ -228,10 +232,17 @@ use it too, so screen readers hear the name. **`platformById` stays** — a
 preset row with no export has no other label.
 
 **2. Share page.** Add `platform_label` to `KvSharePayloadService.php:271` and
-to `PublicKvResizeItem` (`web/src/services/query.ts:5650`). Delete the local
-`platformLabel()` helper (`KvShareClient.tsx:24-26`); `:296` (alt) and `:304`
-(caption) read `item.platform_label`. This is the only surface needing a server
-change beyond the resource — and it **removes** a client mirror.
+to `PublicKvResizeItem` (`web/src/services/query.ts:5650`). `itemAlt` and
+`itemLabel` read `item.platform_label`. This is the only surface needing a
+server change beyond the resource.
+
+> **Correction (as built).** The `platformLabel()` helper is **kept**, not
+> deleted, and both read sites fall back through it with `||` (not `??`):
+> `platform_label` arrives with frnd-api-php#433, so an older deploy or a
+> cached payload sends it absent OR empty, and either would render as
+> "undefined export" to a screen reader. The helper also still serves motion
+> items, which carry no `platform_label` at all. Raised as PR #571 review
+> finding 3915792256; fixed in web `8ccfc47`.
 
 *Privacy:* `PublicKvController`'s docblock promises the payload exposes "image
 URLs, board names, dimensions and aspect only — never workspace, user, thread
