@@ -1102,6 +1102,7 @@ Then at the `KvResizeResultRow` call site, beside
                     }
                   )
                 }
+```
 
 - [ ] **Step 4: Verify in the running app**
 
