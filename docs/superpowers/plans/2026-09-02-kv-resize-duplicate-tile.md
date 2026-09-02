@@ -1395,6 +1395,20 @@ cd api && DB_CONNECTION=pgsql DB_DATABASE=frnd_dup_tile_test TELESCOPE_ENABLED=f
 cd web && bun test src/lib/studio/kv/customSize.test.ts src/components/studio/kv-generator/KvResizePanel.test.tsx src/components/studio/kv-generator/KvCustomSizeRow.test.tsx
 ```
 
+`KvShareClient.test.tsx` must be run **on its own**, not appended to the line
+above:
+
+```bash
+cd web && bun test "src/app/share/[token]/KvShareClient.test.tsx"
+```
+
+Combining it with other suites fails with `TypeError: Attempted to assign to
+readonly property` from `@tremor/react`'s bundled `@headlessui/react`, which
+patches `HTMLElement.prototype.focus` at import time and throws once another
+suite in the same process has already touched that prototype. It is purely a
+cross-suite import-order artifact in `node_modules` — the file is 27/27 green
+alone, and nothing in this feature is involved.
+
 - [ ] **web build**
 
 ```bash
