@@ -253,6 +253,8 @@ Terminal 1 (primary):                    Terminal 2 (workspace):
 
 **Requirements:** JJ installed (`brew install jj`). Best with terminal-based harnesses (Claude Code, Amp) — Cursor is IDE-integrated so benefits less.
 
+`/onboard` does not install JJ — it only detects whether you already have it. Parallel workspaces are worth nothing until you're running a second feature, so `/workflow start` offers the install at that point instead of front-loading it onto setup.
+
 **Loki coexistence:** if you chose Claude Code + GUI (loki) during `/onboard`, `/jj-workflow` becomes inert in that workspace — loki writes `.loki/marker.json` on install, and the skill detects it and exits with a redirect message. Parallel features in loki-managed workspaces happen via kanban cards (each card gets its own `git worktree`) rather than JJ workspaces. If you also installed Amp alongside Claude Code + loki, Amp continues to use `/jj-workflow` normally from its own terminal — the two models coexist because Amp doesn't share loki's worktree surface.
 
 ### loki (Claude Code GUI) — optional surface

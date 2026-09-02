@@ -50,7 +50,7 @@ Why: loki writes this marker on first successful bootstrap when the user picks C
 
 ### `/jj-workflow init`
 
-Initialize JJ colocated mode in all service repos. Can be run standalone or during onboarding.
+Initialize JJ colocated mode in all service repos. Run this when you first want parallel features — `/onboard` deliberately does not install or init JJ.
 
 **Steps:**
 1. Check JJ is available:

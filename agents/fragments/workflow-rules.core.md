@@ -190,6 +190,8 @@ Tier 2 agents follow this loop:
 
 When JJ is available and the user wants to work on multiple features in parallel, they can use `/jj-workflow` to spin up isolated workspaces. Full rules: `skills/jj-workflow/references/rules.md`.
 
+JJ is **not** installed during `/onboard` — setup only detects it. Do not recommend installing JJ until the user actually needs a second concurrent feature; `/workflow start` offers it there. A user working one feature at a time never needs JJ.
+
 **Loki coexistence:** if `.loki/marker.json` exists at the workspace root, loki (the Claude Code GUI) is managing isolation via its own git worktrees. In that case, every `/jj-workflow` subcommand is a no-op that prints a redirect message. Do not suggest `/jj-workflow new` for parallel features in a loki-managed workspace — tell the user to add a card in the GUI instead.
 
 ### Agent Teams (parallel implementation)

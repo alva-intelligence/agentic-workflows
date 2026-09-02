@@ -352,31 +352,26 @@ Mark `steps.prerequisites` as `"completed"` in `.onboard-state.json` and proceed
 - Amp was selected in Step 1.3
 - Claude Code was selected in Step 1.3 **AND** `claude_ui` from Step 1.4.5 is `"terminal"`
 
-Rationale: JJ workspaces are the terminal-mode parallel-feature story. When Claude Code runs under loki (`claude_ui: "loki"`), loki's git worktrees replace JJ, and the `/jj-workflow` skill is inert in this workspace (it detects `.loki/marker.json` and exits). If the user additionally picked Amp (which has no GUI equivalent), JJ is still installed — Amp runs alongside loki and uses JJ for its own parallel sessions. Cursor and OpenCode alone don't need JJ (IDE-integrated / per-session), so they don't trigger this step.
+Rationale: JJ workspaces are the terminal-mode parallel-feature story. When Claude Code runs under loki (`claude_ui: "loki"`), loki's git worktrees replace JJ, and the `/jj-workflow` skill is inert in this workspace (it detects `.loki/marker.json` and exits). If the user additionally picked Amp (which has no GUI equivalent), JJ is still detected here — Amp runs alongside loki and uses JJ for its own parallel sessions. Cursor and OpenCode alone don't need JJ (IDE-integrated / per-session), so they don't trigger this step.
 
 JJ enables parallel feature development via isolated workspaces — useful when you run one agent session per directory. It runs in colocated mode alongside git — all git commands remain unchanged.
+
+**Do not push JJ during setup.** Parallel workspaces only pay off once the user is actually running more than one feature at a time, which never happens on day one. Onboarding detects JJ and moves on; installing it is deferred to the moment `/workflow` first offers a parallel workspace. Recommending an extra tool here costs setup time and buys nothing until then.
 
 1. **Check if JJ is available:**
    ```bash
    command -v jj &>/dev/null && echo "✓ jj available: $(jj --version)" || echo "✗ jj not found"
    ```
 
-2. **If JJ is found** (pre-installed or via `brew install jj`):
+2. **If JJ is found** (already on the machine):
    - Record `jj_available: true` in `.onboard-state.json`
-   - Tell user: "JJ detected. After onboarding, you can use `/jj-workflow init` to enable colocated mode in service repos, then `/jj-workflow new <slug>` to create parallel workspaces for simultaneous feature development."
-   - **Do NOT run `jj git init --colocate` yet** — repos haven't been cloned. The user will run `/jj-workflow init` after clone.
+   - Tell user: "JJ detected — parallel workspaces are available if you want them later via `/jj-workflow init` then `/jj-workflow new <slug>`. Nothing to do now."
+   - **Do NOT run `jj git init --colocate` yet** — repos haven't been cloned. The user will run `/jj-workflow init` after clone, if and when they want parallel features.
 
-3. **If JJ is NOT found:**
-   - Use the ask tool:
-     > "JJ (Jujutsu) enables parallel feature development — work on multiple features in separate directories simultaneously. It's optional and only useful with terminal-based harnesses (Claude Code, Amp)."
-     > - **Install JJ** (`brew install jj`) — recommended if you plan to work on multiple features in parallel
-     > - **Skip** — I'll work on one feature at a time
-   - If user chooses install:
-     ```bash
-     brew install jj
-     ```
-     Verify: `command -v jj && echo "✓ jj installed"`. Record `jj_available: true`.
-   - If user chooses skip: record `jj_available: false`. They can install later.
+3. **If JJ is NOT found:** record `jj_available: false` and continue — **no ask, no install prompt.** Tell the user once, as a single line:
+   > "JJ (Jujutsu) isn't installed. It's only needed for working on several features in parallel — skipping it for now. `/workflow` will offer to set it up the first time that comes up."
+
+   Do not present install/skip options and do not run `brew install jj` at this stage.
 
 4. **After clone (Step 4)**, if `jj_available` is `true`:
    - Automatically run the equivalent of `/jj-workflow init`:
@@ -758,7 +753,7 @@ If "Yes": continue to 9.5.3.
 
 **If "I'll install it myself":** set `steps.loki_install: "pending"` and continue to 9.5.3 — the marker check will still catch whether loki actually ran.
 
-**If "Skip, fall back to terminal":** set `claude_ui: "terminal"`, `skipped_reasons.loki_install: "user skipped"`, and move on to Step 10. If JJ was NOT already installed in Step 2.5 (because GUI was chosen at the time), tell the user: "Since you're back on terminal, consider running `/jj-workflow init` later if you want parallel-workspace support. `brew install jj` if it's not already installed."
+**If "Skip, fall back to terminal":** set `claude_ui: "terminal"`, `skipped_reasons.loki_install: "user skipped"`, and move on to Step 10. No JJ action needed here — `/workflow` offers parallel workspaces (and the JJ install) the first time a second feature comes up.
 
 ### 9.5.3 Launch loki and verify marker
 

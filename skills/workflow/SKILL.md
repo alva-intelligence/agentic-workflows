@@ -64,12 +64,21 @@ Start a new feature workflow.
    - If `status` is `"completed"` → proceed
 2. Read `.workflow-state.json` (create if doesn't exist).
 3. Check that `<slug>` doesn't already exist in features.
-4. **If an active feature already exists AND JJ is available** (`command -v jj`):
-   - Suggest parallel workspace as an option:
-     > "You have an active feature (`<active-slug>` in `<phase>`). You can:"
-     > - **Continue here** with context-switching (`/workflow switch` between features)
-     > - **Create a parallel workspace** with `/jj-workflow new <slug>` to work on `<slug>` in a separate directory
-   - If user chooses parallel workspace → tell them to run `/jj-workflow new <slug>` and stop.
+4. **If an active feature already exists**, offer parallel work. This is the point where JJ earns its install — `/onboard` deliberately skips it, so JJ may not be present yet. Skip this whole step if `.loki/marker.json` exists (loki's worktrees are the parallel surface there).
+
+   **If JJ is available** (`command -v jj`):
+   > "You have an active feature (`<active-slug>` in `<phase>`). You can:"
+   > - **Continue here** with context-switching (`/workflow switch` between features)
+   > - **Create a parallel workspace** with `/jj-workflow new <slug>` to work on `<slug>` in a separate directory
+
+   **If JJ is NOT available**, offer the install alongside the same choice:
+   > "You have an active feature (`<active-slug>` in `<phase>`). You can:"
+   > - **Continue here** with context-switching (`/workflow switch` between features) — recommended
+   > - **Install JJ and create a parallel workspace** (`brew install jj`) — separate directory per feature, one agent session each
+
+   If the user picks install: run `brew install jj`, verify with `command -v jj`, set `jj_available: true` in `.onboard-state.json`, then run `/jj-workflow init` before `/jj-workflow new <slug>`. If the install fails, say so and fall through to continuing here.
+
+   - If user chooses a parallel workspace → tell them to run `/jj-workflow new <slug>` and stop.
    - If user chooses to continue here → proceed.
 5. Capture intake via the ask tool:
    - **Type:** feature | bug | improvement
