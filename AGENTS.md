@@ -29,6 +29,17 @@ Also check for `.loki/marker.json`. If present, loki (the Claude Code GUI) is ma
 
 Run the update-check script and sync the current branch. Detailed procedure (including dependency bootstraps and conflict handling): `skills/workflow/references/session-checks.md` → "Update check + sync".
 
+**After any bootstrap or update-check, re-apply the local-only wiring.** `.agents/` and
+`.claude/` are gitignored install artifacts (`.gitignore:8-11`) that `local-bootstrap.sh` and
+`update-check.sh` overwrite, so every local patch to a skill, hook or settings entry is lost.
+Three tracked scripts put it back — run all three, each is idempotent and each takes `--check`:
+
+| Script | Restores |
+|---|---|
+| `scripts/local-wire-orchestration.sh` | `orchestration/` registered as the fifth service |
+| `scripts/local-worktree-mode.sh` | `/jj-workflow` delegating to git worktrees (ledger `W1`) |
+| `scripts/local-align-wire.sh` | the `align-guard` hook, its `settings.json` entry, and the `/workflow` + `/prd-split` alignment steps (ledger `W16`) |
+
 ### Step 2: Load workflow state
 
 Read `.workflow-state.json` to determine:
@@ -42,9 +53,15 @@ If `.workflow-state.json` doesn't exist, no features are active yet.
 
 If `.lark-sync.json` is missing or `lark-cli auth status` is incomplete, follow `skills/lark-sync/references/session-check.md` — re-auth silently when unambiguous, auto-run `/lark-sync link` when `.lark-sync.json` is missing. Ask only for missing credentials or installs.
 
-### Step 4: Feature branch recency + service health
+### Step 4: Workspace alignment + feature branch recency + service health
 
-After pulling, if any service is on a `feature/*` branch, run the recency check against its base branch. Then verify that required services are healthy. Full procedures (recency, re-run triggers, health commands): `skills/workflow/references/session-checks.md`.
+**First, run `./scripts/local-align.sh` (read-only).** It exits 1 and prints a table when any
+service is on the wrong branch for the active feature. Show the table and resolve the drift
+before starting work — `--apply` moves the movable repos; anything it marks `BLOCKED` is
+resolved by hand, never worked around. One feature means one branch name in every in-scope
+service and the default branch in every uninvolved one.
+
+Then, if any service is on a `feature/*` branch, run the recency check against its base branch. Then verify that required services are healthy. Full procedures (recency, re-run triggers, health commands): `skills/workflow/references/session-checks.md`.
 
 ### Step 5: Route to correct agent
 
@@ -124,7 +141,14 @@ Conversely, a sandbox block on a write that did NOT persist (state inspection sh
 4. **CHECK `.workflow-state.json` before ANY work.**
 5. **UPDATE `.workflow-state.json` after every state change** — phase entry, `phase_status` flip, transition.
 6. **CHECK current git branch matches the expected branch for the phase** before doing any work.
-7. **Wait for user before advancing.** When `phase_status` becomes `completed`, present the outcome and ask whether to advance.
+   Mechanically: `./scripts/local-align.sh`. The `align-guard` PreToolUse hook
+   (`.claude/hooks/align-guard.sh`) blocks Edit/Write into any service repo that is on the
+   wrong branch. If it fires, either align or start a separate feature — do not disable it
+   silently. `FRNDOS_ALIGN_OFF=1` is the escape hatch and using it must be stated out loud.
+7. **Work that is unrelated to the active feature gets its own slug.** `/workflow start <slug>`
+   (or `/jj-workflow new <slug>` for a parallel worktree), then align. Never an ad-hoc branch
+   created in one repo — that is exactly how five repos ended up on five unrelated branches.
+8. **Wait for user before advancing.** When `phase_status` becomes `completed`, present the outcome and ask whether to advance.
 
 ### Branch per Phase
 

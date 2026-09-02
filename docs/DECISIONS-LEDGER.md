@@ -663,3 +663,62 @@ overshooting alias is a legitimate member of `PLATFORMS`.
   whether `Seeder.registered_account()` resolves for each brand × platform leg still depends on
   the copied demo mart rows, per `FR-30a`, and is still unmeasured because local ClickHouse was
   stopped throughout.
+
+---
+
+## 2026-09-02 — `W16`: the one-branch-per-feature rule existed only as prose, and five repos proved it
+
+Measured at the start of this session, with one active feature (`local-pipeline-e2e`):
+
+| Repo | On | Should have been |
+|---|---|---|
+| api | `improvement/fahmi/vc-local-pipeline-e2e` | same — the only aligned service |
+| data-service | `release/fahmi/insights-metrics` | the feature branch |
+| orchestration | `fix/fahmi/vc-worker-requirements-drift` | the feature branch |
+| web | `feature/fahmi/vc-insights-missing-metrics` | `develop` (out of scope, PR #535 already merged) |
+| ai-service | `development` | `development` — correct by accident, it was never touched |
+
+Five repos, five different branches, one active feature. `AGENTS.md` already forbade this in
+four places (rules 3 and 6, "Branch Naming", "Default Branches by Service"). The rule was never
+the problem.
+
+**The mechanism gap.** `skills/workflow/SKILL.md` `/workflow switch` step 6 read: *"If on a
+different git branch, inform user: … Switch with: `git checkout {branch}`"*. It **printed advice
+about one repo** and never touched the other four, never parked the uninvolved ones, and had no
+notion of which services were even in scope — `features[*].services` was `null` on both features,
+so nothing could have enforced a scope even if something had tried.
+
+| # | What changed | Supersedes | Why | Cost |
+|---|---|---|---|---|
+| W16 | **`scripts/local-align.sh`** — new. Reads `features[<slug>].branch` and `.services` from `.workflow-state.json` and the roster from `.onboard-state.json`; puts every in-scope service on the feature branch and parks every other one on its own default branch. Read-only by default (exit 1 on drift), `--apply` moves. Base branch is read from each repo's `origin/HEAD` with an `AGENTS.md:328-333` fallback table. Never pushes, never merges, never stashes. | `skills/workflow/SKILL.md` `/workflow switch` step 6 in full — replaced in place with "align the whole workspace, do not merely advise". | The convention was already written and already being violated. What did not exist was a verb that performs it, so every context switch depended on discipline. | `scripts/` is tracked, so the script itself is safe — but the hook, its `settings.json` entry and the two skill patches all land in gitignored install copies, so `W16d` **does** add a third entry to the must-re-run-after-bootstrap list. |
+| W16a | **`features[*].services`** becomes authoritative and is populated at `prd_splitting` (`skills/prd-split/SKILL.md` step 9), normalised to workspace **directory** names. Backfilled on both existing features from their `service_prds` keys. | Nothing — the field existed in the schema and was `null` in practice. | `service_prds` was the only record of scope, and it uses the service PRD's key, which for `insights-missing-metrics` was `frnd-orchestration` while the directory is `orchestration`. Align needs directory names. | A feature whose `services` is left `null` silently falls back to `service_prds` keys; if both are empty the guard is off for that feature. Documented in the skill, not enforced. |
+| W16b | **`.claude/hooks/align-guard.sh`** — `PreToolUse` hook on `Edit\|Write\|NotebookEdit`, wired in `.claude/settings.json`. Blocks an edit into any service repo whose branch ≠ expected, and names the three ways out (align / start a separate feature / `FRNDOS_ALIGN_OFF=1` said out loud). | Nothing — new. | Steps in a skill file are prose an agent can skip and context compaction can lose. A hook is executed by the harness. This is the only piece of `W16` with teeth. | **It does not see Bash.** `sed -i`, heredocs and `python3 -` write files without passing through `PreToolUse` on `Edit`/`Write`, and this session's own operating mode prefers Bash for edits. See Known gaps. |
+| W16c | `AGENTS.md` Step 4 renamed to "Workspace alignment + feature branch recency + service health" and now opens with the read-only align run; a new **rule 7** states that unrelated work gets its own slug, never an ad-hoc branch in one repo. Old rule 7 renumbers to 8. | `AGENTS.md` Step 4's previous opening, which began at the recency check and assumed the branches were already right. | The drift above was created *between* sessions, so the check has to fire at session start, before the first edit. | Renumbering. No other document referenced the Phase Transition Rules by number — checked. |
+| W16d | **`scripts/local-align-wire.sh`** — new, tracked, idempotent, `--check` mode. Regenerates `.claude/hooks/align-guard.sh`, re-adds the `PreToolUse` entry to `.claude/settings.json`, and re-applies the `/workflow` and `/prd-split` steps into `.agents/skills/`. `AGENTS.md` Step 1 now carries the full must-re-run table (`local-wire-orchestration.sh`, `local-worktree-mode.sh`, `local-align-wire.sh`). | Nothing — but it corrects `W16`'s own cost cell, which claimed no new re-wire burden. | Four of `W16`'s seven edits landed in gitignored install copies (`.gitignore:8-11`) that `local-bootstrap.sh` and `update-check.sh` overwrite. Without this the guard silently disappears on the next update — the same class of failure as `W1`. Verified by deleting the hook and restoring it: `--check` exited 1, the restore rewrote it, and the rebuilt hook still returned exit 2 on a wrong-branch edit and 0 on a right-branch one. | The hook body now exists **twice** — in `.claude/hooks/align-guard.sh` and as a heredoc inside the wire script. Editing one without the other leaves a stale copy that reappears at the next bootstrap. This is the same duplication `W11` flagged for parity copies, accepted here because the destination is gitignored and cannot hold the source. |
+
+### Known gaps
+
+- **The hook is blind to Bash-driven edits.** `Edit`/`Write`/`NotebookEdit` are covered;
+  `Bash(sed -i …)`, `cat > file <<EOF` and `python3 - <<PY` are not. Adding a `Bash` matcher
+  means parsing arbitrary shell to decide whether it writes and where, which is unreliable
+  enough to produce false blocks on read-only commands. The honest escalation is a
+  `PostToolUse` check on `Bash` that reports *after the fact* which repo was written to while
+  off-branch — noisy, but it cannot be evaded. Not built.
+- **`workspace-root` is pinned, so root edits are never guarded.** It is a member of
+  `local-pipeline-e2e`'s `service_prds`, but it is `agentic-workflows` on a long-lived personal
+  branch (`feat/fahmi/data-agentic-setup`), and `docs/prd/local-pipeline-e2e.workspace-root.md`
+  says commits land there deliberately. Align reports it and never moves it; the hook lets every
+  root-level file through.
+- **`release/*` is blocked, not solved.** `data-service` sits on `release/fahmi/insights-metrics`
+  with PR #222 open. Align refuses to step off it without `--force-release`. Stepping off does
+  not delete the branch or the PR, so the block is a prompt to think, not a safety property.
+- **Two trees outside the roster.** `frnd-orchestration-1-staging/` is hardcoded into
+  `IGNORE_DIRS`; `projects/frnd-orchestration/` is outside the workspace and never seen. A third
+  such tree would need the ignore list edited by hand.
+- **Parallel workspaces are not cross-checked.** `.workflow-state.json` `workspaces` lists `2`
+  and `data`; align runs against one workspace root only and does not know whether a sibling
+  worktree holds the same branch.
+- **Nothing here fixes the merge-order contradiction** found in the same session: api's PRD says
+  `orch(1) → api(2) → data-service(3) → workspace-root(4)` while
+  `docs/prd/local-pipeline-e2e.workspace-root.md:117` and data-service's PRD still carry the
+  pre-`FR-30` order. Alignment is about branches, not about documents agreeing.
