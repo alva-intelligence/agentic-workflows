@@ -162,10 +162,20 @@ Guards, in order:
 
 | Condition | Response |
 |---|---|
-| file not in caller's workspace | 403 |
+| file not in caller's workspace | 404 in practice — see below |
 | export does not belong to this file | 404 |
 | source `platform_id` is not a custom id | 422 (presets are out of scope) |
 | parent is not `isLayerComposed()` | 422 (defence in depth, mirrors `createBatch`) |
+
+The first row wants to be a 403, and the controller does carry
+`abort_unless($file->workspace_id === …, 403)` to match its siblings. But
+`StudioFile` has a `HasWorkspaceScope` global scope, so a file outside the
+caller's workspace is already invisible to `findOrFail` and the request 404s
+before that line is reached. The neighbouring `KvResizeExportControllerTest`
+documents the same 404 for the same scenario. The security property is intact
+either way, and 404 is the better answer — it does not confirm the file
+exists. The `403` guard stays as defence in depth for the paths where the
+scope does not apply.
 
 The fourth guard is **implied by the third today** — a custom id can only
 have been created on a layer-composed parent, and a generation's
