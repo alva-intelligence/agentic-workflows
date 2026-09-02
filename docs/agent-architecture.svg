@@ -38,50 +38,55 @@
   <line x1="790" y1="98" x2="740" y2="98" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-green)"/>
 
   <!-- Delegation arrows -->
-  <line x1="300" y1="124" x2="80" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="330" y1="124" x2="210" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="360" y1="124" x2="350" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="390" y1="124" x2="490" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="410" y1="124" x2="620" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="430" y1="124" x2="750" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="450" y1="124" x2="870" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="470" y1="124" x2="990" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="300" y1="124" x2="75" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="320" y1="124" x2="192" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="340" y1="124" x2="309" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="360" y1="124" x2="426" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="385" y1="124" x2="543" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="405" y1="124" x2="660" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="425" y1="124" x2="777" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="450" y1="124" x2="894" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="470" y1="124" x2="1011" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
 
   <!-- Sub-Agent zone -->
   <rect x="15" y="165" width="1075" height="110" rx="12" fill="#d3f9d8" stroke="#2f9e44" stroke-width="1" opacity="0.3"/>
   <text x="27" y="178" font-size="10" fill="#15803d" font-weight="600">SUB-AGENT LAYER (phase-scoped, 9 agents)</text>
 
-  <rect x="22" y="192" width="108" height="40" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
-  <text x="76" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-prd</text>
-  <text x="76" y="244" text-anchor="middle" font-size="9" fill="#757575">PRD Creation</text>
+  <rect x="22" y="192" width="107" height="40" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
+  <text x="75" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-brainstorm</text>
+  <text x="75" y="244" text-anchor="middle" font-size="9" fill="#757575">Brainstorming</text>
 
-  <rect x="140" y="192" width="140" height="40" rx="8" fill="#d0bfff" stroke="#9c36b5" stroke-width="2" filter="url(#shadow)"/>
-  <text x="210" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-wireframe</text>
-  <text x="210" y="244" text-anchor="middle" font-size="9" fill="#757575">Wireframe</text>
+  <rect x="139" y="192" width="107" height="40" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
+  <text x="192" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-prd</text>
+  <text x="192" y="244" text-anchor="middle" font-size="9" fill="#757575">PRD Creation</text>
 
-  <rect x="290" y="192" width="125" height="40" rx="8" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
-  <text x="352" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-splitter</text>
-  <text x="352" y="244" text-anchor="middle" font-size="9" fill="#757575">PRD Splitting</text>
+  <rect x="256" y="192" width="107" height="40" rx="8" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
+  <text x="309" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-splitter</text>
+  <text x="309" y="244" text-anchor="middle" font-size="9" fill="#757575">PRD Splitting</text>
 
-  <rect x="425" y="192" width="140" height="40" rx="8" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
-  <text x="495" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-implement</text>
-  <text x="495" y="244" text-anchor="middle" font-size="9" fill="#757575">Sequential impl</text>
+  <rect x="373" y="192" width="107" height="40" rx="8" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
+  <text x="426" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-implement</text>
+  <text x="426" y="244" text-anchor="middle" font-size="9" fill="#757575">Sequential impl</text>
 
-  <rect x="575" y="192" width="130" height="40" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="2" filter="url(#shadow)"/>
-  <text x="640" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-engineer</text>
-  <text x="640" y="244" text-anchor="middle" font-size="9" fill="#757575">Team: per-service</text>
+  <rect x="490" y="192" width="107" height="40" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="2" filter="url(#shadow)"/>
+  <text x="543" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-engineer</text>
+  <text x="543" y="244" text-anchor="middle" font-size="9" fill="#757575">Team: per-service</text>
 
-  <rect x="715" y="192" width="130" height="40" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="2" filter="url(#shadow)"/>
-  <text x="780" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-architect</text>
-  <text x="780" y="244" text-anchor="middle" font-size="9" fill="#757575">Team: reviewer</text>
+  <rect x="607" y="192" width="107" height="40" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="2" filter="url(#shadow)"/>
+  <text x="660" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-architect</text>
+  <text x="660" y="244" text-anchor="middle" font-size="9" fill="#757575">Team: reviewer</text>
 
-  <rect x="855" y="192" width="95" height="40" rx="8" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
-  <text x="902" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-pr</text>
-  <text x="902" y="244" text-anchor="middle" font-size="9" fill="#757575">PR + Review</text>
+  <rect x="724" y="192" width="107" height="40" rx="8" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
+  <text x="777" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-pr</text>
+  <text x="777" y="244" text-anchor="middle" font-size="9" fill="#757575">PR Submission</text>
 
-  <rect x="960" y="192" width="105" height="40" rx="8" fill="#ffc9c9" stroke="#e03131" stroke-width="2" filter="url(#shadow)"/>
-  <text x="1012" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">frndos-track</text>
-  <text x="1012" y="244" text-anchor="middle" font-size="9" fill="#757575">Completion</text>
+  <rect x="841" y="192" width="107" height="40" rx="8" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
+  <text x="894" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-pr-review</text>
+  <text x="894" y="244" text-anchor="middle" font-size="9" fill="#757575">PR Review</text>
+
+  <rect x="958" y="192" width="107" height="40" rx="8" fill="#ffc9c9" stroke="#e03131" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1011" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-track</text>
+  <text x="1011" y="244" text-anchor="middle" font-size="9" fill="#757575">Completion</text>
 
   <!-- Skills zone -->
   <rect x="15" y="295" width="1075" height="68" rx="12" fill="#dbe4ff" stroke="#1971c2" stroke-width="1" opacity="0.3"/>

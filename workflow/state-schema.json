@@ -90,11 +90,6 @@
           "description": "Relative path to the main PRD file for this feature, or null if not yet created.",
           "type": ["string", "null"]
         },
-        "implementation_strategy": {
-          "description": "Recognized implementation strategy chosen by the user at the start of the implementation phase. 'wireframe_then_implementation' = build the web UI on the feature branch with mock/static data first, then swap stubs for real API calls. 'implementation_only' = jump straight to full implementation. Asked only when web-service work is in scope.",
-          "type": ["string", "null"],
-          "enum": ["implementation_only", "wireframe_then_implementation", null]
-        },
         "parent_feature": {
           "description": "Slug of the parent feature when this feature is a sub-PRD split from a larger PRD. E.g. 'brand-health-dashboard-p0' has parent_feature 'brand-health-dashboard'. Null for standalone features.",
           "type": ["string", "null"]

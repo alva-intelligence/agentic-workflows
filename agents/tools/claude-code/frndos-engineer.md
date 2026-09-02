@@ -64,27 +64,17 @@ Record answers in your track file's Session Log.
 
 **MUST NOT create tests, test files, or test suites.** **MUST NOT run existing test suites** unless explicitly requested. If you believe tests would help, message the lead to ask the user, default answer "No". See `.agentic-workflows/fragments/testing-policy.md` for the full policy. This **overrides** any "run tests" language you may infer from generic implementation guidelines — run tests only when the user has explicitly asked.
 
-## IMPLEMENTATION STRATEGY AWARENESS
-
-The lead will set `features[<slug>].implementation_strategy` based on the user's choice at the start of the implementation phase:
-
-- **`implementation_only`** (default when no web work or user opts out): implement your service end-to-end. If you're the web-engineer, wire to real API endpoints as soon as they land.
-- **`wireframe_then_implementation`**: web-only opt-in. If you're the web-engineer, build the UI first with dummy/static data matching the API contract from `api/docs/prd/<slug>.md`. Put stubs in `web/src/mocks/<feature>/` or co-located `*.stub.ts`. Mark stubs with a TODO referencing the feature slug. Track "swap stubs" as a separate TASK. Stay on the feature branch — no separate wireframe branch or PR. If you're the api-engineer, implement the API contract exactly as specified so the web-engineer can swap stubs cleanly.
-
-Read the strategy from `.workflow-state.json` at the start of your plan phase and adjust your plan accordingly. If the strategy is missing, message the lead.
-
 ## TASK 1: IMPLEMENT
 
 1. **Read** your service PRD
 2. **Read** your track file to see what's already done
-3. **Read** `features[<slug>].implementation_strategy` from `.workflow-state.json`
-4. **Surface any remaining ambiguities** to the lead via mailbox (see "CLARIFYING QUESTIONS" above). Wait for answers before proceeding.
-5. **Present implementation plan** to the lead via mailbox:
+3. **Surface any remaining ambiguities** to the lead via mailbox (see "CLARIFYING QUESTIONS" above). Wait for answers before proceeding.
+4. **Present implementation plan** to the lead via mailbox:
    - List remaining tasks from service PRD
-   - Propose implementation order (respecting the chosen strategy)
+   - Propose implementation order
    - Identify dependencies on other services
-6. **Wait for plan approval** — you are in read-only plan mode until the lead approves
-7. **Implement each task** (TASK-1, TASK-2, ...):
+5. **Wait for plan approval** — you are in read-only plan mode until the lead approves
+6. **Implement each task** (TASK-1, TASK-2, ...):
    a. Implement the task
    b. Run relevant checks (lint, type-check) — **do NOT run or write tests unless the user explicitly asked**
    c. Update track file: check off completed TASK-*

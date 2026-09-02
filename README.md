@@ -109,11 +109,6 @@ Agent:  → Phase: prd_splitting. [delegates to frndos-splitter]
 
 You:    /workflow next
 Agent:  → Phase: implementation.
-        [asks: "Wireframe-first with mock data, or implementation-only?"]
-You:    Wireframe-first.
-Agent:  [builds web UI on the feature branch with mocks/stubs in
-         web/src/mocks/brand-health-dashboard/]
-        [then implements API, then swaps stubs for real calls]
 ```
 
 **From here, the path splits based on your session mode:**
@@ -316,7 +311,7 @@ Agents are phase-scoped specialists. You never invoke them directly — the orch
 | `frndos-brainstorm` | Opus 5 | Brainstorming | Loads latest service state via code-graph MCP, asks 3–6 multi-choice questions (each with one `(Recommended)` option), records answers + summary that feeds the PRD. |
 | `frndos-prd` | Opus 5 | PRD Creation | Authors a structured PRD from the brainstorming summary + user input. Includes a `Brainstorming Outcome` section pulling answers verbatim. |
 | `frndos-splitter` | Opus 5 | PRD Splitting | Creates `feature/<worker>/vc-<slug>` from base, then splits the main PRD into per-service PRDs. (Replaces the old separate `branch_creation` phase.) |
-| `frndos-implement` | Opus 5 | Implementation | **Sequential mode only.** Implements across all services following service PRDs. On entry, offers a wireframe-first sub-step (web UI with mocks on the feature branch) when web work is in scope. |
+| `frndos-implement` | Opus 5 | Implementation | **Sequential mode only.** Implements across all services following service PRDs. |
 | `frndos-engineer` | Opus 5 | Implementation | **Team Session only.** One per service. Implements, self-reviews, creates PR for their assigned service. Communicates via mailbox. Cannot write code outside their service directory. |
 | `frndos-architect` | Opus 5 | Implementation | **Team Session only.** Reviews cross-service integration — API contracts, shared types, data flow, auth consistency. Does NOT review code quality. Does NOT write code. |
 | `frndos-pr` | Sonnet 5 | PR Submission | Runs full self code-review on the diff (correctness, lint, conventions) plus a `security-reviewer` skill audit BEFORE opening the PR. Body includes both summaries. |

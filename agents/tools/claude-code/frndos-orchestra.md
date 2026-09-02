@@ -50,7 +50,7 @@ echo $CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
 | brainstorming | frndos-brainstorm | any | Service-state-grounded multi-choice questioning before PRD |
 | prd_creation | frndos-prd | any | PRD authored from brainstorming summary + user input |
 | prd_splitting | frndos-splitter | `develop`/`development` → `feature/<worker>/vc-<slug>` | Create feature branch + split main PRD into per-service PRDs |
-| implementation | (see below) | `feature/<worker>/vc-<slug>` | Agent Teams: spawn engineers. Sequential: frndos-implement. May include wireframe-with-mocks sub-step on web work. |
+| implementation | (see below) | `feature/<worker>/vc-<slug>` | Agent Teams: spawn engineers. Sequential: frndos-implement. |
 | pr_submission | frndos-pr | `feature/<worker>/vc-<slug>` | Self code-review + security audit, then open PR |
 | pr_review | frndos-pr-review | `feature/<worker>/vc-<slug>` | Resolve PR threads / bot findings |
 | completion | frndos-track | `feature/<worker>/vc-<slug>` | Mark feature complete |

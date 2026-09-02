@@ -63,35 +63,6 @@ Do NOT proceed to the "present plan" step until all answers are recorded.
 
 **MUST NOT create tests, test files, or test suites in any service.** **MUST NOT run existing test suites** unless the user explicitly requests it in this session. If you believe tests would help, use `AskUserQuestion` to ask the user with the default answer being "No". See `.agentic-workflows/fragments/testing-policy.md` for the full policy.
 
-## IMPLEMENTATION STRATEGIES (web-only opt-in)
-
-Before presenting your implementation plan (Step 4 below), check whether `service_prds` includes web work. If it does, use `AskUserQuestion` to offer a wireframe-first sub-step:
-
-> "Which approach for this feature?
-> - **Wireframe-first with mock data** (Recommended when UI is non-trivial) — build the web UI on the feature branch with mock/static data first, then swap stubs for real API calls. No separate branch, no separate PR, no FE-owner approval gate.
-> - **Implementation-only** — jump straight to full implementation."
-
-Record the choice in `.workflow-state.json` as `features[<slug>].implementation_strategy`:
-
-- `"wireframe_then_implementation"` — wireframe-first sub-step
-- `"implementation_only"` — straight implementation
-
-If no web service is in scope, set `implementation_strategy = "implementation_only"` without asking.
-
-### Wireframe-first sub-step rules
-
-When `implementation_strategy === "wireframe_then_implementation"`:
-
-1. Stay on the **feature branch** the whole time. Do not create a separate wireframe branch. Do not open a separate wireframe PR.
-2. Build the web UI with mock/static data:
-   - Put dummy data in `web/src/mocks/<feature>/` or co-located `*.stub.ts` files.
-   - Match the planned API contracts from `api/docs/prd/<slug>.md` exactly — same field names, types, shapes.
-   - Mark stub usage with a TODO comment referencing the feature slug so swap-out is easy.
-3. Track "swap stubs" as its own TASK in the web track file.
-4. Once the user is satisfied with the UI, proceed to the rest of the implementation (backends, then swap stubs).
-
-There is no separate wireframe phase, scaffold, skill, or PR for this work — it's part of `implementation`.
-
 ## PROCESS
 
 1. **Activate phase:** Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.

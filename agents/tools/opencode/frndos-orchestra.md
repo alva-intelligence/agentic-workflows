@@ -109,7 +109,7 @@ NEVER let a sub-agent's `open_questions` reach the user without a structured `qu
 | brainstorming | frndos-brainstorm | Multi-choice questioning grounded in service state |
 | prd_creation | frndos-prd | PRD authored from brainstorming summary + user input |
 | prd_splitting | frndos-splitter | Create feature branch + split main PRD into per-service PRDs |
-| implementation | frndos-implement | Implement (sequential — Agent Teams not available in OpenCode). Optional wireframe-with-mocks sub-step on web work. |
+| implementation | frndos-implement | Implement (sequential — Agent Teams not available in OpenCode). |
 | pr_submission | frndos-pr | Self code-review + security audit, then open PR |
 | pr_review | frndos-pr-review | Resolve PR threads / bot findings |
 | completion | frndos-track | Mark feature complete |

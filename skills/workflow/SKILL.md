@@ -31,7 +31,6 @@ Show the current workflow state for the active feature.
    - Brainstorming: questions answered / total, summary present?
    - Branch: `{branch}` or "not created"
    - Service PRDs: list with status
-   - Implementation strategy: `{implementation_strategy}` (or "not chosen")
    - PRs: list `{pr_urls}` entries (service → URL) or "not submitted"
 
 ### `/workflow list`
@@ -193,7 +192,6 @@ Show detailed progress for the active feature.
    - Phase progression timeline (with `phase_status` per phase)
    - Brainstorming summary
    - Service PRD status
-   - Implementation strategy (`implementation_only` or `wireframe_then_implementation`)
    - Track file task completion percentage
    - Session log summary
    - PR self-review and security audit summaries

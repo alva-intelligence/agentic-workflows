@@ -62,12 +62,6 @@ _Pulled verbatim from `features[{{FEATURE_SLUG}}].brainstorming.summary`. Follow
 
 {{SCREENS}}
 
-### Mock-data Notes
-
-_Only when `implementation_strategy === "wireframe_then_implementation"`. List the mock-data fixtures the web service will build first._
-
-{{MOCK_DATA_NOTES}}
-
 ## Data Model
 
 ### New Tables

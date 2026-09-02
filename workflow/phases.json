@@ -41,14 +41,14 @@
     },
     "implementation": {
       "name": "Implementation",
-      "description": "Implementing the feature across services. On entry, if any web-service work is in scope, the agent asks the user whether to wireframe-first (build web UI on the feature branch with mock/static data, then swap stubs for real API calls) or jump straight to implementation. Sequential strategy: frndos-implement handles all services. Agent Teams (Claude Code, experimental): per-service engineers run in parallel and each opens their own PR.",
+      "description": "Implementing the feature across services, straight from the split service PRDs. Sequential strategy: frndos-implement handles all services. Agent Teams (Claude Code, experimental): per-service engineers run in parallel and each opens their own PR.",
       "agent": "frndos-implement",
       "next": ["pr_submission", "completion"],
       "next_strategy": {
         "sequential": "pr_submission",
         "agent_teams": "completion"
       },
-      "allowed_actions": ["choose_implementation_strategy", "implement", "wireframe_with_mocks", "update_track"],
+      "allowed_actions": ["implement", "update_track"],
       "kanban_lane": "Build"
     },
     "pr_submission": {

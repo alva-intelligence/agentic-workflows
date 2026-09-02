@@ -104,21 +104,6 @@ Every gate also requires `phase_status === 'completed'`.
 
 Skill: `skills/brainstorm/SKILL.md`.
 
-### Implementation phase — wireframe-first option (web only)
-
-On entering `implementation`, if `service_prds` includes web work, the agent asks the user via the ask tool:
-
-> "Build the web UI on the feature branch with mock/static data first (then swap stubs for real API calls), or jump straight to full implementation?"
-
-Recommended option = wireframe-first when the UI is non-trivial.
-
-The choice is recorded in `features[active_feature].implementation_strategy`:
-
-- `"wireframe_then_implementation"` — UI first with mock data, same feature branch, no separate PR, no FE-owner approval.
-- `"implementation_only"` — straight implementation.
-
-There is **no separate wireframe phase, branch, PR, scaffold, or skill**.
-
 ### PR submission phase — frndos-pr responsibilities
 
 `frndos-pr` runs **before** opening the PR:
