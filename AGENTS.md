@@ -338,7 +338,7 @@ Examples:
 | Frontend | `web/` | 3000 | `develop` | `bun dev` |
 | AI Service | `ai-service/` | 8000 | `development` | `fastapi dev` |
 | Data Service | `data-service/` | 9999 | `development` | `uvicorn app.main:app --reload --port 9999` |
-| Orchestration | `orchestration/` | — | `development` | no long-running server (local Prefect `:4200` is opt-in) |
+| Orchestration | `orchestration/` | — | `development` | nothing in `run-all.sh`; local Prefect `:4200` started by hand for flow work |
 
 > ⚠️ **`orchestration/` is the transform layer.** Its branch model is the standard one, but two
 > things differ from every other service. **(1) No port, no server:** it runs no long-lived process

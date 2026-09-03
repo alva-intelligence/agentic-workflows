@@ -12,8 +12,9 @@
 
 > ⚠️ **`orchestration/` breaks two assumptions the other four services share.**
 > 1. **No port, no server.** It runs no long-lived process and is absent from `run-all.sh` by design.
->    A local Prefect server on `:4200` is opt-in (onboard Step 7.5) and only needed for flow
->    development. There is nothing to health-check.
+>    A local Prefect server on `:4200` is set up by onboarding Step 7.5 — required for anyone who
+>    picked Orchestration — but you start it by hand when you work on flows, so `run-all.sh` has
+>    nothing to launch and nothing to health-check.
 > 2. **There is no deploy step — both branches are live estates.** The branch shape is the standard
 >    one (`development` for work, `main` for release), but a Prefect worker polls each estate and
 >    `git clone`s the branch **at run time**. So a merge is live the moment it lands — there is no

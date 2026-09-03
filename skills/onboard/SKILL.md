@@ -68,7 +68,8 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
     "install_deps": "completed|pending",
     "env_files": "completed|partial|pending",
     "db_setup": "completed|skipped|pending",
-    "ch_local": "completed|skipped|pending",
+    "ch_local": "completed|pending",
+    "prefect_local": "completed|pending",
     "prefect_setup": "completed|skipped|pending",
     "db_gui": "completed|skipped|pending",
     "run_all_sh": "completed|pending",
@@ -119,11 +120,25 @@ The agent must remind the user what's missing and how to fix it.
 > `env_status` value must be handled at every reader, and the readers are:
 > `skills/workflow/SKILL.md`, `agents/fragments/session-protocol.core.md`, `skills/jj-workflow/SKILL.md`.
 >
-> **The three new steps are advisory and never block `/workflow start`:**
+> **Two of the four new steps are required parts of onboarding; two are not.** None of them adds a
+> `/workflow start` gate — the blocking list above is unchanged — but "does not block the gate" is
+> **not** the same as "offer to skip it". Do not present a required step as a choice.
+>
+> **Required whenever the owning service was selected — no skip option, no `"skipped"` value:**
 > - `steps.ch_local` — the local ClickHouse cluster (Step 7.4: server, bootstrap, schema, seed).
-> - `steps.prefect_setup` — Prefect profiles + local estate (Steps 6b and 7.5). Orchestration work
->   is possible read-only without an estate connection: reading flows, editing transforms, running
->   the test suite. Only *running* or inspecting real flow runs needs it. Warn, don't block.
+>   Required for **data-service and/or orchestration**. It is that pair's equivalent of the API's
+>   database: orchestration writes `frnd_agg_marts.*` into it and data-service reads them out, so
+>   without it a data developer has no database at all.
+> - `steps.prefect_local` — the **local** Prefect estate (Step 7.5: server, blocks, work pool,
+>   worker, smoke test). Required for **orchestration**. Every value it needs is pure-local; there
+>   is nothing to request from anyone, so there is nothing to wait for and nothing to skip.
+>
+> **Genuinely optional — keep the skip path:**
+> - `steps.prefect_setup` — `~/.prefect/profiles.toml` for the **shared** estate (Step 6b **only**).
+>   It carries a credential that must be handed over by fahmi, so a developer may legitimately not
+>   have it yet. Orchestration work continues without it: reading flows, editing transforms, running
+>   the test suite, and everything in Step 7.5. Only *inspecting the shared estate's* real flow runs
+>   needs it. Warn, don't block, and never let skipping it imply skipping Step 7.5.
 > - `steps.db_gui` — the database GUI client (Step 9.6). Convenience only.
 
 ## Step 0: Verify GitHub Access
@@ -172,9 +187,11 @@ invisible.
 - **API Queue Worker** — processes background jobs (always runs with API)
 - **Mailhog** — captures emails sent by the API for local testing (:1025 SMTP, :8025 UI)
 
-**Orchestration is deliberately NOT in `run-all.sh`.** It has no long-running process. Flows run on
-the shared Prefect server; a local Prefect server on `:4200` is opt-in and only needed for flow
-development (Step 7.5). Nothing to start, nothing to health-check — see Step 12.
+**Orchestration is deliberately NOT in `run-all.sh`.** It has no long-running process to start
+alongside the other services, so there is nothing for `run-all.sh` to health-check — see Step 12.
+That is a statement about `run-all.sh`, **not** about setup: if you pick Orchestration, onboarding
+sets up a local ClickHouse (Step 7.4) and a local Prefect estate on `:4200` (Step 7.5), and both are
+required. You start that server yourself when you work on flows.
 
 ### 1.2 Do you have `.env` files ready?
 
@@ -651,9 +668,13 @@ Use the ask tool:
 
 **The user can continue onboarding with missing .env files, but `/workflow start` will block until ALL are provided.**
 
-## Step 6b: Prefect profiles — **STOP** (Orchestration only)
+## Step 6b: Prefect profiles for the **shared** estate — **STOP** (Orchestration only)
 
 **Skip this entire step if the user did not select Orchestration.**
+
+> **This step is optional, and it is the only optional Prefect step.** It configures access to the
+> team's **shared** estate. The **local** estate is Step 7.5, it needs no credential from anyone, and
+> it is **required** — skipping this step never means skipping that one.
 
 Orchestration is the one service with **no `.env`**. Its runtime credentials are Prefect Secret
 blocks fetched from the server at flow time, and the server connection itself comes from a profile
@@ -665,8 +686,9 @@ file that lives **outside the workspace**. Two artifacts, two different places:
 | Secret blocks | on the Prefect server, not on disk | ClickHouse host/port/user/pass, callback token, AWS keys | created in Step 7.5.3 |
 
 **Local-only developers can skip the profile entirely.** Step 7.5 stands up a local Prefect server
-and creates its blocks with pure-local values — nothing secret, nothing to ask anyone for. The
-profile below is only needed to *read* the shared estate (inspecting real flow runs and deployments).
+and creates its blocks with pure-local values — nothing secret, nothing to ask anyone for, and it
+runs either way. The profile below is only needed to *read* the shared estate (inspecting real flow
+runs and deployments).
 
 ### 6b.1 Profiles — ask, then wait
 
@@ -680,12 +702,15 @@ Use the ask tool:
 > - Yes — I have the file (or the values)
 > - No — I need it from fahmi
 > - Skip — local-only development is fine for now
+>
+> Say plainly, in the same message, that the answer only affects access to the **shared** estate and
+> that the local estate in Step 7.5 is set up regardless.
 
 If **"No"**: tell the user to ask **fahmi** for the shared `profiles.toml`. Mark
 `steps.prefect_setup` as `"pending"` and continue — this does not block anything.
 
-If **"Skip"**: mark `steps.prefect_setup` as `"skipped"` with the reason, and continue. Step 7.5
-still works.
+If **"Skip"**: mark `steps.prefect_setup` as `"skipped"` with the reason, and continue. **Step 7.5
+still runs — it is not optional and this answer does not affect it.**
 
 If **"Yes"**: **the user puts it in place themselves — the agent must not write this file.** It
 contains a plaintext credential for a shared estate and it lives outside the workspace.
@@ -721,12 +746,14 @@ Any deployment output means the profile works.
 
 ### 6b.3 Record
 
-Set `steps.prefect_setup` to `"completed"`, `"pending"` or `"skipped"`.
+Set `steps.prefect_setup` to `"completed"`, `"pending"` or `"skipped"`. **This field covers this step
+only** — the local estate is recorded separately as `steps.prefect_local` in Step 7.5.
 
 **This does NOT block `/workflow start`** — unlike the API's database dump. Orchestration work is
-possible read-only without an estate connection: reading flows, editing transforms, running the test
-suite (`.venv/bin/pytest` — no `PYTHONPATH=` prefix needed, `pyproject.toml` sets `pythonpath`).
-Only actually running or inspecting real flow runs needs it. Warn, don't block.
+possible without a *shared*-estate connection: reading flows, editing transforms, running the test
+suite (`.venv/bin/pytest` — no `PYTHONPATH=` prefix needed, `pyproject.toml` sets `pythonpath`), and
+running flows locally against Step 7.5's estate. Only inspecting the shared estate's real flow runs
+needs it. Warn, don't block.
 
 ## Step 7: Initialize Local Databases & Services
 
@@ -823,9 +850,11 @@ Use the ask tool:
 
 **The DB dump is REQUIRED for API.** `/workflow start` will block if `db_setup` is not `"completed"` and the user selected the API service.
 
-### 7.4 Local ClickHouse — **Data Service and/or Orchestration**
+### 7.4 Local ClickHouse — **required for Data Service and/or Orchestration**
 
-**Skip this entire section if the user selected neither.**
+**Skip this entire section if the user selected neither. If either was selected, this section is
+required — do not offer it as a choice and do not ask whether the user wants it.** The only questions
+in it are about *how* to proceed on a machine that already has a cluster (7.4.1), never *whether* to.
 
 This is the ClickHouse equivalent of 7.1's PostgreSQL setup, and it is **shared**: orchestration
 writes `frnd_agg_marts.*` into this cluster and data-service reads them out. Set it up once, for both.
@@ -1104,7 +1133,8 @@ deactivate; cd ..
 `MergeTree` engine and needs no help. None of the 93 mart/master migrations use a Cloud-only engine
 (65 `ReplacingMergeTree`, 14 `MergeTree`, 1 `SummingMergeTree`), so they all run locally.
 
-Record `steps.ch_local` in `.onboard-state.json`.
+Record `steps.ch_local` in `.onboard-state.json` — `"completed"`, or `"pending"` if something is
+genuinely unresolved. There is no `"skipped"` value for this step.
 
 #### 7.4c Seed — so everyone's local data matches
 
@@ -1147,9 +1177,14 @@ not a pipeline bug. This script builds the source with real table shapes derived
 > `api/demo-ulids.json`. **Two copies.** If Postgres and ClickHouse demo data disagree, this is why.
 > Do not edit one without the other.
 
-### 7.5 Local Prefect estate — **Orchestration only**
+### 7.5 Local Prefect estate — **required for Orchestration**
 
-**Skip if the user did not select Orchestration.**
+**Skip if the user did not select Orchestration. If Orchestration was selected, this section is
+required — do not offer it as a choice and do not ask whether the user wants it.**
+
+> Every value this step needs is **pure-local** (7.5.3): there is no credential to request, nobody to
+> wait on, and nothing secret. That is what separates it from Step 6b, which configures the *shared*
+> estate and is optional. A "skip" answer in 6b has no bearing here.
 
 **Prerequisite: 7.4 must have produced a running local ClickHouse on `:8123`.** Every flow — the smoke
 test included — resolves ClickHouse from Secret blocks and writes to it. Prefect alone starts fine,
@@ -1326,7 +1361,9 @@ the UI shows which of those it got stuck on.
 > of it and a symptom→cause table. If you are setting up now, running it once here is enough; Step 12
 > is where it becomes the standing verification.
 
-Record `steps.prefect_setup` in `.onboard-state.json`.
+Record `steps.prefect_local` in `.onboard-state.json` — `"completed"`, or `"pending"` if something
+is genuinely unresolved. There is no `"skipped"` value for this step. Do **not** write
+`steps.prefect_setup` here; that field belongs to Step 6b.
 
 ## Step 7: Create run-all.sh
 
@@ -1792,8 +1829,10 @@ curl -sf http://localhost:8123/ping &>/dev/null && echo "✓ ClickHouse (8123)" 
 itself and is enough for a Step 12 verdict. Tier 2 is the real end-to-end smoke test, which the
 **user** fires because triggering a flow run is denied to the agent.
 
-**Skip both if the user did not set up the local estate in Step 7.5.** Say so plainly ("orchestration
-selected, local Prefect not configured — nothing to verify") rather than reporting a failure.
+**If Orchestration was selected, Step 7.5 ran, so run both.** Should the estate somehow not be in
+place, that is an **unfinished required step, not an opt-out**: say so plainly ("orchestration
+selected, local Prefect not configured — Step 7.5 is incomplete"), leave `steps.prefect_local` at
+`"pending"`, and tell the user what is left to finish.
 
 #### Tier 1 — agent-run readiness probes (read-only)
 
