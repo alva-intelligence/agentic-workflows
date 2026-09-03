@@ -14,13 +14,12 @@
 > 1. **No port, no server.** It runs no long-lived process and is absent from `run-all.sh` by design.
 >    A local Prefect server on `:4200` is opt-in (onboard Step 7.5) and only needed for flow
 >    development. There is nothing to health-check.
-> 2. **There is no deploy step — both branches are live estates.** The branch shape matches
->    ai-service and data-service (`development` for work, `main` for production), but a Prefect worker
->    polls each estate and `git clone`s the branch **at run time**. So a merge to `development` is
->    live on staging and a merge to `main` is live in production, immediately — there is no build or
->    release to forget. Feature work branches from and PRs into `development`; production is a
->    deliberate `development` → `main` promotion PR opened by a human. Open PRs; never merge them
->    yourself, never push directly to either branch.
+> 2. **There is no deploy step — both branches are live estates.** The branch shape is the standard
+>    one (`development` for work, `main` for release), but a Prefect worker polls each estate and
+>    `git clone`s the branch **at run time**. So a merge is live the moment it lands — there is no
+>    build or release to forget. Feature work branches from and PRs into `development`; promotion to
+>    `main` is a deliberate PR opened by a human. Open PRs; never merge them yourself, never push
+>    directly to either branch.
 
 ### Service Owners & Contacts
 

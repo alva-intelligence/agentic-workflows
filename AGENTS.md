@@ -293,13 +293,12 @@ Examples:
   - Security audit summary
 - **Target branch:** `develop` (api, web) or `development` (ai-service, data-service, orchestration)
 
-> ⚠️ **orchestration: `development` and `main` are both live Prefect estates.** It follows the same
-> `development` → `main` shape as ai-service and data-service, but with one difference that matters:
-> **there is no separate deploy step.** A Prefect worker polls each estate and `git clone`s the
-> branch at run time, so a merge to `development` is live on staging and a merge to `main` is live in
-> production, immediately. Target `development` for feature work; production is a deliberate,
-> separate `development` → `main` promotion PR opened by a human, never part of a feature. Open the
-> PR and stop: never merge it yourself, never push directly to either branch.
+> ⚠️ **orchestration: there is no deploy step — both branches are live Prefect estates.** The branch
+> shape is the standard `development` → `main` every service uses; what differs is that a Prefect
+> worker polls each estate and `git clone`s the branch **at run time**, so a merge is live the moment
+> it lands — no build, no release step to forget. Target `development` for feature work; promotion to
+> `main` is a deliberate, separate PR opened by a human, never part of a feature. Open the PR and
+> stop: never merge it yourself, never push directly to either branch.
 >
 > The branch is pinned **per environment** by `scripts/register_paid_deployments.py` (`ENV_BRANCH`),
 > not by `prefect.yaml` — that file has `deployments: []`, so its pull step is inert and its own
@@ -320,7 +319,7 @@ Examples:
 | Frontend | alva-intelligence/frnd-web | `develop` |
 | AI Service | alva-intelligence/frnd-ai-services | `development` |
 | Data Service | alva-intelligence/frnd-clickhouse-api | `development` |
-| Orchestration | alva-intelligence/frnd-orchestration | `development` (⚠️ `main` = production) |
+| Orchestration | alva-intelligence/frnd-orchestration | `development` |
 
 ### Rules
 
@@ -341,14 +340,13 @@ Examples:
 | Data Service | `data-service/` | 9999 | `development` | `uvicorn app.main:app --reload --port 9999` |
 | Orchestration | `orchestration/` | — | `development` | no long-running server (local Prefect `:4200` is opt-in) |
 
-> ⚠️ **`orchestration/` is the transform layer.** Its branch model matches ai-service and
-> data-service — `development` for work, `main` for production — but two things differ from every
-> other service. **(1) No port, no server:** it runs no long-lived process and is absent from
-> `run-all.sh` by design, so there is nothing to start and nothing to health-check. **(2) No deploy
-> step:** a Prefect worker polls each estate and clones the branch at run time, so a merge to
-> `development` is live on staging and a merge to `main` is live in production, immediately. It also
-> has **no `.env`** — credentials are Prefect Secret blocks, so its `env_status` is `"n/a"`, which
-> satisfies the onboarding gate. Full rules: `orchestration/AGENTS.md`.
+> ⚠️ **`orchestration/` is the transform layer.** Its branch model is the standard one, but two
+> things differ from every other service. **(1) No port, no server:** it runs no long-lived process
+> and is absent from `run-all.sh` by design, so there is nothing to start and nothing to
+> health-check. **(2) No deploy step:** a Prefect worker polls each estate and clones the branch at
+> run time, so a merge is live the moment it lands. It also has **no `.env`** — credentials are
+> Prefect Secret blocks, so its `env_status` is `"n/a"`, which satisfies the onboarding gate. Full
+> rules: `orchestration/AGENTS.md`.
 
 Full registry (owners, env files, exact start/health commands, port-conflict check): `skills/onboard/references/service-registry.md`.
 

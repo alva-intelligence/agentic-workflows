@@ -486,8 +486,8 @@ Only clone services the user selected. Skip if directory already exists.
 [ -d "data-service" ] || (git clone git@github.com:alva-intelligence/frnd-clickhouse-api.git data-service && cd data-service && git checkout development)
 
 # Orchestration — the transform layer (raw -> staging -> frnd_agg_marts).
-# Same branch shape as ai-service and data-service: `development` is the working
-# base, `main` is production. See the warning below — there is no deploy step.
+# Standard branch shape: `development` is the working base. See the warning
+# below — what differs is that there is no deploy step.
 [ -d "orchestration" ] || (git clone https://github.com/alva-intelligence/frnd-orchestration.git orchestration && cd orchestration && git checkout development)
 ```
 
@@ -497,16 +497,15 @@ Only clone services the user selected. Skip if directory already exists.
 > lives here, the endpoint that exposes it lives in data-service. Without this clone, half of every
 > data question is invisible.
 
-> ⚠️ **Both branches are live Prefect estates, and there is no deploy step.** `development` is the
-> staging estate and `main` is production — the same shape as ai-service and data-service. The
-> difference: a Prefect worker polls each estate and `git clone`s the branch **at run time**, so a
-> merge to `development` is live on staging and a merge to `main` is live in production immediately.
-> There is no build or release to forget about.
+> ⚠️ **Both branches are live Prefect estates, and there is no deploy step.** The branch shape is
+> the standard one — `development` is the staging estate, `main` the production one. What differs: a
+> Prefect worker polls each estate and `git clone`s the branch **at run time**, so a merge is live
+> the moment it lands. There is no build or release to forget about.
 >
-> **Feature work branches from `development` and PRs into `development`.** Reaching production is a
-> **separate promotion PR (`development` → `main`)**, opened deliberately by a human, never as part
-> of a feature. Open the PR and stop either way: never merge it yourself, and never push directly to
-> `development` or `main`.
+> **Feature work branches from `development` and PRs into `development`.** Promotion is a **separate
+> PR (`development` → `main`)**, opened deliberately by a human, never as part of a feature. Open the
+> PR and stop either way: never merge it yourself, and never push directly to `development` or
+> `main`.
 
 ## Step 5: Install Dependencies
 
