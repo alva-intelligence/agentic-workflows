@@ -8,7 +8,7 @@
   - `bug` → `fix/`
   - `improvement` → `improvement/`
 - Human branches: `<prefix><description>` (no `vc-` infix)
-- Created from latest `develop` (for api, web) or `development` (for ai-service, data-service)
+- Created from latest `develop` (for api, web) or `development` (for ai-service, data-service, orchestration)
 - NEVER work directly on develop/development
 
 ### Branch Workflow
@@ -54,7 +54,24 @@ Examples:
   - Track file
   - Self-review summary
   - Security audit summary
-- **Target branch:** `develop` (api, web) or `development` (ai-service, data-service)
+- **Target branch:** `develop` (api, web) or `development` (ai-service, data-service, orchestration)
+
+> ⚠️ **orchestration: `development` and `main` are both live Prefect estates.** It follows the same
+> `development` → `main` shape as ai-service and data-service, but with one difference that matters:
+> **there is no separate deploy step.** A Prefect worker polls each estate and `git clone`s the
+> branch at run time, so a merge to `development` is live on staging and a merge to `main` is live in
+> production, immediately. Target `development` for feature work; production is a deliberate,
+> separate `development` → `main` promotion PR opened by a human, never part of a feature. Open the
+> PR and stop: never merge it yourself, never push directly to either branch.
+>
+> The branch is pinned **per environment** by `scripts/register_paid_deployments.py` (`ENV_BRANCH`),
+> not by `prefect.yaml` — that file has `deployments: []`, so its pull step is inert and its own
+> comment says to leave it alone.
+>
+> Do not re-register Prefect deployments as a side effect of a feature. `data-service` triggers
+> orchestration flows by **hardcoded deployment UUID** (`app/clients/prefect.py`), so a
+> re-registration that mints a new id makes those calls 404 and the Fivetran-triggered pipeline stops
+> — silently, since nothing on the orchestration side errors.
 - **Merge strategy:** Squash merge by repo owner
 - **Review:** Repo owner reviews and merges
 
@@ -66,6 +83,7 @@ Examples:
 | Frontend | alva-intelligence/frnd-web | `develop` |
 | AI Service | alva-intelligence/frnd-ai-services | `development` |
 | Data Service | alva-intelligence/frnd-clickhouse-api | `development` |
+| Orchestration | alva-intelligence/frnd-orchestration | `development` (⚠️ `main` = production) |
 
 ### Rules
 

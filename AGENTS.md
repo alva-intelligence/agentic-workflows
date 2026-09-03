@@ -18,8 +18,8 @@ Check `.workflow-state.json` → `workspace_meta.is_jj_workspace`. If `true`, th
 
 ### Step 0.5: Detect workspace state
 
-1. **No service directories** (none of `api/`, `web/`, `ai-service/`, `data-service/` exist) → Fresh workspace. Use your ask tool: "This workspace hasn't been set up yet. Would you like to start onboarding now?" On yes, execute `skills/onboard/SKILL.md` directly. On no, tell the user they can run `/onboard` later.
-2. **`.onboard-state.json` exists and `status` is `"in_progress"`** → Check `env_status`, `steps.db_setup`; if critical items missing, tell the user to run `/onboard resume` or `/onboard verify`. Block workflow commands until resolved.
+1. **No service directories** (none of `api/`, `web/`, `ai-service/`, `data-service/`, `orchestration/` exist) → Fresh workspace. Use your ask tool: "This workspace hasn't been set up yet. Would you like to start onboarding now?" On yes, execute `skills/onboard/SKILL.md` directly. On no, tell the user they can run `/onboard` later.
+2. **`.onboard-state.json` exists and `status` is `"in_progress"`** → Check `env_status`, `steps.db_setup`; if critical items missing, tell the user to run `/onboard resume` or `/onboard verify`. Block workflow commands until resolved. **An `env_status` of `"n/a"` counts as resolved, not missing** — it means that service has no `.env` by design (orchestration uses Prefect Secret blocks). Only `"pending"` blocks.
 3. **`.onboard-state.json` exists and `status` is `"completed"`** (or no `.onboard-state.json` but services exist) → Proceed. If `.workflow-state.json` missing, welcome the user and point at `/workflow start`, `/workflow list`.
 4. **`.workflow-state.json` exists** → Proceed through remaining steps.
 
@@ -245,7 +245,7 @@ See `skills/onboard/references/external-steps.md` — tell the user what to run,
   - `bug` → `fix/`
   - `improvement` → `improvement/`
 - Human branches: `<prefix><description>` (no `vc-` infix)
-- Created from latest `develop` (for api, web) or `development` (for ai-service, data-service)
+- Created from latest `develop` (for api, web) or `development` (for ai-service, data-service, orchestration)
 - NEVER work directly on develop/development
 
 ### Branch Workflow
@@ -291,7 +291,24 @@ Examples:
   - Track file
   - Self-review summary
   - Security audit summary
-- **Target branch:** `develop` (api, web) or `development` (ai-service, data-service)
+- **Target branch:** `develop` (api, web) or `development` (ai-service, data-service, orchestration)
+
+> ⚠️ **orchestration: `development` and `main` are both live Prefect estates.** It follows the same
+> `development` → `main` shape as ai-service and data-service, but with one difference that matters:
+> **there is no separate deploy step.** A Prefect worker polls each estate and `git clone`s the
+> branch at run time, so a merge to `development` is live on staging and a merge to `main` is live in
+> production, immediately. Target `development` for feature work; production is a deliberate,
+> separate `development` → `main` promotion PR opened by a human, never part of a feature. Open the
+> PR and stop: never merge it yourself, never push directly to either branch.
+>
+> The branch is pinned **per environment** by `scripts/register_paid_deployments.py` (`ENV_BRANCH`),
+> not by `prefect.yaml` — that file has `deployments: []`, so its pull step is inert and its own
+> comment says to leave it alone.
+>
+> Do not re-register Prefect deployments as a side effect of a feature. `data-service` triggers
+> orchestration flows by **hardcoded deployment UUID** (`app/clients/prefect.py`), so a
+> re-registration that mints a new id makes those calls 404 and the Fivetran-triggered pipeline stops
+> — silently, since nothing on the orchestration side errors.
 - **Merge strategy:** Squash merge by repo owner
 - **Review:** Repo owner reviews and merges
 
@@ -303,6 +320,7 @@ Examples:
 | Frontend | alva-intelligence/frnd-web | `develop` |
 | AI Service | alva-intelligence/frnd-ai-services | `development` |
 | Data Service | alva-intelligence/frnd-clickhouse-api | `development` |
+| Orchestration | alva-intelligence/frnd-orchestration | `development` (⚠️ `main` = production) |
 
 ### Rules
 
@@ -321,6 +339,16 @@ Examples:
 | Frontend | `web/` | 3000 | `develop` | `bun dev` |
 | AI Service | `ai-service/` | 8000 | `development` | `fastapi dev` |
 | Data Service | `data-service/` | 9999 | `development` | `uvicorn app.main:app --reload --port 9999` |
+| Orchestration | `orchestration/` | — | `development` | no long-running server (local Prefect `:4200` is opt-in) |
+
+> ⚠️ **`orchestration/` is the transform layer.** Its branch model matches ai-service and
+> data-service — `development` for work, `main` for production — but two things differ from every
+> other service. **(1) No port, no server:** it runs no long-lived process and is absent from
+> `run-all.sh` by design, so there is nothing to start and nothing to health-check. **(2) No deploy
+> step:** a Prefect worker polls each estate and clones the branch at run time, so a merge to
+> `development` is live on staging and a merge to `main` is live in production, immediately. It also
+> has **no `.env`** — credentials are Prefect Secret blocks, so its `env_status` is `"n/a"`, which
+> satisfies the onboarding gate. Full rules: `orchestration/AGENTS.md`.
 
 Full registry (owners, env files, exact start/health commands, port-conflict check): `skills/onboard/references/service-registry.md`.
 

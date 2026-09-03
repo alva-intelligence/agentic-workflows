@@ -4,6 +4,11 @@
 #
 # Requires the toolchain from /onboard Step 2 to be on PATH.
 # Services: API (9191), Frontend (3000), AI Service (8000), Data Service (9999)
+#
+# NOT started here: Orchestration has no long-running server (flows run on a Prefect
+# worker) and is absent by design. Ports 8123 (local ClickHouse) and 4200 (local Prefect)
+# are included in the conflict CHECKS only -- this script never starts or stops them, and
+# they are expected to be in use when a data developer has them running.
 
 set -euo pipefail
 
@@ -39,7 +44,7 @@ is_running() { [[ -n "${1:-}" ]] && kill -0 "$1" 2>/dev/null; }
 # ── Port conflict check ──────────────────────────────────────────────────────
 check_ports() {
   local conflicts=0
-  for port in 9191 3000 8000 9999; do
+  for port in 9191 3000 8000 9999 8123 4200; do
     local pid
     pid=$(lsof -ti :"$port" 2>/dev/null || true)
     if [[ -n "$pid" ]]; then
@@ -59,7 +64,7 @@ check_ports() {
 
 # ── Kill conflicting ports ───────────────────────────────────────────────────
 kill_ports() {
-  for port in 9191 3000 8000 9999; do
+  for port in 9191 3000 8000 9999 8123 4200; do
     local pid
     pid=$(lsof -ti :"$port" 2>/dev/null || true)
     if [[ -n "$pid" ]]; then
@@ -83,7 +88,7 @@ stop_all() {
   done
 
   # 2. Kill anything still on our ports (catches orphaned processes)
-  for port in 9191 3000 8000 9999 1025 8025; do
+  for port in 9191 3000 8000 9999 1025 8025 8123 4200; do
     local pid
     pid=$(lsof -ti :"$port" 2>/dev/null || true)
     if [[ -n "$pid" ]]; then
