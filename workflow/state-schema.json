@@ -128,7 +128,7 @@
           "type": ["string", "null"]
         },
         "agent_state": {
-          "description": "Current attention state of the agent driving this feature. null = working/resuming. 'needs_approval' = a plan or destructive action awaits user approval (e.g. ExitPlanMode just fired). 'needs_answer' = a structured question was just asked (e.g. AskUserQuestion fired). 'needs_human' = stuck on something requiring free-form human judgment, no structured options. Consumed by the loki GUI shell and orchestra to decide whether to surface the feature for user attention. Always paired with agent_state_reason when non-null.",
+          "description": "Current attention state of the agent driving this feature. null = working/resuming. 'needs_approval' = a plan or destructive action awaits user approval (e.g. ExitPlanMode just fired). 'needs_answer' = a structured question was just asked (e.g. AskUserQuestion fired). 'needs_human' = stuck on something requiring free-form human judgment, no structured options. Consumed by the orchestra to decide whether to surface the feature for user attention. Always paired with agent_state_reason when non-null.",
           "type": ["string", "null"],
           "enum": ["needs_approval", "needs_answer", "needs_human", null],
           "default": null

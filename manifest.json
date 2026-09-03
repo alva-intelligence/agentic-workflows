@@ -8,12 +8,12 @@
       "type": "fragment"
     },
     "agents/fragments/session-protocol.core.md": {
-      "sha256": "05a60e19c7503fd1e3cc8d04ece8326cb96fe21f038c1de2fb9affcb4b51d0a3",
+      "sha256": "5357b47fce9abeec85a82c6c0f9b7dc7b2ce2e5ae37fea65b1d3f3f525ddec9d",
       "install_to": ".agentic-workflows/fragments/session-protocol.core.md",
       "type": "fragment"
     },
     "agents/fragments/workflow-rules.core.md": {
-      "sha256": "75debd91d71ad460736b067972927a3b7fb8984a363a767360ee7f900d058af5",
+      "sha256": "de282bb7f208f03fd1c5c062f1acffcafd7225bcbd9e43ebee4c37ff7a26de5e",
       "install_to": ".agentic-workflows/fragments/workflow-rules.core.md",
       "type": "fragment"
     },
@@ -38,7 +38,7 @@
       "type": "script"
     },
     "workflow/phases.json": {
-      "sha256": "593fb14c4d6fd5aa43b3896b6138b349df64adee5ab98b9c34ac3e77c58f3f75",
+      "sha256": "94bfa63a3943b4f04d2c768d8248f204cc186c3e80ee932758bb16c5f9941dad",
       "install_to": ".agentic-workflows/workflow/phases.json",
       "type": "workflow"
     },
@@ -48,7 +48,7 @@
       "type": "workflow"
     },
     "workflow/state-schema.json": {
-      "sha256": "fbc29f297fb47ecd8138761ebab0478f699c8de6456a0b6ac2d74b3503b9719f",
+      "sha256": "3c580e39dbd3bbb8cb56f0128785807afa70404ded3135505ace33bea22ee9be",
       "install_to": ".agentic-workflows/workflow/state-schema.json",
       "type": "workflow"
     },
@@ -78,17 +78,17 @@
       "type": "skill"
     },
     "skills/jj-workflow/SKILL.md": {
-      "sha256": "5e7966961381ef580bb1b752f36b371dd31b69a069a5122e0a770b7635102a4a",
+      "sha256": "fb922e645dd77c1165baa0c8e25da10aaace4b258756b2aeb60fcef122e78295",
       "install_to": ".agents/skills/jj-workflow/SKILL.md",
       "type": "skill"
     },
     "skills/onboard/SKILL.md": {
-      "sha256": "395430ab1d18e3b015fa27b02b54c43eb6a0c6d9e1fc4ec6c4f514276b5ff2cb",
+      "sha256": "ba6fbe99d39784eba449a97dc7e751a1176190c716edf7afc03b9b28c8be579f",
       "install_to": ".agents/skills/onboard/SKILL.md",
       "type": "skill"
     },
     "skills/workflow/SKILL.md": {
-      "sha256": "825b7434316368ebec59d8dcf5fef9fac6722327814e0e35e6e9e113b9501515",
+      "sha256": "85459c78b9b8caa9326e8a27fabeb92f3c83f731d12bf91a602cd20628069a26",
       "install_to": ".agents/skills/workflow/SKILL.md",
       "type": "skill"
     },

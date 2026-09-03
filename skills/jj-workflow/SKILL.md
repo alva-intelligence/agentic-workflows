@@ -15,37 +15,6 @@ Manages JJ (Jujutsu) workspaces for parallel feature development. Each workspace
 
 Full behavioral rules (independence, commit propagation, port conflicts, hierarchy, lifecycle, secondary-workspace detection) live in `references/rules.md`. Read it before creating, switching, or cleaning up workspaces.
 
-## Loki coexistence (Step 0 of every subcommand)
-
-If the file `.loki/marker.json` exists at the workspace root, **loki (the GUI app) is managing isolation for this workspace**. In that case, every `/jj-workflow` subcommand (`init`, `new`, `list`, `status`, `cleanup`) MUST exit early without performing any action and print:
-
-```
-loki is managing isolation in this workspace.
-  → Add/list/remove feature workspaces from the loki GUI instead.
-  → `/jj-workflow` is disabled here to avoid two competing parallel-workspace models.
-
-Marker: .loki/marker.json (loki version <read version field>)
-
-If you want to use JJ workspaces instead, uninstall loki from this workspace
-(remove .loki/) and re-run onboarding in terminal mode.
-```
-
-**Detection snippet** — run this at the start of every subcommand below, before any other step:
-
-```bash
-if [ -f .loki/marker.json ]; then
-  version=$(jq -r '.version // "unknown"' .loki/marker.json 2>/dev/null || echo "unknown")
-  echo "loki is managing isolation in this workspace."
-  echo "  → Add/list/remove feature workspaces from the loki GUI instead."
-  echo "  → /jj-workflow is disabled here to avoid two competing parallel-workspace models."
-  echo ""
-  echo "Marker: .loki/marker.json (loki version $version)"
-  exit 0
-fi
-```
-
-Why: loki writes this marker on first successful bootstrap when the user picks Claude Code + GUI during `/onboard`. loki uses bare git worktrees for per-feature isolation, driven from its kanban UI. Running `/jj-workflow new` on top of that would create a parallel, inconsistent isolation model in the same directory. The skill stays installed (so uninstalling loki later restores JJ behavior) but is inert while loki claims the workspace.
-
 ## Commands
 
 ### `/jj-workflow init`

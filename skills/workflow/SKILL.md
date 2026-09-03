@@ -63,7 +63,7 @@ Start a new feature workflow.
    - If `status` is `"completed"` → proceed
 2. Read `.workflow-state.json` (create if doesn't exist).
 3. Check that `<slug>` doesn't already exist in features.
-4. **If an active feature already exists**, offer parallel work. This is the point where JJ earns its install — `/onboard` deliberately skips it, so JJ may not be present yet. Skip this whole step if `.loki/marker.json` exists (loki's worktrees are the parallel surface there).
+4. **If an active feature already exists**, offer parallel work. This is the point where JJ earns its install — `/onboard` deliberately skips it, so JJ may not be present yet.
 
    **If JJ is available** (`command -v jj`):
    > "You have an active feature (`<active-slug>` in `<phase>`). You can:"

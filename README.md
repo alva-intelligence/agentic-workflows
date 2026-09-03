@@ -250,12 +250,6 @@ Terminal 1 (primary):                    Terminal 2 (workspace):
 
 `/onboard` does not install JJ — it only detects whether you already have it. Parallel workspaces are worth nothing until you're running a second feature, so `/workflow start` offers the install at that point instead of front-loading it onto setup.
 
-**Loki coexistence:** if you chose Claude Code + GUI (loki) during `/onboard`, `/jj-workflow` becomes inert in that workspace — loki writes `.loki/marker.json` on install, and the skill detects it and exits with a redirect message. Parallel features in loki-managed workspaces happen via kanban cards (each card gets its own `git worktree`) rather than JJ workspaces. If you also installed Amp alongside Claude Code + loki, Amp continues to use `/jj-workflow` normally from its own terminal — the two models coexist because Amp doesn't share loki's worktree surface.
-
-### loki (Claude Code GUI) — optional surface
-
-[loki](https://github.com/arhen/loki) is a native macOS app that provides a kanban + chat + diff + terminal shell over the agentic workflow when Claude Code is the chosen tool. During `/onboard`, after picking Claude Code, the agent asks "GUI (loki) or terminal?" and if GUI is chosen, guides the user through installing loki and launching it against the workspace. loki never reimplements skills — it shells out to the same `/workflow start`, `/workflow next` etc. the terminal agent calls. `.workflow-state.json` is the shared source of truth, so terminal and GUI stay in lockstep. **Scope:** Claude Code only, macOS only. Cursor/OpenCode/Amp are unaffected.
-
 ### Creating a New Workspace for a Different Project
 
 Use `/setup-workspace` to create a brand new agentic workspace for a completely different project using this framework as the base. The skill walks you through an interactive wizard:
