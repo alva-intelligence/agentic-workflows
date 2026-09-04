@@ -84,7 +84,7 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
     "web": "completed|pending",
     "ai-service": "completed|pending",
     "data-service": "completed|pending",
-    "orchestration": "n/a"
+    "data-pipeline": "n/a"
   },
   "skipped_reasons": {}
 }
@@ -98,7 +98,7 @@ The workflow engine reads this file. **`/workflow start` will block** if any of 
 
 The agent must remind the user what's missing and how to fix it.
 
-> **`orchestration` is exempt from the `.env` gate, and the exemption needs two fields, not one.**
+> **`data-pipeline` is exempt from the `.env` gate, and the exemption needs two fields, not one.**
 > It has no `.env` at all — its credentials are Prefect Secret blocks (Step 6b) — so neither
 > `"pending"` (nothing can ever resolve it) nor `"completed"` (no file was ever provided) is true.
 > Its `env_status` is therefore the literal string **`"n/a"`**.
@@ -107,12 +107,12 @@ The agent must remind the user what's missing and how to fix it.
 > `steps.env_files == "completed"` (see `skills/workflow/SKILL.md` → `/workflow start`, step 1) — a
 > single aggregate string, *not* the per-service `env_status` map. So:
 >
-> - Set `env_status.orchestration` to `"n/a"` so the per-service picture is honest.
+> - Set `env_status["data-pipeline"]` to `"n/a"` so the per-service picture is honest.
 > - **Compute `steps.env_files` over the services that actually need a file** — treat `"n/a"` as
 >   satisfied. If every other selected service is `"completed"`, `steps.env_files` is `"completed"`.
 >
 > Get the second bullet wrong and `/workflow start` blocks forever for anyone who selects
-> Orchestration, while `.onboard-state.json` looks perfectly correct — the failure is invisible.
+> Data Pipeline, while `.onboard-state.json` looks perfectly correct — the failure is invisible.
 >
 > ⚠️ **`.onboard-state.json` has no JSON schema** (`workflow/state-schema.json` covers
 > `.workflow-state.json` only), so nothing rejects a bad value here and nothing enforces the rule
@@ -126,17 +126,17 @@ The agent must remind the user what's missing and how to fix it.
 >
 > **Required whenever the owning service was selected — no skip option, no `"skipped"` value:**
 > - `steps.ch_local` — the local ClickHouse cluster (Step 7.4: server, bootstrap, schema, seed).
->   Required for **data-service and/or orchestration**. It is that pair's equivalent of the API's
->   database: orchestration writes `frnd_agg_marts.*` into it and data-service reads them out, so
+>   Required for **data-service and/or data-pipeline**. It is that pair's equivalent of the API's
+>   database: data-pipeline writes `frnd_agg_marts.*` into it and data-service reads them out, so
 >   without it a data developer has no database at all.
 > - `steps.prefect_local` — the **local** Prefect estate (Step 7.5: server, blocks, work pool,
->   worker, smoke test). Required for **orchestration**. Every value it needs is pure-local; there
+>   worker, smoke test). Required for **data-pipeline**. Every value it needs is pure-local; there
 >   is nothing to request from anyone, so there is nothing to wait for and nothing to skip.
 >
 > **Genuinely optional — keep the skip path:**
 > - `steps.prefect_setup` — `~/.prefect/profiles.toml` for the **shared** estate (Step 6b **only**).
 >   It carries a credential that must be handed over by fahmi, so a developer may legitimately not
->   have it yet. Orchestration work continues without it: reading flows, editing transforms, running
+>   have it yet. Data Pipeline work continues without it: reading flows, editing transforms, running
 >   the test suite, and everything in Step 7.5. Only *inspecting the shared estate's* real flow runs
 >   needs it. Warn, don't block, and never let skipping it imply skipping Step 7.5.
 > - `steps.db_gui` — the database GUI client (Step 9.6). Convenience only.
@@ -174,12 +174,12 @@ Present ALL questions in a single message:
 | 2 | Frontend | `web/` | Next.js 16, React 19, TypeScript, Tailwind, Bun | :3000 |
 | 3 | AI Service | `ai-service/` | FastAPI, Python, Agno, OpenAI/Anthropic/Google | :8000 |
 | 4 | Data Service | `data-service/` | FastAPI, Python, pandas | :9999 |
-| 5 | Orchestration | `orchestration/` | Prefect 3, Python 3.12, ClickHouse, AWS S3 | — (no server) |
+| 5 | Data Pipeline | `data-pipeline/` | Prefect 3, Python 3.12, ClickHouse, AWS S3 | — (no server) |
 
-**If you picked Data Service, pick Orchestration too.** They are two halves of one pipeline:
-orchestration *writes* `frnd_agg_marts.*`, data-service *reads and serves* them. "Why is this metric
-empty?" is answered in orchestration far more often than in data-service, and adding a metric is a
-**two-repo change** — the projection that computes the column lives in orchestration, the endpoint
+**If you picked Data Service, pick Data Pipeline too.** They are the two halves of one data path:
+data-pipeline *writes* `frnd_agg_marts.*`, data-service *reads and serves* them. "Why is this metric
+empty?" is answered in data-pipeline far more often than in data-service, and adding a metric is a
+**two-repo change** — the projection that computes the column lives in data-pipeline, the endpoint
 that exposes it lives in data-service. Taking data-service alone leaves half of every data question
 invisible.
 
@@ -187,9 +187,9 @@ invisible.
 - **API Queue Worker** — processes background jobs (always runs with API)
 - **Mailhog** — captures emails sent by the API for local testing (:1025 SMTP, :8025 UI)
 
-**Orchestration is deliberately NOT in `run-all.sh`.** It has no long-running process to start
+**Data Pipeline is deliberately NOT in `run-all.sh`.** It has no long-running process to start
 alongside the other services, so there is nothing for `run-all.sh` to health-check — see Step 12.
-That is a statement about `run-all.sh`, **not** about setup: if you pick Orchestration, onboarding
+That is a statement about `run-all.sh`, **not** about setup: if you pick Data Pipeline, onboarding
 sets up a local ClickHouse (Step 7.4) and a local Prefect estate on `:4200` (Step 7.5), and both are
 required. You start that server yourself when you work on flows.
 
@@ -201,16 +201,16 @@ required. You start that server yourself when you work on flows.
 | Frontend | `web/.env.local` | fahrizky, daffa |
 | AI Service | `ai-service/.env` | rifki |
 | Data Service | `data-service/.env` | fahmi, arhen |
-| Orchestration | Prefect Secret blocks — **not** a `.env` ¹ | fahmi |
+| Data Pipeline | Prefect Secret blocks — **not** a `.env` ¹ | fahmi |
 
-¹ Orchestration is the one service whose runtime credentials do not live in a `.env`. ClickHouse
+¹ Data Pipeline is the one service whose runtime credentials do not live in a `.env`. ClickHouse
 host/port/user/password, the data-service callback token and the AWS keys are **Prefect Secret
-blocks**, fetched from the Prefect server at flow runtime (`orchestration/AGENTS.md` hard rule 10 —
+blocks**, fetched from the Prefect server at flow runtime (`data-pipeline/AGENTS.md` hard rule 10 —
 never print or commit a block value). The committed template is
 `prefect_blocks.staging.example.yaml`; the real `prefect_blocks.staging.yaml` is gitignored. Setup
 script: `scripts/setup_staging_blocks.py`, dry-run by default. Full procedure: **Step 6b**.
 
-> ⚠️ `orchestration/AGENTS.md` and `integrations/clickhouse.py` both reference
+> ⚠️ `data-pipeline/AGENTS.md` and `integrations/clickhouse.py` both reference
 > `prefect_blocks.example.yaml` and `scripts/setup_prefect_blocks.py`. **Neither has ever existed in
 > that repo.** Use the `staging` names above; do not go looking for the ones the docs name.
 
@@ -346,7 +346,7 @@ fi
 | git | `command -v git` | Missing → `brew install git`. Installed → keep |
 | gh | `command -v gh` | Missing → `brew install gh`. Installed → keep |
 
-**Data-stack tools — Orchestration and/or Data Service only.** Skip this table entirely if the user
+**Data-stack tools — Data Pipeline and/or Data Service only.** Skip this table entirely if the user
 selected neither.
 
 | Tool | Check | Action |
@@ -369,7 +369,7 @@ one, keep it and do not install a second.
 > **WSL2**, and Linux uses the distro packages. Both are in Step 7.4.2; the `brew` line above does
 > not apply there.
 
-² **Orchestration's deployed Prefect worker runs Python 3.12**, and `orchestration/pyproject.toml`
+² **Data Pipeline's deployed Prefect worker runs Python 3.12**, and `data-pipeline/pyproject.toml`
 pins `target-version = "py312"` with a comment stating it matches *"the runtime this repo actually
 deploys on — not the interpreter that happens to be on a contributor's PATH."* Note that brew's
 `python@3.12` is **keg-only**: installing it does **not** relink `python3`, so `python3` may still be
@@ -454,7 +454,7 @@ JJ enables parallel feature development via isolated workspaces — useful when 
 4. **After clone (Step 4)**, if `jj_available` is `true`:
    - Automatically run the equivalent of `/jj-workflow init`:
      ```bash
-     for service in api web ai-service data-service orchestration; do
+     for service in api web ai-service data-service data-pipeline; do
        if [ -d "$service/.git" ] && [ ! -d "$service/.jj" ]; then
          cd "$service" && jj git init --colocate && cd ..
        fi
@@ -502,13 +502,13 @@ Only clone services the user selected. Skip if directory already exists.
 # Data Service
 [ -d "data-service" ] || (git clone git@github.com:alva-intelligence/frnd-clickhouse-api.git data-service && cd data-service && git checkout development)
 
-# Orchestration — the transform layer (raw -> staging -> frnd_agg_marts).
+# Data Pipeline — the transform layer (raw -> staging -> frnd_agg_marts).
 # Standard branch shape: `development` is the working base. See the warning
 # below — what differs is that there is no deploy step.
-[ -d "orchestration" ] || (git clone https://github.com/alva-intelligence/frnd-orchestration.git orchestration && cd orchestration && git checkout development)
+[ -d "data-pipeline" ] || (git clone https://github.com/alva-intelligence/frnd-orchestration.git data-pipeline && cd data-pipeline && git checkout development)
 ```
 
-> **Why orchestration is worth cloning even if you never edit it.** The marts every dashboard reads
+> **Why data-pipeline is worth cloning even if you never edit it.** The marts every dashboard reads
 > are produced here — data-service *serves* them. So "why is this metric empty?" is usually answered
 > in this repo, and adding a metric is a **two-repo change**: the projection that computes the column
 > lives here, the endpoint that exposes it lives in data-service. Without this clone, half of every
@@ -541,26 +541,26 @@ cd ai-service && uv venv && cd ..
 # Data Service — uses standard venv as .venv
 cd data-service && python3 -m venv .venv && cd ..
 
-# Orchestration — standard venv as .venv, on Python 3.12 (the deployed worker's runtime).
+# Data Pipeline — standard venv as .venv, on Python 3.12 (the deployed worker's runtime).
 # `python3` is NOT reliably 3.12: brew's python@3.12 is keg-only and does not relink
 # `python3`, so a bare `python3 -m venv` silently builds on whatever is first on PATH.
 PY312="$(command -v python3.12 || command -v python3)"
-cd orchestration && "$PY312" -m venv .venv && cd ..
+cd data-pipeline && "$PY312" -m venv .venv && cd ..
 ```
 
-**Orchestration — verify the interpreter before installing anything into it:**
+**Data Pipeline — verify the interpreter before installing anything into it:**
 
 ```bash
-orchestration/.venv/bin/python --version
+data-pipeline/.venv/bin/python --version
 ```
 
 > ⚠️ **If that is not 3.12, say so and ask the user before continuing.** The deployed Prefect worker
-> runs 3.12 and `orchestration/pyproject.toml` pins `target-version = "py312"`. A newer interpreter
+> runs 3.12 and `data-pipeline/pyproject.toml` pins `target-version = "py312"`. A newer interpreter
 > installs and runs fine today, so the divergence is **silent** — which is exactly why it is worth
 > catching here rather than in a production-only failure later. If `python3.12` is absent, Step 2's
 > data-stack table installs it.
 >
-> ⚠️ `orchestration/README.md` says `python -m venv venv` (no dot). Use **`.venv`** so the path
+> ⚠️ `data-pipeline/README.md` says `python -m venv venv` (no dot). Use **`.venv`** so the path
 > matches ai-service and data-service, and so the editor tooling in Step 9 finds it.
 
 ### 5.2 Install deps per service
@@ -580,19 +580,19 @@ cd ai-service && source .venv/bin/activate && uv pip install -r requirements.txt
 # Data Service (venv already created in 5.1)
 cd data-service && source .venv/bin/activate && pip install -r requirements.txt && deactivate; cd ..
 
-# Orchestration (venv already created in 5.1) — BOTH files: requirements-dev.txt carries
+# Data Pipeline (venv already created in 5.1) — BOTH files: requirements-dev.txt carries
 # pytest and ruff, and the runtime install deliberately omits them.
-cd orchestration && source .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt && deactivate; cd ..
+cd data-pipeline && source .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt && deactivate; cd ..
 ```
 
-> **Orchestration — confirm `prefect` actually landed.** It is the only service whose CLI the rest of
+> **Data Pipeline — confirm `prefect` actually landed.** It is the only service whose CLI the rest of
 > onboarding calls by path, and nothing later installs it:
 >
 > ```bash
-> orchestration/.venv/bin/prefect version | head -3
+> data-pipeline/.venv/bin/prefect version | head -3
 > ```
 >
-> `orchestration/requirements.txt` pins `prefect>=3.0.0` — an **open upper bound**, so a fresh install
+> `data-pipeline/requirements.txt` pins `prefect>=3.0.0` — an **open upper bound**, so a fresh install
 > takes the newest 3.x and two machines onboarded a month apart will not match. If this line errors,
 > Step 6b and every command in Step 7.5 fails with command-not-found.
 >
@@ -655,9 +655,9 @@ Use the ask tool:
    ```
 8. Mark `env_status` per service and set `steps.env_files` accordingly.
 
-> **Computing `steps.env_files` when Orchestration is selected.** Aggregate over the services that
+> **Computing `steps.env_files` when Data Pipeline is selected.** Aggregate over the services that
 > actually need a file: a service whose `env_status` is `"n/a"` counts as **satisfied**, not pending.
-> Orchestration has no `.env` (Prefect Secret blocks — Step 6b), so if every other selected service
+> Data Pipeline has no `.env` (Prefect Secret blocks — Step 6b), so if every other selected service
 > is `"completed"`, `steps.env_files` is `"completed"`. This is the field `/workflow start` gates on;
 > treating `"n/a"` as unresolved blocks the workflow permanently for no real reason.
 
@@ -668,15 +668,15 @@ Use the ask tool:
 
 **The user can continue onboarding with missing .env files, but `/workflow start` will block until ALL are provided.**
 
-## Step 6b: Prefect profiles for the **shared** estate — **STOP** (Orchestration only)
+## Step 6b: Prefect profiles for the **shared** estate — **STOP** (Data Pipeline only)
 
-**Skip this entire step if the user did not select Orchestration.**
+**Skip this entire step if the user did not select Data Pipeline.**
 
 > **This step is optional, and it is the only optional Prefect step.** It configures access to the
 > team's **shared** estate. The **local** estate is Step 7.5, it needs no credential from anyone, and
 > it is **required** — skipping this step never means skipping that one.
 
-Orchestration is the one service with **no `.env`**. Its runtime credentials are Prefect Secret
+Data Pipeline is the one service with **no `.env`**. Its runtime credentials are Prefect Secret
 blocks fetched from the server at flow time, and the server connection itself comes from a profile
 file that lives **outside the workspace**. Two artifacts, two different places:
 
@@ -692,12 +692,12 @@ runs and deployments).
 
 ### 6b.1 Profiles — ask, then wait
 
-The committed placeholder template is `orchestration/config_handover/profiles.toml.example`. The
+The committed placeholder template is `data-pipeline/config_handover/profiles.toml.example`. The
 real file is **not** in the repo and must never be committed.
 
 Use the ask tool:
 
-> "Orchestration can connect to the team's shared Prefect estate to inspect real flow runs. That
+> "Data Pipeline can connect to the team's shared Prefect estate to inspect real flow runs. That
 > needs `~/.prefect/profiles.toml`, which carries the server URL and an auth string. Do you have it?"
 > - Yes — I have the file (or the values)
 > - No — I need it from fahmi
@@ -725,14 +725,14 @@ chmod 600 ~/.prefect/profiles.toml
 ### 6b.2 Verify — read-only, never mutate
 
 ```bash
-cd orchestration
+cd data-pipeline
 .venv/bin/prefect profile ls                                     # expect: frndos_prefect, local
 PREFECT_PROFILE=frndos_prefect .venv/bin/prefect deployment ls
 ```
 
 Any deployment output means the profile works.
 
-> `prefect` is installed **into `orchestration/.venv`** by `requirements.txt` (Step 5.2). Every
+> `prefect` is installed **into `data-pipeline/.venv`** by `requirements.txt` (Step 5.2). Every
 > Prefect command in this skill is written as `.venv/bin/prefect` for that reason. On a fresh machine
 > a bare `prefect` fails with command-not-found; on a machine that already does data work it may
 > resolve to a **different install at a different version** reading the same profiles file. The bare
@@ -749,7 +749,7 @@ Any deployment output means the profile works.
 Set `steps.prefect_setup` to `"completed"`, `"pending"` or `"skipped"`. **This field covers this step
 only** — the local estate is recorded separately as `steps.prefect_local` in Step 7.5.
 
-**This does NOT block `/workflow start`** — unlike the API's database dump. Orchestration work is
+**This does NOT block `/workflow start`** — unlike the API's database dump. Data Pipeline work is
 possible without a *shared*-estate connection: reading flows, editing transforms, running the test
 suite (`.venv/bin/pytest` — no `PYTHONPATH=` prefix needed, `pyproject.toml` sets `pythonpath`), and
 running flows locally against Step 7.5's estate. Only inspecting the shared estate's real flow runs
@@ -850,17 +850,17 @@ Use the ask tool:
 
 **The DB dump is REQUIRED for API.** `/workflow start` will block if `db_setup` is not `"completed"` and the user selected the API service.
 
-### 7.4 Local ClickHouse — **required for Data Service and/or Orchestration**
+### 7.4 Local ClickHouse — **required for Data Service and/or Data Pipeline**
 
 **Skip this entire section if the user selected neither. If either was selected, this section is
 required — do not offer it as a choice and do not ask whether the user wants it.** The only questions
 in it are about *how* to proceed on a machine that already has a cluster (7.4.1), never *whether* to.
 
-This is the ClickHouse equivalent of 7.1's PostgreSQL setup, and it is **shared**: orchestration
+This is the ClickHouse equivalent of 7.1's PostgreSQL setup, and it is **shared**: data-pipeline
 writes `frnd_agg_marts.*` into this cluster and data-service reads them out. Set it up once, for both.
 
 > **Why this step exists.** `data-service` documents a local ClickHouse in its own `README.md` §4 and
-> orchestration's raw seeder refuses to run against anything else — but onboarding has never set one
+> data-pipeline's raw seeder refuses to run against anything else — but onboarding has never set one
 > up. So a data developer got a `.env` pointing at a shared remote cluster and no local database at
 > all. `api` gets `initdb`, a dump, `artisan migrate` and a blocking gate; ClickHouse got nothing.
 
@@ -1000,11 +1000,11 @@ documented here.
 | Mode | What works | What does not |
 |---|---|---|
 | **Local server** (recommended) | Everything, including 7.4c's raw seed and a full raw → staging → mart chain offline | Nothing real — it starts empty |
-| **Remote cluster** | Querying real data | **Seeding.** `orchestration/scripts/local-seed-raw.py` **refuses any host but `localhost`** by design |
+| **Remote cluster** | Querying real data | **Seeding.** `data-pipeline/scripts/local-seed-raw.py` **refuses any host but `localhost`** by design |
 
 #### 7.4.3 Bootstrap the service user — **user runs this**
 
-**Run this before any mart DDL.** 17 of orchestration's 20 `v2` migrations end in
+**Run this before any mart DDL.** 17 of data-pipeline's 20 `v2` migrations end in
 `CREATE ROW POLICY … TO frndos_data_service`, and `alembic/env.py` calls
 `_assert_policy_grantee_exists` which **refuses before any DDL runs** if that user is missing.
 ClickHouse DDL is not transactional, so a missing grantee would otherwise leave a mart table live
@@ -1032,14 +1032,14 @@ already have the DDL, or an *old* DDL" is Alembic rather than a for-loop over `.
 schema:
 
 ```bash
-cd orchestration && git pull && cd ../data-service && git pull && cd ..
+cd data-pipeline && git pull && cd ../data-service && git pull && cd ..
 ```
 
 **There are two Alembic lineages. They are never merged.** They partition the databases cleanly:
 
 | Lineage | Run from | Owns | Revisions |
 |---|---|---|---|
-| Marts | `orchestration/` | `frnd_agg_marts` | 24 |
+| Marts | `data-pipeline/` | `frnd_agg_marts` | 24 |
 | Master / AI / RAFI | `data-service/` | `frnd_os_master`, `frnd_ai_database`, `temp_telkomsel_rafi` | 24 |
 
 Run the same four-step check **once per lineage**, from that lineage's repo root:
@@ -1055,10 +1055,10 @@ Step 4  branch on the comparison:
           current behind heads                         ->  upgrade head (apply only the delta)
 ```
 
-**Marts lineage — orchestration:**
+**Marts lineage — data-pipeline:**
 
 ```bash
-cd orchestration
+cd data-pipeline
 FRND_ENVIRONMENT=staging .venv/bin/alembic heads      # agent may run (read-only)
 FRND_ENVIRONMENT=staging .venv/bin/alembic current    # agent may run (read-only)
 # then ONE of these — USER runs it:
@@ -1074,7 +1074,7 @@ cd ..
 > local or staging run away from the production cluster.
 
 **Master lineage — data-service.** `alembic` is **missing from its `requirements.txt`** despite 24
-revisions and a committed `alembic.ini`, so install it into that venv first, at orchestration's exact
+revisions and a committed `alembic.ini`, so install it into that venv first, at data-pipeline's exact
 pins:
 
 ```bash
@@ -1086,7 +1086,7 @@ deactivate; cd ..
 
 **Warnings that change what happens — state all of these:**
 
-> ⚠️ **`FRND_ENVIRONMENT` unset resolves to PRODUCTION.** `orchestration/alembic/env.py` implements
+> ⚠️ **`FRND_ENVIRONMENT` unset resolves to PRODUCTION.** `data-pipeline/alembic/env.py` implements
 > `_assert_environment_declared()` precisely because `_is_staging()` is false when the variable is
 > unset, and "no marker ⇒ production" is that repo's hard rule 11. It refuses to act from a terminal
 > until you name the cluster. **Carry the prefix on every single Alembic command.**
@@ -1110,18 +1110,18 @@ deactivate; cd ..
 > and records that it ran. The SQL is the same SQL.
 
 > ⚠️ **The two mart DDL trees are not identical, which is the whole reason to use Alembic.** Measured
-> 2026-09-03: `orchestration/database/migrations/frnd_agg_marts/` has **58** `.sql` files,
+> 2026-09-03: `data-pipeline/database/migrations/frnd_agg_marts/` has **58** `.sql` files,
 > `data-service/database/migrations/frnd_agg_marts/` has **55**. All 55 shared files are byte-identical
-> — but orchestration carries three extra, and they are real `ALTER`s on a shared table:
+> — but data-pipeline carries three extra, and they are real `ALTER`s on a shared table:
 > `v2/021_add_duration_seconds_to_social_content_performance.sql`, `v2/022_add_skip_rate_3s_…`,
 > `v2/023_add_completion_rate_…`. A developer who hand-applies data-service's tree alone ends up with
-> three missing columns and no signal why. Orchestration's Alembic chain is the only thing that
+> three missing columns and no signal why. Data Pipeline's Alembic chain is the only thing that
 > carries them, so **run the marts lineage even if you only work on data-service.**
 
-> **Mart DDL ownership moved to orchestration on 2026-08-26**, but only on the working branches —
+> **Mart DDL ownership moved to data-pipeline on 2026-08-26**, but only on the working branches —
 > `frnd-orchestration:development` and `frnd-clickhouse-api:development`, **neither repo's `main`**.
 > So which copy is authoritative depends on the branch you checked out. Adding a mart column is an
-> orchestration change on those branches. Check before you write one.
+> data-pipeline change on those branches. Check before you write one.
 
 > **There is no manual migration runner, and you do not need one.** `data-service/database/README.md`
 > describes one that "could" live at `database/migrate.py`; it does not exist. Alembic is the runner.
@@ -1157,10 +1157,10 @@ ending today, and applies a per-brand volume multiplier; it auto-generates its s
 The 30 `.sql` seeders under `database/seeders/frnd_agg_marts/` are the older v1 set — the Python ones
 supersede them.
 
-**Raw layer — orchestration's seeder.** Only useful with a **local** server; it refuses any other host.
+**Raw layer — data-pipeline's seeder.** Only useful with a **local** server; it refuses any other host.
 
 ```bash
-cd orchestration
+cd data-pipeline
 .venv/bin/python scripts/local-seed-raw.py --list
 .venv/bin/python scripts/local-seed-raw.py --brand <ulid> --platforms ig --posts 40
 cd ..
@@ -1169,7 +1169,7 @@ cd ..
 Why it matters: the demo cluster's raw tables are *placeholders* (five columns), so the transforms
 have nothing real to read and every downstream metric renders as an em dash. That is an absent source,
 not a pipeline bug. This script builds the source with real table shapes derived from
-`orchestration/config_handover/*.yaml` — the Fivetran allow-list each transformer reads against — so
+`data-pipeline/config_handover/*.yaml` — the Fivetran allow-list each transformer reads against — so
 **the fixture cannot drift from the pipeline's own expectations**.
 
 > ⚠️ **The demo ULIDs are a cross-repo contract with no shared source.** `seed_demo.py` reads them
@@ -1177,9 +1177,9 @@ not a pipeline bug. This script builds the source with real table shapes derived
 > `api/demo-ulids.json`. **Two copies.** If Postgres and ClickHouse demo data disagree, this is why.
 > Do not edit one without the other.
 
-### 7.5 Local Prefect estate — **required for Orchestration**
+### 7.5 Local Prefect estate — **required for Data Pipeline**
 
-**Skip if the user did not select Orchestration. If Orchestration was selected, this section is
+**Skip if the user did not select Data Pipeline. If Data Pipeline was selected, this section is
 required — do not offer it as a choice and do not ask whether the user wants it.**
 
 > Every value this step needs is **pure-local** (7.5.3): there is no credential to request, nobody to
@@ -1208,10 +1208,10 @@ commands are denied to the agent on purpose, each with the reason stated where i
 #### 7.5.1 Confirm the install and the `local` profile
 
 This step installs nothing. Prefect is **not** a system package and has no Homebrew row — it arrives
-in `orchestration/.venv` from `requirements.txt` at Step 5.2:
+in `data-pipeline/.venv` from `requirements.txt` at Step 5.2:
 
 ```bash
-cd orchestration && .venv/bin/prefect version | head -3
+cd data-pipeline && .venv/bin/prefect version | head -3
 ```
 
 Expect `Version: 3.x` and a Python version matching the interpreter Step 5.1 resolved. If it errors,
@@ -1225,7 +1225,7 @@ go back to Step 5.2; nothing below can work.
 Then confirm a `local` profile exists — don't create one blindly:
 
 ```bash
-cd orchestration && .venv/bin/prefect profile ls    # expect `local` in the list
+cd data-pipeline && .venv/bin/prefect profile ls    # expect `local` in the list
 ```
 
 > If `local` is missing, **the user creates it, not the agent.** The two commands that would do it —
@@ -1244,10 +1244,10 @@ prefix is scoped to one command, `profile use` is not.
 #### 7.5.2 Terminal 1 — the local server (leave running)
 
 ```bash
-cd orchestration && PREFECT_PROFILE=local .venv/bin/prefect server start
+cd data-pipeline && PREFECT_PROFILE=local .venv/bin/prefect server start
 ```
 
-Serves `http://127.0.0.1:4200`. **This is the one port orchestration can contend for** — it is in the
+Serves `http://127.0.0.1:4200`. **This is the one port data-pipeline can contend for** — it is in the
 Step 12 port-conflict check for that reason.
 
 #### 7.5.3 Terminal 2 — five Secret blocks, all pure-local
@@ -1289,7 +1289,7 @@ print, log or commit a block value (hard rule 10).
 **Confirm what landed** — read-only, the agent can run this:
 
 ```bash
-cd orchestration && PREFECT_PROFILE=local .venv/bin/prefect block ls
+cd data-pipeline && PREFECT_PROFILE=local .venv/bin/prefect block ls
 ```
 
 Expect the five names above. `block ls` prints names and types only, never values.
@@ -1300,7 +1300,7 @@ One Prefect Variable gates how far back data is kept project-wide — rows older
 from staging, marts and creative assets:
 
 ```bash
-cd orchestration && PREFECT_PROFILE=local .venv/bin/prefect variable set staging_date_cutoff "2025-01-01"
+cd data-pipeline && PREFECT_PROFILE=local .venv/bin/prefect variable set staging_date_cutoff "2025-01-01"
 ```
 
 The source of truth is the live Variable on the shared estate; read it any time with
@@ -1312,7 +1312,7 @@ default only.
 
 ```bash
 # Terminal 2
-cd orchestration
+cd data-pipeline
 PREFECT_PROFILE=local .venv/bin/prefect work-pool create local-pool --type process
 PREFECT_PROFILE=local .venv/bin/python scripts/register_paid_deployments.py --env production
 PREFECT_PROFILE=local .venv/bin/prefect worker start --pool local-pool   # leave running
@@ -1334,7 +1334,7 @@ PREFECT_PROFILE=local .venv/bin/prefect worker start --pool local-pool   # leave
 
 ```bash
 # Terminal 3, with the server (7.5.2) and the worker (7.5.5) both still running
-cd orchestration
+cd data-pipeline
 PREFECT_PROFILE=local .venv/bin/prefect deployment run testing-worker/smoke-testing
 ```
 
@@ -1357,7 +1357,7 @@ curl -s 'http://localhost:8123/' --data-binary 'SELECT count() FROM smoke_prefec
 (7.5.5)? all five blocks present (`block ls`)? ClickHouse up (`curl :8123/ping`)? The flow-run page in
 the UI shows which of those it got stuck on.
 
-> **Step 12 re-runs this as orchestration's health check**, with a four-probe readiness pass in front
+> **Step 12 re-runs this as data-pipeline's health check**, with a four-probe readiness pass in front
 > of it and a symptom→cause table. If you are setting up now, running it once here is enough; Step 12
 > is where it becomes the standing verification.
 
@@ -1460,7 +1460,7 @@ All commands run directly against tools on `PATH`. Infrastructure services (Post
 ## Step 9.6: Database GUI client — **STOP, ask user**
 
 A GUI client is how a developer actually *sees* the local databases Steps 7.1–7.4 just built. Both
-engines are involved: **PostgreSQL** (api, `:5432`) and **ClickHouse** (data-service + orchestration,
+engines are involved: **PostgreSQL** (api, `:5432`) and **ClickHouse** (data-service + data-pipeline,
 `:8123`). Run this step for every workspace — it is useful even with only `api` selected.
 
 ### 9.6.1 Detect what is already installed
@@ -1817,11 +1817,11 @@ redis-cli ping &>/dev/null && echo "✓ Redis" || echo "✗ Redis — down"
 # Mailhog (optional)
 curl -sf http://localhost:8025 &>/dev/null && echo "✓ Mailhog" || echo "○ Mailhog — not running (optional)"
 
-# ClickHouse (only if data-service or orchestration was selected)
+# ClickHouse (only if data-service or data-pipeline was selected)
 curl -sf http://localhost:8123/ping &>/dev/null && echo "✓ ClickHouse (8123)" || echo "○ ClickHouse — not running (start with: clickhouse server)"
 ```
 
-> **Orchestration has no HTTP health check, by design.** It runs no long-lived server and is absent
+> **Data Pipeline has no HTTP health check, by design.** It runs no long-lived server and is absent
 > from `run-all.sh`; its flows execute on a Prefect worker. Do not report it as "down" — there is
 > nothing to be down.
 
@@ -1829,15 +1829,15 @@ curl -sf http://localhost:8123/ping &>/dev/null && echo "✓ ClickHouse (8123)" 
 itself and is enough for a Step 12 verdict. Tier 2 is the real end-to-end smoke test, which the
 **user** fires because triggering a flow run is denied to the agent.
 
-**If Orchestration was selected, Step 7.5 ran, so run both.** Should the estate somehow not be in
-place, that is an **unfinished required step, not an opt-out**: say so plainly ("orchestration
+**If Data Pipeline was selected, Step 7.5 ran, so run both.** Should the estate somehow not be in
+place, that is an **unfinished required step, not an opt-out**: say so plainly ("data-pipeline
 selected, local Prefect not configured — Step 7.5 is incomplete"), leave `steps.prefect_local` at
 `"pending"`, and tell the user what is left to finish.
 
 #### Tier 1 — agent-run readiness probes (read-only)
 
 ```bash
-cd orchestration
+cd data-pipeline
 
 # 1. Is the local Prefect API up? (the UI at :4200 is the same process)
 curl -s --max-time 3 http://127.0.0.1:4200/api/health && echo " ✓ Prefect API" || echo "✗ Prefect API — start it: PREFECT_PROFILE=local .venv/bin/prefect server start"
@@ -1867,7 +1867,7 @@ Read the results as a chain — each step is meaningless if the one above it fai
 curl -s http://localhost:8123/ping    # expects "Ok."
 ```
 
-If all five are green, report the estate as **ready** — that is the orchestration equivalent of a
+If all five are green, report the estate as **ready** — that is the data-pipeline equivalent of a
 green health check, and it is sufficient for Step 12.
 
 #### Tier 2 — the real smoke test — **user runs this**
@@ -1877,7 +1877,7 @@ exists for exactly this:
 
 ```bash
 # Terminal 3, with the server (7.5.2) and worker (7.5.5) both running
-cd orchestration
+cd data-pipeline
 PREFECT_PROFILE=local .venv/bin/prefect deployment run testing-worker/smoke-testing
 ```
 
@@ -1927,7 +1927,7 @@ directly — send the user there rather than guessing.
 The agent may also inspect run history read-only:
 
 ```bash
-cd orchestration && PREFECT_PROFILE=local .venv/bin/prefect flow-run ls --limit 5
+cd data-pipeline && PREFECT_PROFILE=local .venv/bin/prefect flow-run ls --limit 5
 ```
 
 

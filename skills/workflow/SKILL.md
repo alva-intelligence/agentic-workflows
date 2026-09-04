@@ -51,7 +51,7 @@ Start a new feature workflow.
    - If `status` is `"in_progress"`, check critical steps:
      - `steps.env_files` must be `"completed"` (every service that needs a `.env` has a real one).
        A service whose `env_status` is `"n/a"` is **satisfied, not pending** — it has no `.env` by
-       design (orchestration uses Prefect Secret blocks), so it must not hold this field back.
+       design (data-pipeline uses Prefect Secret blocks), so it must not hold this field back.
      - `steps.db_setup` must be `"completed"` (if API service is selected)
      - `steps.clone_repos` must be `"completed"`
      - `steps.install_deps` must be `"completed"`

@@ -8,8 +8,8 @@ Check `.workflow-state.json` → `workspace_meta.is_jj_workspace`. If `true`, th
 
 ### Step 0.5: Detect workspace state
 
-1. **No service directories** (none of `api/`, `web/`, `ai-service/`, `data-service/`, `orchestration/` exist) → Fresh workspace. Use your ask tool: "This workspace hasn't been set up yet. Would you like to start onboarding now?" On yes, execute `skills/onboard/SKILL.md` directly. On no, tell the user they can run `/onboard` later.
-2. **`.onboard-state.json` exists and `status` is `"in_progress"`** → Check `env_status`, `steps.db_setup`; if critical items missing, tell the user to run `/onboard resume` or `/onboard verify`. Block workflow commands until resolved. **An `env_status` of `"n/a"` counts as resolved, not missing** — it means that service has no `.env` by design (orchestration uses Prefect Secret blocks). Only `"pending"` blocks.
+1. **No service directories** (none of `api/`, `web/`, `ai-service/`, `data-service/`, `data-pipeline/` exist) → Fresh workspace. Use your ask tool: "This workspace hasn't been set up yet. Would you like to start onboarding now?" On yes, execute `skills/onboard/SKILL.md` directly. On no, tell the user they can run `/onboard` later.
+2. **`.onboard-state.json` exists and `status` is `"in_progress"`** → Check `env_status`, `steps.db_setup`; if critical items missing, tell the user to run `/onboard resume` or `/onboard verify`. Block workflow commands until resolved. **An `env_status` of `"n/a"` counts as resolved, not missing** — it means that service has no `.env` by design (data-pipeline uses Prefect Secret blocks). Only `"pending"` blocks.
 3. **`.onboard-state.json` exists and `status` is `"completed"`** (or no `.onboard-state.json` but services exist) → Proceed. If `.workflow-state.json` missing, welcome the user and point at `/workflow start`, `/workflow list`.
 4. **`.workflow-state.json` exists** → Proceed through remaining steps.
 

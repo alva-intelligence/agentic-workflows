@@ -5,7 +5,7 @@
 # Requires the toolchain from /onboard Step 2 to be on PATH.
 # Services: API (9191), Frontend (3000), AI Service (8000), Data Service (9999)
 #
-# NOT started here: Orchestration has no long-running server (flows run on a Prefect
+# NOT started here: Data Pipeline has no long-running server (flows run on a Prefect
 # worker) and is absent by design. Ports 8123 (local ClickHouse) and 4200 (local Prefect)
 # are included in the conflict CHECKS only -- this script never starts or stops them, and
 # they are expected to be in use when a data developer has them running.
