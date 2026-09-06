@@ -1,0 +1,23 @@
+name: Manifest coverage
+
+# A file under a distributed directory that is missing from manifest.json is
+# invisible to every onboarded workspace, and update-manifest.yml cannot catch
+# it: that workflow iterates `jq -r '.files | keys[]'`, so it rehashes files
+# already declared and has no way to discover a new one. See
+# scripts/check-manifest-coverage.py for the incident this closes.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check-manifest-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+
+      - name: Every distributed file is declared in the manifest
+        run: python3 scripts/check-manifest-coverage.py
