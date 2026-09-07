@@ -20,6 +20,34 @@
 - Work on the current branch. **Do not push.** Commit locally only.
 - All paths below are relative to `web/`.
 
+### Known baseline red — do not chase it
+
+Measured on a clean worktree of `origin/develop` at `acfd85fbf`, before any
+change in this plan:
+
+| Suite | Result |
+|---|---|
+| `KvTileOverlayEditor.test.tsx` | 39 pass, 0 fail |
+| `KvTileOverlayEditor.boxes.test.tsx` | 16 pass, 0 fail |
+| `KvTileOverlayEditor.shape.test.tsx` | 7 pass, 0 fail |
+| `KvTileOverlayEditor.analytics.test.tsx` | 6 pass, 0 fail |
+| `KvResizeResultRow.test.tsx` | 19 pass, **1 fail** |
+| `resizeBoardLayout.test.ts` | 13 pass, 0 fail |
+| `focusCamera.test.ts` | 19 pass, 0 fail |
+
+The one failure is `KvResizeResultRow — inline editor > shows the Reset
+button when row.overlays is a snapshot, and fires onResetOverlays on click`,
+which fails on an unwrapped `act(...)` state update from
+`KvTileOverlayEditor`. It fails when run alone too, so it is not
+cross-suite mock contamination. **It is pre-existing and out of scope.**
+
+Where a step below says a suite should PASS, it means "no NEW failures
+against this table". Do not fix this test as a side effect of another task —
+if a task appears to need it fixed, stop and report instead.
+
+`focusCamera.test.ts` already exists with 19 tests, so Task 4 appends to it
+rather than creating it.
+
 ---
 
 ### Task 1: Tile display-width policy (pure module)
