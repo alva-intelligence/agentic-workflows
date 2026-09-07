@@ -190,11 +190,30 @@ This is independent of the scale change and can land on its own.
   (clamped to `MIN_SCALE`/`MAX_SCALE`) and centre it. This is the piece
   `focusCamera.ts` currently refuses to do, so the fit helper belongs there
   alongside `centerRectInView`.
-- Add a zoom pill to Resize mirroring the existing
-  `motion/KvMotionCanvasZoomPill.tsx`: current level, zoom in/out, reset to
-  100%, and fit-active-tile.
-- Expose fit from the tile row's own affordances so it is reachable without
-  knowing the wheel modifier.
+- Surface it through the bottom nav's **existing** shared `ZoomPill` — out /
+  % / in / fit — by registering a `KvZoomApi` from the Resize canvas and
+  reporting the live scale upward. `KvGeneratorLayout` already owns that
+  state and already threads the pill; only the Konva canvas was wired in,
+  which is the entire reason the pill is invisible on the Resize tab.
+
+> **Amended as built.** This section originally called for a NEW pill
+> mirroring `motion/KvMotionCanvasZoomPill.tsx`, with a reset-to-100%
+> control, plus a per-row fit affordance. All three changed:
+>
+> - **No new pill.** The shared one already exists and was deliberately
+>   lifted out of the canvases so Layers / Zoom / Style read as one aligned
+>   baseline. Motion's private pill is not a counter-precedent — it exists
+>   because Motion's transport bar already carries a competing zoom control,
+>   which Resize has not.
+> - **No reset control.** The shared pill has four controls and no reset, so
+>   a reset had no consumer. Its planned contract ("1:1 at the current pan")
+>   was also defective: holding `x`/`y` while changing scale pins the layout
+>   origin rather than anything visible, which strands the viewport on blank
+>   space once a tile far down the list has been fitted.
+> - **No per-row fit affordance.** Fit reaches the UI only through the pill.
+>   Dropping it was not a considered decision at the time — it fell out of
+>   the rewrite — so it stands as a genuine gap rather than a choice. The
+>   tile context menu (`KvResizeTileContextMenu`) is where it would go.
 
 Two needs, two mechanisms: the resting scale is for **seeing and navigating**
 every tile at once, zoom-to-fit is for **precision work** on one. The present
@@ -232,13 +251,36 @@ complaint.
 1. **`MIN_TILE_DISPLAY_WIDTH` value.** ~420px is the working figure. This
    needs to be judged on screen against a real platform set, not chosen from
    a table.
-2. **One-axis or two-axis floor.** Text size is normalized against board
+2. **How much more the floor should account for height.** This question was
+   written backwards and is now half-answered.
+
+   As written, it worried only that a width-only floor leaves
+   short-landscape tiles with small text: text size normalizes against board
    **height** (`overlayGeometry.ts:104`,
    `fontSizePx = payload.fontSize * board.height`, floored at 1px), so a
-   floor on width alone leaves short-landscape tiles with small text — a
-   420×220 tile still renders `0.03` body text at 6.6px. A two-axis floor
-   (`max(sharedScale, MIN_W / w, MIN_H / h)` under the same native and 752
-   ceilings) fixes that but moves more tiles. Decide by looking at both.
+   420×220 tile still renders `0.03` body text at 6.6px. That is real and
+   still open.
+
+   The half it missed is the opposite failure, which the whole-branch review
+   measured: a width-only floor makes tall-**portrait** tiles enormous.
+   `displayHeight` follows the aspect unbounded, and `apronPx` is
+   `0.15 * max(displayWidth, displayHeight)`, so a floored portrait tile
+   inflates its apron through height and the fabric backing store grows
+   roughly with the square. A legal custom size — 64…8192 per side with no
+   aspect constraint — reaches ~85 MP and ~340 MB for a single tile at
+   512×8192, past Safari's canvas ceiling, where it renders **blank**. A
+   blank fabric canvas is an un-editable tile and a blank export. The old
+   strictly-proportional behaviour was what kept those tiles safe; the floor
+   removed that protection.
+
+   **Resolved for the portrait half:** a `MAX_TILE_DISPLAY_HEIGHT` (900) term
+   is folded into the FLOOR TARGET, not around the whole expression —
+   `floorTarget = min(MIN_W, nativeWidth, MAX_H * nativeWidth / nativeHeight)`
+   — so the result stays a `max` whose first argument is the old policy's own
+   value and goal 4 is untouched.
+
+   **Still open:** whether short-landscape tiles also need a lift, which the
+   height ceiling does nothing for. Judge it on screen.
 3. **Apron growth.** A floored tile's apron grows in absolute px with
    `displayWidth`. The apron already hangs outside the frame and already
    required `relative z-20` on row headers and the action bar to stop it
@@ -271,10 +313,26 @@ Run web tests with `bun test` (bunfig preloads jest-dom), and build with
 
 ## Analytics
 
-Per the `frndos-analytics-events` skill, a web feature is not done without
-events. At minimum: tile fit invoked (with the source affordance — pill vs
-row), zoom reset, and zoom level reached. Naming and payloads to follow that
-skill.
+**Amended as built: no new event.** The shared `ZoomPill` this feature joins
+already fires `trackKvCanvasZoom({ action: "in" | "out" | "fit", canvas_mode })`,
+and `KvCanvasMode` already includes `"resize"`. Reusing it is the right call
+rather than a shortcut — a Resize-specific event would split one funnel across
+canvases, so a spike in Craft's zoom and a spike in Resize's would stop being
+comparable.
+
+This section originally asked for three events: fit invoked *with its source
+affordance*, zoom reset, and zoom level reached. What that costs, recorded
+honestly:
+
+- **Source affordance** is lost — the existing event has no such property,
+  and there is now only one affordance anyway (the pill), so there is nothing
+  to distinguish until a per-row fit lands. Add the property then, don't add
+  an event now.
+- **Zoom reset** does not exist as a control, so it cannot be an event.
+- **Zoom level reached** is partly covered: `action` distinguishes in/out/fit
+  but the resulting scale is not in the payload. If the question "what zoom
+  do people actually work at" ever matters, that is a property to add to the
+  shared event, again not a new one.
 
 ## Out of scope
 
