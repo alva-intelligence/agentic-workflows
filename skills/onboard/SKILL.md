@@ -170,11 +170,18 @@ Present ALL questions in a single message:
 
 | # | Service | Directory | Stack | Port(s) |
 |---|---------|-----------|-------|---------|
-| 1 | API | `api/` | Laravel 13, PHP 8.5, PostgreSQL, Sanctum + JWT | :9191 (server) + queue worker |
-| 2 | Frontend | `web/` | Next.js 16, React 19, TypeScript, Tailwind, Bun | :3000 |
-| 3 | AI Service | `ai-service/` | FastAPI, Python, Agno, OpenAI/Anthropic/Google | :8000 |
-| 4 | Data Service | `data-service/` | FastAPI, Python, pandas | :9999 |
-| 5 | Data Pipeline | `data-pipeline/` | Prefect 3, Python 3.12, ClickHouse, AWS S3 | — (no server) |
+| 1 | API | `api/` | Laravel 13, PHP 8.5, PostgreSQL, Sanctum + JWT | **:9191** (server) + queue worker · pg `:5432` |
+| 2 | Frontend | `web/` | Next.js 16, React 19, TypeScript, Tailwind, Bun | **:3000** |
+| 3 | AI Service | `ai-service/` | FastAPI, Python, Agno, OpenAI/Anthropic/Google | **:8000** · pg `:5432`, redis `:6379` |
+| 4 | Data Service | `data-service/` | FastAPI, Python, pandas | **:9999** · ch `:8123`, prefect `:4200` |
+| 5 | Data Pipeline | `data-pipeline/` | Prefect 3, Python 3.12, ClickHouse, AWS S3 | prefect `:4200` · ch `:8123` |
+
+> **Bold = the port that service serves on; the rest are backing services it connects to.** Only the
+> bold ones are started, health-checked or stopped by `run-all.sh` — Postgres `:5432`, Redis `:6379`,
+> ClickHouse `:8123` and Prefect `:4200` are shared infrastructure you run yourself (Steps 7.4.2 and
+> 7.5.2), reported but never killed. **Data Pipeline has no bold entry**: it runs no server, is absent
+> from `run-all.sh` by design, and the two ports shown are what its flows talk to. It is also the only
+> service with no `.env` — its credentials live in Prefect Secret blocks (7.5.3).
 
 **If you picked Data Service, pick Data Pipeline too.** They are the two halves of one data path:
 data-pipeline *writes* `frnd_agg_marts.*`, data-service *reads and serves* them. "Why is this metric

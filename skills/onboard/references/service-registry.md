@@ -4,17 +4,31 @@
 
 | Service | Directory | Repository | Stack | Default Branch | Port |
 |---------|-----------|-----------|-------|---------------|------|
-| API | `api/` | alva-intelligence/frnd-api-php | Laravel 13, PHP 8.5, PostgreSQL, Sanctum + JWT | `develop` | 9191 |
-| Frontend | `web/` | alva-intelligence/frnd-web | Next.js 16, React 19, TypeScript, Tailwind CSS, Zustand, TanStack Query v5, Bun | `develop` | 3000 |
-| AI Service | `ai-service/` | alva-intelligence/frnd-ai-services | FastAPI, Python, Agno, OpenAI/Anthropic/Google, pgvector, Redis | `development` | 8000 |
-| Data Service | `data-service/` | alva-intelligence/frnd-clickhouse-api | FastAPI, Python, pandas, Sentry | `development` | 9999 |
-| Data Pipeline | `data-pipeline/` | alva-intelligence/frnd-orchestration | Prefect 3, Python 3.12, ClickHouse, AWS S3 | `development` | — (no server) |
+| API | `api/` | alva-intelligence/frnd-api-php | Laravel 13, PHP 8.5, PostgreSQL, Sanctum + JWT | `develop` | **9191** + pg `:5432` |
+| Frontend | `web/` | alva-intelligence/frnd-web | Next.js 16, React 19, TypeScript, Tailwind CSS, Zustand, TanStack Query v5, Bun | `develop` | **3000** |
+| AI Service | `ai-service/` | alva-intelligence/frnd-ai-services | FastAPI, Python, Agno, OpenAI/Anthropic/Google, pgvector, Redis | `development` | **8000** + pg `:5432`, redis `:6379` |
+| Data Service | `data-service/` | alva-intelligence/frnd-clickhouse-api | FastAPI, Python, pandas, Sentry | `development` | **9999** + ch `:8123`, prefect `:4200` |
+| Data Pipeline | `data-pipeline/` | alva-intelligence/frnd-orchestration | Prefect 3, Python 3.12, ClickHouse, AWS S3 | `development` | prefect `:4200` + ch `:8123` |
+
+> **Bold = the port the service itself serves on. Unbolded = a backing service it connects to.**
+> Only the bold ones are `run-all.sh`'s to start, health-check or stop; Postgres `:5432`, Redis
+> `:6379`, ClickHouse `:8123` and Prefect `:4200` are shared infrastructure the developer runs, and
+> the template reports them without ever killing them (`SHARED_PORTS`).
+>
+> Ports are the local defaults, read from each repo's `.env` / `.env.example` on 2026-09-07. Two
+> corrections worth carrying: **API does not use Redis locally** — `.env.example` ships `REDIS_*`,
+> but `QUEUE_CONNECTION=database` and `CACHE_STORE=file`, so nothing connects to `:6379`; and
+> **Data Service talks to Prefect too** (`PREFECT_API_URL=http://127.0.0.1:4200/api`), which is easy
+> to miss because Prefect reads as a data-pipeline concern.
 
 > ⚠️ **`data-pipeline/` breaks two assumptions the other four services share.**
-> 1. **No port, no server.** It runs no long-lived process and is absent from `run-all.sh` by design.
->    A local Prefect server on `:4200` is set up by onboarding Step 7.5 — required for anyone who
->    picked Data Pipeline — but you start it by hand when you work on flows, so `run-all.sh` has
->    nothing to launch and nothing to health-check.
+> 1. **No port of its own.** It runs no long-lived process and is absent from `run-all.sh` by design.
+>    Its Port cell lists what its flows *connect to*, not what it serves: the local Prefect server on
+>    `:4200` (onboarding Step 7.5, required for anyone who picked Data Pipeline) and local ClickHouse
+>    on `:8123` (Step 7.4.2). You start both by hand when you work on flows, so `run-all.sh` has
+>    nothing to launch and nothing to health-check here.
+>    It is also the only service with **no `.env`** — every credential comes from Prefect Secret
+>    blocks (7.5.3), which is why there is no file to point at a port.
 > 2. **There is no deploy step — both branches are live estates.** The branch shape is the standard
 >    one (`development` for work, `main` for release), but a Prefect worker polls each estate and
 >    `git clone`s the branch **at run time**. So a merge is live the moment it lands — there is no
