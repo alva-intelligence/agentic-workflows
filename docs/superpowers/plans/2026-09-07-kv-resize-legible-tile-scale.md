@@ -430,14 +430,26 @@ Create `src/components/studio/kv-generator/overlayControlStyle.ts`:
  * unaffected — see the drag/transform commit tests guarding exactly that.
  */
 export const OVERLAY_CONTROL = {
-  cornerSize: 10,
-  /** Larger hit slop for coarse pointers; fabric uses this instead of
-   *  `cornerSize` when the gesture comes from touch. */
-  touchCornerSize: 20,
-  /** Screen px the border/controls stand off the box. */
+  /** Fabric's own measured default, pinned rather than inherited.
+   *  Deliberately NOT shrunk: the goal this task serves is that handles stay
+   *  a USABLE click target on a small tile, and with `padding` below they no
+   *  longer sit on the box, so there is no crowding left to solve by making
+   *  them smaller. On a 40x40 overlay the padded box is 52x52 and four 13px
+   *  handles leave a 39px gap — they cannot collide. Pinning the value guards
+   *  against a future fabric default drifting under us. */
+  cornerSize: 13,
+  /** Fabric's measured default, pinned for the same reason. This one is an
+   *  INVISIBLE hit-box used instead of `cornerSize` when the gesture comes
+   *  from touch, so shrinking it could only ever cost touch area and buy
+   *  nothing back. */
+  touchCornerSize: 24,
+  /** Screen px the border/controls stand off the box. The ONLY field here
+   *  that departs from fabric's default (0), and the one doing the work. */
   padding: 6,
 } as const;
 ```
+
+Measure fabric's defaults in Step 1 and confirm they are still `cornerSize: 13`, `touchCornerSize: 24`, `padding: 0`. If a measurement disagrees with the numbers above, the measurement wins for the two pinned fields — report the discrepancy rather than silently keeping these.
 
 - [ ] **Step 5: Apply it where every built object gets its common config**
 
