@@ -535,18 +535,34 @@ Only clone services the user selected. Skip if directory already exists.
 These must exist before installing Python deps:
 
 ```bash
-# AI Service — uses uv for venv
-cd ai-service && uv venv && cd ..
-
-# Data Service — uses standard venv as .venv
-cd data-service && python3 -m venv .venv && cd ..
-
-# Data Pipeline — standard venv as .venv, on Python 3.12 (the deployed worker's runtime).
-# `python3` is NOT reliably 3.12: brew's python@3.12 is keg-only and does not relink
-# `python3`, so a bare `python3 -m venv` silently builds on whatever is first on PATH.
+# Resolve 3.12 ONCE — every Python service below wants it, and `python3` is NOT reliably
+# 3.12: brew's python@3.12 is keg-only and does not relink `python3`, so a bare
+# `python3 -m venv` silently builds on whatever happens to be first on PATH.
 PY312="$(command -v python3.12 || command -v python3)"
+"$PY312" -V   # expect 3.12.x — if this prints 3.13/3.14, install python@3.12 (Step 2) first
+
+# AI Service — uses uv for venv
+cd ai-service && uv venv --python "$PY312" && cd ..
+
+# Data Service — standard venv as .venv, on 3.12 (see the version cap below)
+cd data-service && "$PY312" -m venv .venv && cd ..
+
+# Data Pipeline — standard venv as .venv, on 3.12 (the deployed worker's runtime)
 cd data-pipeline && "$PY312" -m venv .venv && cd ..
 ```
+
+> ⚠️ **Data Service has a hard upper bound, not just a preference.** `requirements.txt` pins
+> `clickhouse-connect==0.9.2`, which declares `>=3.9,<3.14`. On a machine where `python3` is 3.14 —
+> the default from a current `brew install python` — a bare `python3 -m venv` succeeds and the
+> **`pip install -r requirements.txt` afterwards fails hard**, with a resolver error that names the
+> interpreter rather than this line. Measured on this machine: `python3` → 3.14.6, `python3.12` →
+> 3.12.14; the venv had to be deleted and rebuilt. `data-service/pyproject.toml` also pins
+> `target-version = "py312"`, same as data-pipeline.
+
+> **AI Service has no pin at all** — no `pyproject.toml`, so nothing declares a floor or a ceiling
+> and `uv venv` on its own takes whatever interpreter it resolves. `--python "$PY312"` above is
+> onboarding's choice for consistency, not a repo requirement. If a future dependency actually needs
+> something newer, change it here rather than assuming the pin was load-bearing.
 
 **Data Pipeline — verify the interpreter before installing anything into it:**
 
@@ -894,6 +910,12 @@ clickhouse client --query "SHOW DATABASES"
 
 **Then branch on the result. Report what you found before proposing the next step.**
 
+> **7.4b is split by an ordering gate.** Its read-only half (`db-sync.sh --status` / `--verify`,
+> plus data-service's `alembic heads` / `current`) runs where it sits. Its **marts write** half
+> (`db-sync.sh --local`) needs the Prefect Secret blocks from **7.5.3**, so the real order for a
+> Data Pipeline developer is `7.4b (read) → 7.5.2 → 7.5.3 → 7.4b (write) → 7.4c`. data-service's
+> write half has no such dependency and runs in place.
+
 | Probe result | What to do |
 |---|---|
 | No binary, no server | Install (Step 2 data-stack table), then 7.4.2 → 7.4.3 → 7.4b → 7.4c |
@@ -905,7 +927,8 @@ whether `alembic_version` exists in each), then use the ask tool:
 
 > "You already have a local ClickHouse with `<names>`. What would you like to do?"
 > - **Bring the schema up to date** (Recommended) — run the Alembic check in 7.4b; it adopts an
->   existing cluster with `stamp` and applies only what is genuinely missing
+>   existing cluster by stamping the revision it **verified** is present, then applies only what is
+>   genuinely missing
 > - **Add the seed data only** — skip schema, jump to 7.4c, so your local data matches the team's
 > - **Leave it alone** — record and move on
 
@@ -1000,7 +1023,7 @@ documented here.
 | Mode | What works | What does not |
 |---|---|---|
 | **Local server** (recommended) | Everything, including 7.4c's raw seed and a full raw → staging → mart chain offline | Nothing real — it starts empty |
-| **Remote cluster** | Querying real data | **Seeding.** `data-pipeline/scripts/local-seed-raw.py` **refuses any host but `localhost`** by design |
+| **Remote cluster** | Querying real data | **Seeding.** `data-pipeline/scripts/seed_raw.py` **refuses any host but `localhost`** by design |
 
 #### 7.4.3 Bootstrap the service user — **user runs this**
 
@@ -1042,36 +1065,81 @@ cd data-pipeline && git pull && cd ../data-service && git pull && cd ..
 | Marts | `data-pipeline/` | `frnd_agg_marts` | 24 |
 | Master / AI / RAFI | `data-service/` | `frnd_os_master`, `frnd_ai_database`, `temp_telkomsel_rafi` | 24 |
 
-Run the same four-step check **once per lineage**, from that lineage's repo root:
+Run the same check **once per lineage**, from that lineage's repo root. The *shape* is the same
+for both; the tooling is not — marts now ships a script that performs all four steps and refuses to
+guess, while data-service is still driven by hand:
 
 ```
-Step 1  git pull                    # newest revisions           (done above)
-Step 2  alembic heads               # what the repo expects
-Step 3  alembic current             # what THIS cluster has
+Step 1  git pull                     # newest revisions          (done above)
+Step 2  what does the repo expect?   # alembic heads
+Step 3  what does THIS cluster have? # alembic current -- the version row's CLAIM, not a measurement
 Step 4  branch on the comparison:
-          no alembic_version + tables already present  ->  stamp head   (adopt, apply nothing)
-          no alembic_version + empty database          ->  upgrade head (build it)
+          no alembic_version + tables already present  ->  adopt: stamp the VERIFIED revision
+          no alembic_version + empty database          ->  build: upgrade head
           current == heads                             ->  nothing to do
           current behind heads                         ->  upgrade head (apply only the delta)
 ```
 
-**Marts lineage — data-pipeline:**
+> ⛔ **Never type `stamp head`.** Step 4's first branch is the dangerous one. Stamping *head* on a
+> cluster that is missing a revision marks that revision applied, so its DDL never runs — silently,
+> and permanently. The revision actually present has to be **measured**, not assumed.
+> frnd-orchestration's **Do-Not-Touch 4** now forbids `stamp head` by hand or by agent. For marts,
+> `scripts/db-sync.sh` does the measuring; for data-service, see its own subsection below.
+
+**Marts lineage — data-pipeline. Use `scripts/db-sync.sh`, never raw Alembic.** Shipped
+2026-09-07 in `alva-intelligence/frnd-orchestration#77`, specifically to replace the four steps
+above with something that measures instead of assuming:
 
 ```bash
 cd data-pipeline
-FRND_ENVIRONMENT=staging .venv/bin/alembic heads      # agent may run (read-only)
-FRND_ENVIRONMENT=staging .venv/bin/alembic current    # agent may run (read-only)
-# then ONE of these — USER runs it:
-FRND_ENVIRONMENT=staging .venv/bin/alembic stamp head
-FRND_ENVIRONMENT=staging .venv/bin/alembic upgrade head
+scripts/db-sync.sh --status     # agent may run: revision + table count
+scripts/db-sync.sh --verify     # agent may run: the TRUE revision, read from system.columns
+# then — USER runs it. One pass: verify -> stamp the true revision -> upgrade head:
+scripts/db-sync.sh --local
 cd ..
 ```
 
-> **`FRND_ENVIRONMENT` is an estate label, not a branch name.** It selects which cluster the
+| Flag | Who runs it | Reaches ClickHouse how | Needs Prefect? |
+|---|---|---|---|
+| `--status` (the default) | agent | direct HTTP to `localhost:8123` | **no** |
+| `--verify` | agent | direct HTTP to `localhost:8123` | **no** |
+| `--local` | **user** | `--verify`, then Alembic | **yes** — see the gate below |
+| `--remote` | nobody | **not implemented** — warns and exits | — |
+
+`--status` and `--verify` read `FRND_LOCAL_CH_HOST` / `FRND_LOCAL_CH_PORT` (defaulting to
+`localhost` / `8123`) and query ClickHouse over plain HTTP, so they work before any Prefect setup
+exists at all. `--local` shells out to Alembic, and that is what pulls in the dependency below.
+
+> ⚠️ **`--local` is gated on Step 7.5, which is ~240 lines below this one.** `alembic/env.py::_target()`
+> loads the `clickhouse-host` / `-port` / `-user` / `-pass` **Prefect Secret blocks** even under
+> `FRND_ENVIRONMENT=local`. Those blocks are created in **7.5.3**, against a server started in
+> **7.5.2**. So: run `--status` / `--verify` here, then run `--local` **after 7.5.3** and come back.
+> Running it now dies with `ValueError: Unable to find block document named clickhouse-host`, which
+> reads as a broken tool rather than as a missing prerequisite.
+>
+> If the user did **not** select Data Pipeline they never reach 7.5, so the marts lineage cannot be
+> migrated on this laptop. Say that plainly rather than routing them around the gate.
+
+> **Locality is verified, not declared.** `db-sync.sh` refuses when its own resolved `CH_HOST` is not
+> loopback, and `_assert_local_target()` refuses again when the *resolved* `clickhouse-host` block is
+> not loopback. The declared label is a claim; the resolved host is the fact, and both layers check
+> the fact.
+
+> ⛔ **SUPERSEDED** by the `db-sync.sh --local` block above (2026-09-07, ledger row
+> `ONB-MARTS-LOCAL-1`). Kept for history — do not build from this.
+>
+> ~~**`FRND_ENVIRONMENT` is an estate label, not a branch name.** It selects which cluster the
 > migration lands on (`staging` → the `clickhouse-host-staging` block, anything else → the
 > production `clickhouse-host` block). It is unrelated to which git branch you have checked out, and
 > it does **not** become `development` when the branch does. Keep `staging` here: it is what points a
-> local or staging run away from the production cluster.
+> local or staging run away from the production cluster.~~
+>
+> **Why this was wrong.** `staging` resolves the `clickhouse-host-staging` block — a block **7.5.3
+> never creates**, so the step could not succeed as written; and on any laptop where that block does
+> hold a real host, `upgrade head` would have migrated **staging**. `local` (added 2026-09-07, FR-25)
+> resolves `clickhouse-host`, which 7.5.3 *does* create, and is locality-checked on the resolved
+> host. `FRND_ENVIRONMENT` is still an estate label and still unrelated to the git branch — that part
+> was always true, and `unset` still means production.
 
 **Master lineage — data-service.** `alembic` is **missing from its `requirements.txt`** despite 24
 revisions and a committed `alembic.ini`, so install it into that venv first, at data-pipeline's exact
@@ -1080,16 +1148,54 @@ pins:
 ```bash
 cd data-service && source .venv/bin/activate
 pip install alembic==1.19.1 SQLAlchemy==2.0.52 clickhouse-sqlalchemy==0.3.2
-.venv/bin/alembic heads && .venv/bin/alembic current
+.venv/bin/alembic heads && .venv/bin/alembic current   # agent may run (read-only)
+# then, USER runs ONE of these — see the stamp asymmetry below:
+.venv/bin/alembic stamp head      # cluster provisioned, never stamped -> adopt
+.venv/bin/alembic upgrade head    # empty, or stamped and behind -> apply
 deactivate; cd ..
 ```
 
+> ⚠️ **The two lineages do not share an environment contract. Do not carry one's prefix to the
+> other.** This is the single easiest way to break this step, because the commands look identical.
+
+| | Marts — `data-pipeline` | Master / AI / RAFI — `data-service` |
+|---|---|---|
+| Target selected by | `FRND_ENVIRONMENT` (`local` / `staging` / `production`) | `CH_MIGRATE_HOST` → falls back to `CH_HOST` |
+| Read from | Prefect **Secret blocks** (`_target()`) | **`data-service/.env`**, via pydantic-settings |
+| If unset | **→ PRODUCTION** — fails *unsafe*, so the var is mandatory | **→ refuses**, unless `FRND_MIGRATE_ALLOW_REMOTE=1` — fails *safe* |
+| Locality guard | `_assert_local_target()` (only under `local`) | `_assert_intentional_target()` (always) |
+| Verified-stamp tool | `scripts/db-sync.sh` | **none — does not exist** |
+| Needs local Prefect (7.5) | **yes**, for `--local` | **no** |
+
+So: `FRND_ENVIRONMENT=…` in front of a **data-service** Alembic command is **inert** — it selects
+nothing and protects nothing. And `db-sync.sh` does **not** exist in data-service; do not go looking
+for it or write one here.
+
+> ⚠️ **Set `CH_MIGRATE_HOST` / `CH_HOST` in `data-service/.env`, not on the command line.**
+> `_target()` reads through `settings`, and the docstring records the measured reason: `.env` is
+> parsed by pydantic-settings and **is not exported to the process environment**, so code reaching
+> for `os.getenv("CH_MIGRATE_USER")` gets `None` for a value plainly present in `.env` and silently
+> falls back to the read-only app user — failing with ClickHouse **code 497** at the first DDL
+> statement. `CH_MIGRATE_*` wins over `CH_*`; they differ on every deployed environment because the
+> app user holds no DDL grant.
+
+> ⚠️ **Known asymmetry — `stamp head` is still the documented remedy on data-service.** The
+> ⛔ rule above is scoped to marts, where frnd-orchestration's Do-Not-Touch 4 forbids it *and*
+> `db-sync.sh` supplies the measured alternative. data-service has no such tool, so its
+> `_assert_stamped_or_empty` still prints `stamp head` and `stamp` is deliberately left unguarded so
+> the remedy stays reachable. The same silent-skip risk therefore still exists on this lineage — it
+> is simply not solved yet. Do not "fix" it by pointing at `db-sync.sh`; that script is hardcoded to
+> `frnd_agg_marts` and would target the wrong databases.
+
 **Warnings that change what happens — state all of these:**
 
-> ⚠️ **`FRND_ENVIRONMENT` unset resolves to PRODUCTION.** `data-pipeline/alembic/env.py` implements
-> `_assert_environment_declared()` precisely because `_is_staging()` is false when the variable is
-> unset, and "no marker ⇒ production" is that repo's hard rule 11. It refuses to act from a terminal
-> until you name the cluster. **Carry the prefix on every single Alembic command.**
+> ⚠️ **`FRND_ENVIRONMENT` unset resolves to PRODUCTION — on the marts lineage.**
+> `data-pipeline/alembic/env.py` implements `_assert_environment_declared()` precisely because
+> `_is_staging()` is false when the variable is unset, and "no marker ⇒ production" is that repo's
+> hard rule 11. It refuses to act from a terminal until you name the cluster. **Carry the prefix on
+> every `data-pipeline` Alembic command** — `db-sync.sh` already sets `FRND_ENVIRONMENT=local`
+> internally, which is the other reason to prefer the script. This warning does **not** apply to
+> data-service; see the contract table above.
 
 > ⚠️ **An `upgrade` that refuses is the guard working, not a failure.** Both lineages implement
 > `_assert_stamped_or_empty`: it refuses to `upgrade` a cluster that already holds tables but has no
@@ -1097,11 +1203,21 @@ deactivate; cd ..
 > The printed remedy is `stamp head` — and `stamp` is deliberately **not** guarded, so the remedy is
 > reachable. `stamp` writes the version row and applies **no DDL**: it is how you adopt an existing
 > cluster into version control, which is exactly the case here.
+>
+> **On marts, take that remedy via `db-sync.sh --local`, not by typing it.** The script stamps the
+> revision it *verified* against `system.columns` rather than `head`, so a cluster missing a revision
+> gets that revision's DDL applied instead of marked-done. On data-service, typing it is still the
+> only route — see the asymmetry note above.
 
 > ⚠️ **The two lineages must never be merged**, and only ever run from their own repo root. They are
 > indistinguishable at the command line — same binary, same `stamp head` — and only the working
-> directory decides which lineage and which cluster you hit. Both `env.py` files print
-> `lineage=… | env=… | host_block=…` to stderr before acting, for exactly this reason. Read that line.
+> directory decides which lineage and which cluster you hit. Both `env.py` files announce themselves
+> on stderr before acting, for exactly this reason — **read that line**. They do not print the same
+> thing: data-pipeline prints `lineage=frnd_agg_marts (frnd-orchestration) | env=… | host_block=…`
+> (the block *name*, never its value — denylist row 10), data-service prints
+> `lineage=frnd_os_master+frnd_ai_database+temp_telkomsel_rafi (frnd-clickhouse-api) | host=…`
+> (a resolved host, and no `env=` at all, because it has no `FRND_ENVIRONMENT`). `db-sync.sh` adds
+> its own `db-sync: lineage=frnd_agg_marts  host=…  mode=…` line ahead of Alembic's.
 
 > ⚠️ **`data-service/database/README.md` says "Do not use Alembic/Flyway" — that guidance is stale.**
 > Its own tree contains `alembic.ini` and 24 revisions. The objection was that Alembic assumes
@@ -1140,6 +1256,30 @@ genuinely unresolved. There is no `"skipped"` value for this step.
 
 **Offer this even when the cluster already existed.** Schema without rows renders every dashboard as
 em-dashes, which reads as a bug rather than as "no data yet". Seeding is additive and safe to re-run.
+
+> **If the developer runs `data-service/scripts/setup-local-demo.sh`, it does 7.4b's marts stamp for
+> them — conditionally.** Its step 3b (FR-28, added 2026-09-07) locates the orchestration checkout by
+> probing `$ROOT_DIR/orchestration`, `$ROOT_DIR/frnd-orchestration`, then `$ROOT_DIR/data-pipeline`
+> (or `FRND_ORCHESTRATION_DIR`), and calls `db-sync.sh --local` against a **pinned** local target
+> (`FRND_LOCAL_CH_HOST=localhost FRND_LOCAL_CH_PORT=8123`) rather than inheriting the caller's
+> exports.
+>
+> ⚠️ **Step 3b is non-fatal on purpose, so "the demo worked" does not mean the chain was stamped.**
+> A data-service-only developer may have no data-pipeline venv, and `db-sync.sh` then falls back to a
+> `python3` with no alembic. It `warn`s with the exact remedy and the script still exits 0. **Read
+> the warnings.** If it did not stamp, `frnd_agg_marts` holds tables with no `alembic_version` row,
+> and every future `upgrade` on this laptop is refused by `_assert_stamped_or_empty` — which is the
+> guard working, not damage. Confirm with `scripts/db-sync.sh --status` (read-only, no Prefect
+> needed) rather than assuming.
+>
+> ⚠️ **`setup-local-demo.sh` runs `017_fix_social_mart_sorting_keys.sql` unattended, and nothing
+> here changes that.** Its `apply_dir` globs `*.sql` and pipes every file to `ch --multiquery`;
+> **nothing reads file contents**, so that revision's `DO NOT RUN THIS AUTOMATICALLY` marker — an
+> INSERT + `EXCHANGE TABLES` across both social marts — has never been honoured on any laptop this
+> script provisioned. Pre-existing, documented in both repos on 2026-09-07, and **deliberately left
+> alone** because fixing it changes what the script applies. `db-sync.sh` does skip m017, but for an
+> unrelated reason (the marker bars it from reasoning about that revision at all) — that is not
+> coverage. Do not read any of the above as this being handled.
 
 **Marts and master data — data-service's Python seeders.** Plain scripts, no runner; from the repo root:
 
@@ -1208,7 +1348,8 @@ terminals, roughly 15 minutes:
 ```
 7.5.1  confirm .venv/bin/prefect and the `local` profile        (agent can run)
 7.5.2  Terminal 1:  prefect server start    -> http://127.0.0.1:4200   (leave running)
-7.5.3  Terminal 2:  create 5 Secret blocks  -> pure-local values, NO secrets needed
+7.5.3  Terminal 2:  create 6 Secret blocks  -> pure-local values, NO secrets needed
+       Terminal 2:  <- go back and finish 7.4b:  db-sync.sh --local   (gated on 7.5.3)
 7.5.4  Terminal 2:  set the staging_date_cutoff Variable
 7.5.5  Terminal 2:  work-pool -> register deployments -> worker start   (leave running)
 7.5.6  Terminal 3:  prefect deployment run testing-worker/smoke-testing
@@ -1262,7 +1403,7 @@ cd data-pipeline && PREFECT_PROFILE=local .venv/bin/prefect server start
 Serves `http://127.0.0.1:4200`. **This is the one port data-pipeline can contend for** — it is in the
 Step 12 port-conflict check for that reason.
 
-#### 7.5.3 Terminal 2 — five Secret blocks, all pure-local
+#### 7.5.3 Terminal 2 — six Secret blocks, all pure-local
 
 The flows read **every** credential from Prefect `Secret` blocks, never a `.env`. Create these on the
 **local** server via the UI at `http://127.0.0.1:4200` → Blocks → Secret.
@@ -1281,12 +1422,16 @@ developer: it points every flow at the ClickHouse 7.4 just started on this machi
 | `clickhouse-user` | `default` | The OSS server's superuser |
 | `clickhouse-pass` | *(empty string)* | Create it **with an empty value** — do not skip it; `get_client()` loads it unconditionally |
 | `environment` | `local` | `resolve_environment()` returns this verbatim, and `local` is what the S3 upload guard checks before short-circuiting |
+| `clickhouse-host-staging` | `localhost` | A seatbelt, never a target — see the note below. Loaded *instead of* `clickhouse-host` if any staging signal fires |
 
-That set is enough for **7.5.6's smoke test** and for any transform that does not call an external API.
+That set is enough for **7.5.6's smoke test**, and for **7.4b's `db-sync.sh --local`**, and for any transform that does not call an external API.
 
-> `clickhouse-host-staging` is loaded **instead of** `clickhouse-host` whenever a staging signal
-> fires. For a pure-local estate, set it to `localhost` too, so a stray staging signal cannot reach a
-> real cluster.
+> **Create `clickhouse-host-staging` = `localhost` as a sixth block.** It is loaded **instead of**
+> `clickhouse-host` whenever a staging signal fires, so on a pure-local estate a stray signal would
+> otherwise reach a real cluster. It is a seatbelt, not a target: nothing in onboarding should ever
+> *select* it. `data-pipeline/alembic/env.py` names this exact workaround in its own docstring
+> (citing a `setup_local_blocks.py` that is **not in the repo** — do not go looking for it), which is
+> why the marts step now declares `local` instead of leaning on the block being harmless.
 
 **Only if you need real external API calls** do you need real secrets — `openai-key`,
 `data-service-callback-token`, the four `aws-*`, `github-pat`, `rapid-api-key`. Ask **fahmi**. Never
@@ -1304,7 +1449,18 @@ print, log or commit a block value (hard rule 10).
 cd data-pipeline && PREFECT_PROFILE=local .venv/bin/prefect block ls
 ```
 
-Expect the five names above. `block ls` prints names and types only, never values.
+Expect all six names above. `block ls` prints names and types only, never values.
+
+> ⬅️ **Now go back and finish 7.4b.** `scripts/db-sync.sh --local` was gated on this step: it drives
+> Alembic, and `alembic/env.py::_target()` resolves `clickhouse-host` / `-port` / `-user` / `-pass`
+> from the blocks you just created, against the server started in 7.5.2. Both must be up.
+>
+> ```bash
+> cd data-pipeline && scripts/db-sync.sh --local && cd ..
+> ```
+>
+> Record the result in `steps.ch_local` before moving on to 7.5.4 — this is the write half of a step
+> that was split across the ordering gate, and it is the easiest thing in this document to forget.
 
 #### 7.5.4 The `staging_date_cutoff` Variable
 
@@ -1366,7 +1522,7 @@ curl -s 'http://localhost:8123/' --data-binary 'SELECT count() FROM smoke_prefec
 ```
 
 **If it fails, check in this order:** server running (7.5.2)? worker running and polling `local-pool`
-(7.5.5)? all five blocks present (`block ls`)? ClickHouse up (`curl :8123/ping`)? The flow-run page in
+(7.5.5)? all six blocks present (`block ls`)? ClickHouse up (`curl :8123/ping`)? The flow-run page in
 the UI shows which of those it got stuck on.
 
 > **Step 12 re-runs this as data-pipeline's health check**, with a four-probe readiness pass in front
@@ -1854,7 +2010,7 @@ cd data-pipeline
 # 1. Is the local Prefect API up? (the UI at :4200 is the same process)
 curl -s --max-time 3 http://127.0.0.1:4200/api/health && echo " ✓ Prefect API" || echo "✗ Prefect API — start it: PREFECT_PROFILE=local .venv/bin/prefect server start"
 
-# 2. Are the five Secret blocks present? (names + types only, never values)
+# 2. Are the six Secret blocks present? (names + types only, never values)
 PREFECT_PROFILE=local .venv/bin/prefect block ls
 
 # 3. Is a worker actually polling? A pool with NO healthy worker means runs queue forever.
@@ -1869,7 +2025,7 @@ Read the results as a chain — each step is meaningless if the one above it fai
 | Probe | Healthy looks like | If it fails |
 |---|---|---|
 | `/api/health` | any 200 response | Server not started (7.5.2). Everything below is noise until it is. |
-| `block ls` | `clickhouse-host`, `-port`, `-user`, `-pass`, `environment` | Blocks missing (7.5.3). Flows will fail at `Secret.load`, reporting an empty value rather than a stopped server — a confusing symptom worth pre-empting. |
+| `block ls` | `clickhouse-host`, `-port`, `-user`, `-pass`, `environment`, `clickhouse-host-staging` | Blocks missing (7.5.3). Flows will fail at `Secret.load`, reporting an empty value rather than a stopped server — a confusing symptom worth pre-empting. |
 | `work-pool ls --verbose` | `local-pool`, type `process`, **READY** | `NOT_READY` means no worker is polling — start it (7.5.5). Runs will sit in `Pending` forever, which looks like a hang, not an error. |
 | `deployment ls` | `testing-worker/smoke-testing` among them | Deployments not registered (7.5.5). |
 
@@ -1961,6 +2117,25 @@ cd data-pipeline && PREFECT_PROFILE=local .venv/bin/prefect flow-run ls --limit 
    ```bash
    ./run-all.sh --stop
    ```
+
+   > ⚠️ **Check the script before running this if the workspace predates 2026-09-07.** `--stop`
+   > sweeps ports after killing tracked PIDs. In the version generated from the current template
+   > that sweep iterates `OWNED_PORTS` only (`9191 3000 8000 9999 1025 8025`) and deliberately
+   > leaves `SHARED_PORTS` (`8123` ClickHouse, `4200` Prefect) alone. **Older generated copies
+   > included 8123 and 4200 in the sweep and `kill -9`'d them** — the same local ClickHouse and
+   > Prefect server this run told the developer to leave running, and the same two ports the old
+   > script's own header claimed it "never starts or stops". `--kill-ports` had the identical bug,
+   > and the conflict message recommended it.
+   >
+   > Confirm before running either:
+   >
+   > ```bash
+   > grep -n 'OWNED_PORTS\|8123' run-all.sh | head
+   > ```
+   >
+   > If `8123` appears inside a `kill` loop, regenerate `run-all.sh` from
+   > `references/run-all-template.sh` rather than running `--stop`. If ClickHouse or Prefect did get
+   > killed, nothing is lost — restart them per 7.4.2 and 7.5.2; only unsaved flow-run state goes.
 
 ### Final summary
 
