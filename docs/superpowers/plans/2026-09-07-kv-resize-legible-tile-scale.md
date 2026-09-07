@@ -4,7 +4,7 @@
 
 **Goal:** Small Resize tiles render at an editable size regardless of their ratio to the largest tile, their overlay handles stop covering the box they belong to, and one tile can be zoomed to fill the viewport.
 
-**Architecture:** Three independent changes to the live per-tile Resize surface. (1) A pure display-width policy module that floors the existing shared scale, capped so it never asks for more than a tile's native width. (2) Explicit fabric control sizing on overlay objects so handles sit outside the box. (3) A pure fit-camera helper plus a `fitTile` on the existing pan/zoom viewport, surfaced through a zoom pill. Nothing changes overlay data, the apron model, or the shared canvas layout.
+**Architecture:** Three independent changes to the live per-tile Resize surface. (1) A pure display-width policy module that floors the existing shared scale, capped so it never asks for more than a tile's native width. (2) Explicit fabric control sizing on overlay objects so handles sit outside the box. (3) A pure fit-camera helper plus a `fitTile` on the existing pan/zoom viewport, surfaced by joining the bottom nav's **existing** shared zoom pill — no new pill, no new analytics event. Nothing changes overlay data, the apron model, or the shared canvas layout.
 
 **Tech Stack:** Next.js 16 / React 19 / TypeScript, fabric v7, `bun test` + @testing-library/react, PostHog via `safeCapture`.
 
@@ -678,10 +678,29 @@ git commit -m "feat(web): add fitRectInView to the KV focus camera helpers"
 
 **Interfaces:**
 - Consumes: `fitRectInView` from Task 4.
-- Produces: `KvResizeFocusApi` gains three members —
+- Produces: `KvResizeFocusApi` gains two members —
   `fitTile: (tileId: string) => number | null` (returns the resulting scale, or null when the tile is not rendered),
-  `zoomBy: (factor: number) => number` (returns the resulting scale),
-  `resetZoom: () => number` (returns 1).
+  `zoomBy: (factor: number) => number` (returns the resulting scale).
+  Plus a new `onZoomScaleChange?: (scale: number) => void` prop on
+  `KvResizeViewport`, so the live scale is reported UPWARD rather than held in
+  local state.
+
+> **Amended after Task 5's review.** Two changes from what this task
+> originally said, both because the review found the surrounding codebase
+> already solves this:
+>
+> 1. **There is no `resetZoom`.** The shared bottom-nav `ZoomPill` this
+>    feature now reuses has four controls — out / % / in / fit — and no reset.
+>    A reset with no consumer is dead code, and the original contract for it
+>    ("back to 1:1 at the current pan") was itself defective: keeping `x`/`y`
+>    while setting `scale: 1` pins the layout origin rather than anything
+>    visible, which strands the viewport on blank space once you have fitted a
+>    tile far down the list. Deleting it dissolves the defect. Adding a fifth
+>    control to a pill other canvases share is a separate decision.
+> 2. **The live scale is a prop callback, not local state.** `KvGeneratorLayout`
+>    already owns a `zoomScale` state and already accepts `onZoomScaleChange`
+>    from the Konva canvas; the pill reads it from there. Local state in
+>    `KvResizeViewport` cannot reach a nav mounted three levels above it.
 
 - [ ] **Step 1: Extend the published type**
 
@@ -868,280 +887,194 @@ git commit -m "feat(web): add fitTile and discrete zoom to the Resize viewport"
 
 ---
 
-### Task 6: Zoom pill + analytics
+### Task 6: Light up the existing zoom pill for Resize
+
+> **This task was rewritten after Task 5's review.** It originally created a
+> new `KvCanvasZoomPill` component and a new `resize_canvas_zoom_changed`
+> analytics event. Both were duplicates of infrastructure that already
+> exists, and the original approach also put the live scale in a component
+> the pill cannot read from:
+>
+> - `KvCanvasBottomNav` already renders `ZoomPill` — out / % / in / fit —
+>   driven by `zoom={{ available, scale, onZoomIn, onZoomOut, onFit }}`, and
+>   the nav is already resize-aware (`platformPanelOpen` is documented as
+>   "Replaces the layers pill in resize mode").
+> - `ZoomPill` already fires `trackKvCanvasZoom({ action, canvas_mode })`,
+>   and `KvCanvasMode` already includes `"resize"`. No new event is needed,
+>   and a new one would split the funnel across canvases.
+> - `KvGeneratorLayout` already owns the state and the handlers
+>   (`zoomApiRef`, `zoomScale`, `zoomAvailable` at `:2095`,
+>   `handleZoomApiChange` at `:2096`, `handleZoomScaleChange` at `:2100`),
+>   and already threads `zoom={{…}}` to the nav at `:7833`. It is wired to
+>   the Konva canvas only; `KvResizeCanvas` accepts neither prop, which is
+>   the entire reason the pill is invisible on the Resize tab.
+>
+> Motion's separate `KvMotionCanvasZoomPill` is not a counter-precedent: its
+> own comment says it exists because the transport bar already carries a
+> competing zoom control. Resize has none.
 
 **Files:**
-- Create: `src/components/studio/kv-generator/KvCanvasZoomPill.tsx`
-- Modify: `src/components/studio/kv-generator/KvResizeViewport.tsx` (render the pill)
-- Modify: `src/lib/analytics/kv-generator-events.ts`
-- Test: `src/components/studio/kv-generator/KvCanvasZoomPill.test.tsx`
+- Modify: `src/components/studio/kv-generator/KvResizeViewport.tsx`
+- Modify: `src/components/studio/kv-generator/KvResizeCanvas.tsx`
+- Modify: `src/components/studio/kv-generator/KvGeneratorLayout.tsx`
 
 **Interfaces:**
-- Consumes: `zoomScale`, `fitTile`, `zoomBy`, `resetZoom` from Task 5.
-- Produces: `KvCanvasZoomPill` component; `trackKvResizeCanvasZoomChanged(p: KvResizeCanvasZoomChangedProps)` and `KvResizeCanvasZoomInput = "wheel" | "button" | "fit" | "reset"`.
+- Consumes from Task 5: `fitTile: (tileId: string) => number | null` and
+  `zoomBy: (factor: number) => number` on `KvResizeFocusApi`.
+- Consumes existing: `KvZoomApi` from `./KvKonvaCanvas` —
+  `{ zoomIn: () => void; zoomOut: () => void; fitAll: () => void }`.
+- Produces: no new exports, no new component, no new analytics event.
 
-- [ ] **Step 1: Write the failing component test**
+- [ ] **Step 1: Report the live scale upward instead of holding it**
 
-Create `src/components/studio/kv-generator/KvCanvasZoomPill.test.tsx`:
-
-```tsx
-import { describe, expect, it, mock } from "bun:test";
-import { render, within } from "@testing-library/react";
-import { KvCanvasZoomPill } from "./KvCanvasZoomPill";
-
-const noop = () => {};
-
-describe("KvCanvasZoomPill", () => {
-  it("renders the scale as a rounded percentage", () => {
-    render(
-      <KvCanvasZoomPill
-        scale={1.234}
-        onZoomIn={noop}
-        onZoomOut={noop}
-        onFit={noop}
-        onReset={noop}
-      />
-    );
-    expect(within(document.body).getByText("123%")).toBeTruthy();
-  });
-
-  it("calls each handler from its own control", () => {
-    const onZoomIn = mock(noop);
-    const onZoomOut = mock(noop);
-    const onFit = mock(noop);
-    const onReset = mock(noop);
-    render(
-      <KvCanvasZoomPill
-        scale={1}
-        onZoomIn={onZoomIn}
-        onZoomOut={onZoomOut}
-        onFit={onFit}
-        onReset={onReset}
-      />
-    );
-    const body = within(document.body);
-    body.getByLabelText("Zoom in").click();
-    body.getByLabelText("Zoom out").click();
-    body.getByLabelText("Fit active tile to view").click();
-    body.getByLabelText("Reset zoom to 100%").click();
-    expect(onZoomIn).toHaveBeenCalledTimes(1);
-    expect(onZoomOut).toHaveBeenCalledTimes(1);
-    expect(onFit).toHaveBeenCalledTimes(1);
-    expect(onReset).toHaveBeenCalledTimes(1);
-  });
-});
-```
-
-Use `within(document.body)` rather than the bare `screen` export — `screen` is broken under this repo's bun test setup and a single use of it fails every component test in the run.
-
-- [ ] **Step 2: Run the test to verify it fails**
-
-Run: `cd web && bun test src/components/studio/kv-generator/KvCanvasZoomPill.test.tsx`
-Expected: FAIL — cannot resolve `./KvCanvasZoomPill`.
-
-- [ ] **Step 3: Create the component**
-
-Create `src/components/studio/kv-generator/KvCanvasZoomPill.tsx`:
-
-```tsx
-"use client";
-
-import { ArrowsClockwise, CornersOut, Minus, Plus } from "@phosphor-icons/react";
-
-import { Button } from "@/components/frndos/v2";
-
-export type KvCanvasZoomPillProps = {
-  scale: number;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onFit: () => void;
-  onReset: () => void;
-  className?: string;
-};
-
-/**
- * Floating zoom control for a KV canvas viewport.
- *
- * Deliberately a near-twin of `motion/KvMotionCanvasZoomPill` rather than a
- * shared component today: `motion/KvMotionEditor.tsx` has uncommitted work in
- * the tree, and switching it over would collide with that. Consolidating the
- * two is a follow-up once that work lands — not a reason to leave Resize
- * without a control.
- */
-export function KvCanvasZoomPill({
-  scale,
-  onZoomIn,
-  onZoomOut,
-  onFit,
-  onReset,
-  className,
-}: KvCanvasZoomPillProps) {
-  return (
-    <div
-      className={`frndos-float-panel pointer-events-auto flex items-center gap-1 rounded-full px-1.5 py-1 shadow-lg backdrop-blur-[16px] ${
-        className ?? "absolute bottom-3 right-3"
-      }`}
-      // The pill is a CHILD of the element the viewport spreads its pan
-      // handlers onto, so a press here would otherwise bubble to
-      // `onPointerDown` and arm a pan — any movement before release then
-      // drags the canvas out from under the click. The frndos/v2 Buttons have
-      // no pointer handlers of their own, so stop the press here.
-      onPointerDown={(e) => e.stopPropagation()}
-    >
-      <Button variant="icon" size="tiny" aria-label="Zoom out" onClick={onZoomOut}>
-        <Minus size={14} />
-      </Button>
-      <span className="min-w-[3.25rem] text-center font-geist text-textXs text-text-inverse-subtlest">
-        <span className="sr-only">Zoom level: </span>
-        {Math.round(scale * 100)}%
-      </span>
-      <Button variant="icon" size="tiny" aria-label="Zoom in" onClick={onZoomIn}>
-        <Plus size={14} />
-      </Button>
-      <Button
-        variant="icon"
-        size="tiny"
-        aria-label="Fit active tile to view"
-        onClick={onFit}
-      >
-        <CornersOut size={14} />
-      </Button>
-      <Button
-        variant="icon"
-        size="tiny"
-        aria-label="Reset zoom to 100%"
-        onClick={onReset}
-      >
-        <ArrowsClockwise size={14} />
-      </Button>
-    </div>
-  );
-}
-```
-
-- [ ] **Step 4: Run the test to verify it passes**
-
-Run: `cd web && bun test src/components/studio/kv-generator/KvCanvasZoomPill.test.tsx`
-Expected: PASS, 2 tests.
-
-- [ ] **Step 5: Add the analytics event**
-
-Append to `src/lib/analytics/kv-generator-events.ts`, in section J alongside the other canvas-control events:
+In `KvResizeViewport.tsx`, delete the local `zoomScale` state Task 5 added
+and delete the `eslint-disable-next-line` that existed only because it had no
+consumer. Replace both with a prop:
 
 ```ts
-export type KvResizeCanvasZoomInput = "wheel" | "button" | "fit" | "reset";
-
-export interface KvResizeCanvasZoomChangedProps {
-  studio_file_id: string;
-  /** "wheel" covers ctrl/meta+wheel and a trackpad pinch — indistinguishable
-   *  at the DOM level (a pinch emits `wheel` + `ctrlKey`). "button" is the
-   *  pill's +/- controls, "fit" its fit-to-tile control, "reset" its 100%
-   *  control. */
-  input: KvResizeCanvasZoomInput;
-  /** Resulting scale, unrounded. The viewport's range is 0.25-3. */
-  scale: number;
-  /** The tile a "fit" was taken on; null for every other input. Tells a fit
-   *  that framed a small tile from one that framed the master row. */
-  tile_id: string | null;
-}
-
-/** The Resize viewport's pan/zoom camera. A SEPARATE event from
- *  `motion_canvas_zoom_changed` on purpose: same gesture, different surface,
- *  and merging them would make a spike in one read as a spike in the other.
- *  Fires once per discrete pill click; the wheel path must be debounced at
- *  the call site so a trackpad pinch does not emit per notch. */
-export const trackKvResizeCanvasZoomChanged = (
-  p: KvResizeCanvasZoomChangedProps
-) => safeCapture("kv_generator.resize_canvas_zoom_changed", p);
+  /** Reports the live camera scale. Held in a ref and called from
+   *  `applyTransform` under an epsilon guard, so panning reports nothing and
+   *  a zoom reports once per changed scale. A PROP rather than local state
+   *  because the readout lives in `KvCanvasBottomNav`, mounted as a floating
+   *  sibling three levels above this component — React state does not travel
+   *  sideways. `KvGeneratorLayout` already owns exactly this state for the
+   *  Konva canvas; this joins that contract rather than starting a new one. */
+  onZoomScaleChange?: (scale: number) => void;
 ```
 
-- [ ] **Step 6: Render the pill inside the viewport**
-
-Add `studioFileId: string` to `KvResizeViewport`'s props (pass `fileId` from `KvResizeCanvas`, which already has it in scope — the viewport has no way to know it otherwise), then render the pill as a **sibling of the transformed inner div, not a child of it** — inside, the pill would be zoomed along with the tiles.
-
-Place it immediately after the inner div's closing tag, still inside the `overflow-hidden` container:
-
-```tsx
-      <KvCanvasZoomPill
-        scale={zoomScale}
-        onZoomIn={() => {
-          const scale = zoomBy(1.25);
-          trackKvResizeCanvasZoomChanged({
-            studio_file_id: studioFileId,
-            input: "button",
-            scale,
-            tile_id: null,
-          });
-        }}
-        onZoomOut={() => {
-          const scale = zoomBy(1 / 1.25);
-          trackKvResizeCanvasZoomChanged({
-            studio_file_id: studioFileId,
-            input: "button",
-            scale,
-            tile_id: null,
-          });
-        }}
-        onFit={() => {
-          if (!activeTileId) return;
-          const scale = fitTile(activeTileId);
-          if (scale === null) return;
-          trackKvResizeCanvasZoomChanged({
-            studio_file_id: studioFileId,
-            input: "fit",
-            scale,
-            tile_id: activeTileId,
-          });
-        }}
-        onReset={() => {
-          const scale = resetZoom();
-          trackKvResizeCanvasZoomChanged({
-            studio_file_id: studioFileId,
-            input: "reset",
-            scale,
-            tile_id: null,
-          });
-        }}
-      />
-```
-
-`onFit` returns early with no event when no tile is active or the tile is not rendered — a fit that did not happen must not appear in the funnel as one that did.
-
-Add the import:
+Hold it in a ref so its identity can never churn `applyTransform`:
 
 ```ts
-import { trackKvResizeCanvasZoomChanged } from "@/lib/analytics/kv-generator-events";
-import { KvCanvasZoomPill } from "./KvCanvasZoomPill";
+  const onZoomScaleChangeRef = useRef(onZoomScaleChange);
+  onZoomScaleChangeRef.current = onZoomScaleChange;
+  const lastReportedScaleRef = useRef(1);
 ```
 
-Leave the wheel path un-instrumented in this task: it needs debouncing to avoid one event per notch, and shipping it undebounced would flood the funnel. Add it in a follow-up with a settle timer, mirroring `useCanvasCamera`'s `ZOOM_SETTLE_MS`.
+Then, inside `applyTransform`, where the deleted `setZoomScale` call was:
 
-Leave the wheel path un-instrumented in this task: it needs debouncing to avoid one event per notch, and shipping it undebounced would flood the funnel. Add it in a follow-up with a settle timer, mirroring `useCanvasCamera`'s `ZOOM_SETTLE_MS`.
+```ts
+    if (Math.abs(lastReportedScaleRef.current - scale) >= 0.0005) {
+      lastReportedScaleRef.current = scale;
+      onZoomScaleChangeRef.current?.(scale);
+    }
+```
 
-- [ ] **Step 7: Run tests and build**
+The epsilon guard moves from React's bail-out to an explicit ref compare —
+same effect, and now with zero renders in this component for either pan or
+zoom.
+
+- [ ] **Step 2: Register a `KvZoomApi` from `KvResizeCanvas`**
+
+`KvResizeCanvas` already wraps the viewport's focus API in
+`handleViewportFocusApi`. Stash the wrapped api in a ref there, and publish a
+`KvZoomApi` built from it. Add two props:
+
+```ts
+  onZoomApiChange?: (api: KvZoomApi | null) => void;
+  onZoomScaleChange?: (scale: number) => void;
+```
+
+```ts
+  const resizeFocusApiRef = useRef<KvResizeFocusApi | null>(null);
+```
+
+Inside `handleViewportFocusApi`, alongside the existing `onFocusApiChange`
+call:
+
+```ts
+      resizeFocusApiRef.current = api;
+      onZoomApiChange?.(
+        api
+          ? {
+              zoomIn: () => void api.zoomBy(1.25),
+              zoomOut: () => void api.zoomBy(1 / 1.25),
+              // `fitAll` is the shared pill's name for its fourth control. On
+              // the Konva canvas that means every board; on a Resize tile list
+              // the useful meaning is the tile you are working on, which is
+              // what this whole feature exists to make editable. No active
+              // tile is a no-op rather than a guess.
+              fitAll: () => {
+                const id = activeTileIdRef.current;
+                if (id) void api.fitTile(id);
+              },
+            }
+          : null
+      );
+```
+
+`activeTileId` must be read through a ref here, not captured: this callback
+is registered once and `activeTileId` changes on every tile click. Add
+`const activeTileIdRef = useRef(activeTileId); activeTileIdRef.current = activeTileId;`
+next to the existing state.
+
+Forward the scale straight through to the viewport:
+`onZoomScaleChange={onZoomScaleChange}`.
+
+- [ ] **Step 3: Wire it in `KvGeneratorLayout`**
+
+Pass the two handlers the layout already has to `<KvResizeCanvas>` (around
+`:6792`), exactly as they are already passed to the Konva canvas:
+
+```tsx
+              onZoomApiChange={handleZoomApiChange}
+              onZoomScaleChange={handleZoomScaleChange}
+```
+
+`handleZoomApiChange` does `setZoomAvailable(!!api)`, so the pill becomes
+visible on the Resize tab the moment the viewport registers, with no change
+to `KvCanvasBottomNav` or `ZoomPill` at all.
+
+**One hazard to check, not assume.** Both canvases register into the same
+`zoomApiRef`. If the outgoing canvas's cleanup runs AFTER the incoming
+canvas registers when switching modes, it will publish `null` last and blank
+a live API. Switch Resize → Craft → Resize and confirm the pill keeps
+working in both. If it does not, report it rather than papering over it with
+a mode check — the ordering is the bug, and where it gets fixed is a
+decision.
+
+- [ ] **Step 4: Collapse the import an earlier task left multi-line**
+
+Prettier would fold this, and it is the one new formatting violation this
+plan introduced (the file carries ~271 lines of pre-existing prettier drift
+which is NOT yours to touch):
+
+```ts
+import { maxNativeTileWidth, tileDisplayWidth } from "./resizeTileScale";
+```
+
+- [ ] **Step 5: Run tests and build**
 
 ```bash
 cd web
-bun test src/components/studio/kv-generator/KvCanvasZoomPill.test.tsx src/components/studio/kv-generator/resizeTileScale.test.ts src/components/studio/kv-generator/focusCamera.test.ts
+bun test src/components/studio/kv-generator/resizeTileScale.test.ts src/components/studio/kv-generator/focusCamera.test.ts
+bun test src/components/studio/kv-generator/KvResizeResultRow.test.tsx
 node node_modules/next/dist/bin/next build
 ```
 
-- [ ] **Step 8: Runtime check (manual)**
+Expected: `resizeTileScale` 12 pass, `focusCamera` 25 pass,
+`KvResizeResultRow` 19 pass / 1 fail (the documented baseline red, unchanged),
+build succeeds.
 
-1. The pill reads 100% on load and does not move or scale while panning.
-2. `+` / `−` change the percentage and zoom about the viewport centre.
-3. Fit with a small tile active frames that tile with a visible surround; the percentage matches what the pill reports.
-4. Fit on the master row frames the master row.
-5. Reset returns to 100% without moving the pan.
-6. A press on the pill never drags the canvas.
-7. `ctrl`/`cmd`+wheel still zooms and the pill's percentage tracks it.
-8. In PostHog, `kv_generator.resize_canvas_zoom_changed` arrives once per click with the right `input` and a `tile_id` only for fit.
+- [ ] **Step 6: Runtime check (manual, cannot be automated)**
 
-- [ ] **Step 9: Commit**
+1. On the Resize tab the zoom pill is visible in the bottom nav, aligned with
+   the other pills, and reads 100% on load.
+2. `−` / `+` change the percentage and zoom about the viewport centre.
+3. Fit with a tile active frames that tile with a visible surround.
+4. Fit with the master row active frames the master row.
+5. Fit with nothing active does nothing — it must not jump or blank.
+6. Panning does not change the percentage readout.
+7. `ctrl`/`cmd`+wheel still zooms and the readout tracks it.
+8. Switch Resize → Craft → Resize: the pill works in both, and never goes
+   dead (this is the Step 3 hazard).
+9. PostHog receives `kv_generator.canvas_zoom` with `canvas_mode: "resize"`
+   and the right `action` for each of the three controls.
+
+- [ ] **Step 7: Commit**
 
 ```bash
-git add web/src/components/studio/kv-generator/KvCanvasZoomPill.tsx web/src/components/studio/kv-generator/KvCanvasZoomPill.test.tsx web/src/components/studio/kv-generator/KvResizeViewport.tsx web/src/components/studio/kv-generator/KvResizeCanvas.tsx web/src/lib/analytics/kv-generator-events.ts
-git commit -m "feat(web): surface Resize canvas zoom with a fit-to-tile pill"
+git add web/src/components/studio/kv-generator/KvResizeViewport.tsx web/src/components/studio/kv-generator/KvResizeCanvas.tsx web/src/components/studio/kv-generator/KvGeneratorLayout.tsx
+git commit -m "feat(web): light up the shared zoom pill on the Resize canvas"
 ```
 
 ---
