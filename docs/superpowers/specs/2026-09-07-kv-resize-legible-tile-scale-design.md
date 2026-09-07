@@ -124,17 +124,28 @@ Keep the shared scale exactly as it is. Add a floor and a native ceiling:
 
 ```ts
 displayWidthFor(w) =
-  Math.min(
-    Math.max(Math.round(w * sharedScale), MIN_TILE_DISPLAY_WIDTH),
-    w
+  Math.max(
+    Math.round(w * sharedScale),
+    Math.min(MIN_TILE_DISPLAY_WIDTH, w)
   );
 ```
 
+The native cap sits **inside** the floor, not outside the whole expression.
+That placement is load-bearing. Written the other way round —
+`min(max(round(w * sharedScale), MIN), w)` — a set whose widest tile is
+itself narrower than 752 breaks: with every tile 300px native, the shared
+scale renders the widest at 752px today, and an outer `min(…, w)` would drop
+it to 300px. That shrinks the largest tile, which is exactly what goal 4
+forbids. Capping the floor's target instead leaves the shared scale's own
+output untouched in every case.
+
 Three behaviours fall out, and each maps to a goal:
 
-- **Above the floor → untouched.** Any tile whose current render is already
-  `>= MIN_TILE_DISPLAY_WIDTH` is bit-identical to today. This is goal 4, and
-  it is a property of the expression rather than a thing to verify per tile.
+- **Above the floor → untouched.** Any tile whose current render already
+  reaches the floor target is bit-identical to today. This is goal 4, and it
+  is a property of the expression rather than a thing to verify per tile:
+  the result is a `max` whose first argument *is* today's value, so the
+  policy can only ever raise a tile, never lower one.
 - **Below the floor → raised to the floor.** Every such tile lands on the
   same display width whatever its ratio to the largest tile. This is goal 1.
   Height still follows each tile's own aspect, so aspect is never distorted.
