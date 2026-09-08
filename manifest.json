@@ -1,14 +1,14 @@
 {
-  "version": "3.0.21",
-  "updated": "2026-09-03",
+  "version": "3.0.22",
+  "updated": "2026-09-08",
   "files": {
     "agents/fragments/git-conventions.md": {
-      "sha256": "1b224bfa8df5cec37ceb96f54b9e206cbbd72f4eecfd675548b7b94ea9c0c874",
+      "sha256": "2013afacf40acf63a01b6b4efc5a1eca53db4375212f3f23f16d361d4cb46697",
       "install_to": ".agentic-workflows/fragments/git-conventions.md",
       "type": "fragment"
     },
     "agents/fragments/session-protocol.core.md": {
-      "sha256": "5357b47fce9abeec85a82c6c0f9b7dc7b2ce2e5ae37fea65b1d3f3f525ddec9d",
+      "sha256": "85228c3471b4cc3127241f1d05ed4c6281e0bd9be116c3e97a4d8f04b3f95927",
       "install_to": ".agentic-workflows/fragments/session-protocol.core.md",
       "type": "fragment"
     },
@@ -18,7 +18,7 @@
       "type": "fragment"
     },
     "agents/fragments/service-registry.core.md": {
-      "sha256": "cf10f0c449ecf375966c5f6cb51d2cd1cc383eeadfbc108aca69b02848809216",
+      "sha256": "e10761546d3a834b4ab75d65378610d4949f0539ae76e33c3548ddc4c06a1e3c",
       "install_to": ".agentic-workflows/fragments/service-registry.core.md",
       "type": "fragment"
     },
@@ -43,7 +43,7 @@
       "type": "workflow"
     },
     "workflow/gates.json": {
-      "sha256": "62991e87f0d1d1f677cb3414431fb9af69e1e6e4d6bf0710b3ed91539fe7c6cb",
+      "sha256": "aff8355004fa4295fad5c67787073848250188a596ce6374b78ebe3c6a5a630c",
       "install_to": ".agentic-workflows/workflow/gates.json",
       "type": "workflow"
     },
@@ -83,12 +83,12 @@
       "type": "skill"
     },
     "skills/onboard/SKILL.md": {
-      "sha256": "ba6fbe99d39784eba449a97dc7e751a1176190c716edf7afc03b9b28c8be579f",
+      "sha256": "3126b96b4ea7598f6c0e7cad48d975b5b4a72330e6f95aa57fffc0193e721c96",
       "install_to": ".agents/skills/onboard/SKILL.md",
       "type": "skill"
     },
     "skills/workflow/SKILL.md": {
-      "sha256": "85459c78b9b8caa9326e8a27fabeb92f3c83f731d12bf91a602cd20628069a26",
+      "sha256": "8151cc5ba27843039634cf50004498e35d729f5733e30d39b90f1afb36266ed9",
       "install_to": ".agents/skills/workflow/SKILL.md",
       "type": "skill"
     },
@@ -118,7 +118,7 @@
       "type": "skill"
     },
     "skills/onboard/references/run-all-template.sh": {
-      "sha256": "56b738794c228ad79940f044391c1c671ffa6ef61e1c3c739310cecfb780de4a",
+      "sha256": "ab0e09ee96369c0ac8c9e74432239b9128ed89ecb41858b9e23e8d88fa3a89ee",
       "install_to": ".agents/skills/onboard/references/run-all-template.sh",
       "type": "reference"
     },
@@ -133,12 +133,12 @@
       "type": "reference"
     },
     "skills/onboard/references/claude-settings.json": {
-      "sha256": "cbb1f242cf2a84f439f1dc886d9a3481b8cabed9770e623fde4b6de89e1f0d2b",
+      "sha256": "bc1ba959812203569b077920acb175298d7742ee788822e95d18476baaf5763a",
       "install_to": ".agents/skills/onboard/references/claude-settings.json",
       "type": "reference"
     },
     "skills/onboard/references/service-registry.md": {
-      "sha256": "c00da0d84bc071e98d62cce9fc8beeea40bb17491daabe8cc1340f34c4df6e9a",
+      "sha256": "907ca40c06ad1fd2399fb99c5a7f4df7b0fc2c74a9891796761ad06e143f0895",
       "install_to": ".agents/skills/onboard/references/service-registry.md",
       "type": "reference"
     },
