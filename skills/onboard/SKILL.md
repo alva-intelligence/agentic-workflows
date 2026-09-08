@@ -68,6 +68,10 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
     "install_deps": "completed|pending",
     "env_files": "completed|partial|pending",
     "db_setup": "completed|skipped|pending",
+    "ch_local": "completed|pending",
+    "prefect_local": "completed|pending",
+    "prefect_setup": "completed|skipped|pending",
+    "db_gui": "completed|skipped|pending",
     "run_all_sh": "completed|pending",
     "docs_structure": "completed|pending",
     "editor_tooling": "completed|pending",
@@ -79,7 +83,8 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
     "api": "completed|pending",
     "web": "completed|pending",
     "ai-service": "completed|pending",
-    "data-service": "completed|pending"
+    "data-service": "completed|pending",
+    "data-pipeline": "n/a"
   },
   "skipped_reasons": {}
 }
@@ -92,6 +97,49 @@ The workflow engine reads this file. **`/workflow start` will block** if any of 
 - `install_deps` is not `"completed"`
 
 The agent must remind the user what's missing and how to fix it.
+
+> **`data-pipeline` is exempt from the `.env` gate, and the exemption needs two fields, not one.**
+> It has no `.env` at all — its credentials are Prefect Secret blocks (Step 6b) — so neither
+> `"pending"` (nothing can ever resolve it) nor `"completed"` (no file was ever provided) is true.
+> Its `env_status` is therefore the literal string **`"n/a"`**.
+>
+> **`env_status` is descriptive; the gate reads `steps.env_files`.** `/workflow start` blocks on
+> `steps.env_files == "completed"` (see `skills/workflow/SKILL.md` → `/workflow start`, step 1) — a
+> single aggregate string, *not* the per-service `env_status` map. So:
+>
+> - Set `env_status["data-pipeline"]` to `"n/a"` so the per-service picture is honest.
+> - **Compute `steps.env_files` over the services that actually need a file** — treat `"n/a"` as
+>   satisfied. If every other selected service is `"completed"`, `steps.env_files` is `"completed"`.
+>
+> Get the second bullet wrong and `/workflow start` blocks forever for anyone who selects
+> Data Pipeline, while `.onboard-state.json` looks perfectly correct — the failure is invisible.
+>
+> ⚠️ **`.onboard-state.json` has no JSON schema** (`workflow/state-schema.json` covers
+> `.workflow-state.json` only), so nothing rejects a bad value here and nothing enforces the rule
+> above. It holds only because this file and `skills/workflow/SKILL.md` both say so. Any new
+> `env_status` value must be handled at every reader, and the readers are:
+> `skills/workflow/SKILL.md`, `agents/fragments/session-protocol.core.md`, `skills/jj-workflow/SKILL.md`.
+>
+> **Two of the four new steps are required parts of onboarding; two are not.** None of them adds a
+> `/workflow start` gate — the blocking list above is unchanged — but "does not block the gate" is
+> **not** the same as "offer to skip it". Do not present a required step as a choice.
+>
+> **Required whenever the owning service was selected — no skip option, no `"skipped"` value:**
+> - `steps.ch_local` — the local ClickHouse cluster (Step 7.4: server, bootstrap, schema, seed).
+>   Required for **data-service and/or data-pipeline**. It is that pair's equivalent of the API's
+>   database: data-pipeline writes `frnd_agg_marts.*` into it and data-service reads them out, so
+>   without it a data developer has no database at all.
+> - `steps.prefect_local` — the **local** Prefect estate (Step 7.5: server, blocks, work pool,
+>   worker, smoke test). Required for **data-pipeline**. Every value it needs is pure-local; there
+>   is nothing to request from anyone, so there is nothing to wait for and nothing to skip.
+>
+> **Genuinely optional — keep the skip path:**
+> - `steps.prefect_setup` — `~/.prefect/profiles.toml` for the **shared** estate (Step 6b **only**).
+>   It carries a credential that must be handed over by fahmi, so a developer may legitimately not
+>   have it yet. Data Pipeline work continues without it: reading flows, editing transforms, running
+>   the test suite, and everything in Step 7.5. Only *inspecting the shared estate's* real flow runs
+>   needs it. Warn, don't block, and never let skipping it imply skipping Step 7.5.
+> - `steps.db_gui` — the database GUI client (Step 9.6). Convenience only.
 
 ## Step 0: Verify GitHub Access
 
@@ -122,14 +170,35 @@ Present ALL questions in a single message:
 
 | # | Service | Directory | Stack | Port(s) |
 |---|---------|-----------|-------|---------|
-| 1 | API | `api/` | Laravel 13, PHP 8.5, PostgreSQL, Sanctum + JWT | :9191 (server) + queue worker |
-| 2 | Frontend | `web/` | Next.js 16, React 19, TypeScript, Tailwind, Bun | :3000 |
-| 3 | AI Service | `ai-service/` | FastAPI, Python, Agno, OpenAI/Anthropic/Google | :8000 |
-| 4 | Data Service | `data-service/` | FastAPI, Python, pandas | :9999 |
+| 1 | API | `api/` | Laravel 13, PHP 8.5, PostgreSQL, Sanctum + JWT | **:9191** (server) + queue worker · pg `:5432` |
+| 2 | Frontend | `web/` | Next.js 16, React 19, TypeScript, Tailwind, Bun | **:3000** |
+| 3 | AI Service | `ai-service/` | FastAPI, Python, Agno, OpenAI/Anthropic/Google | **:8000** · pg `:5432`, redis `:6379` |
+| 4 | Data Service | `data-service/` | FastAPI, Python, pandas | **:9999** · ch `:8123`, prefect `:4200` |
+| 5 | Data Pipeline | `data-pipeline/` | Prefect 3, Python 3.12, ClickHouse, AWS S3 | prefect `:4200` · ch `:8123` |
+
+> **Bold = the port that service serves on; the rest are backing services it connects to.** Only the
+> bold ones are started, health-checked or stopped by `run-all.sh` — Postgres `:5432`, Redis `:6379`,
+> ClickHouse `:8123` and Prefect `:4200` are shared infrastructure you run yourself (Steps 7.4.2 and
+> 7.5.2), reported but never killed. **Data Pipeline has no bold entry**: it runs no server, is absent
+> from `run-all.sh` by design, and the two ports shown are what its flows talk to. It is also the only
+> service with no `.env` — its credentials live in Prefect Secret blocks (7.5.3).
+
+**If you picked Data Service, pick Data Pipeline too.** They are the two halves of one data path:
+data-pipeline *writes* `frnd_agg_marts.*`, data-service *reads and serves* them. "Why is this metric
+empty?" is answered in data-pipeline far more often than in data-service, and adding a metric is a
+**two-repo change** — the projection that computes the column lives in data-pipeline, the endpoint
+that exposes it lives in data-service. Taking data-service alone leaves half of every data question
+invisible.
 
 **Also started automatically by `run-all.sh`:**
 - **API Queue Worker** — processes background jobs (always runs with API)
 - **Mailhog** — captures emails sent by the API for local testing (:1025 SMTP, :8025 UI)
+
+**Data Pipeline is deliberately NOT in `run-all.sh`.** It has no long-running process to start
+alongside the other services, so there is nothing for `run-all.sh` to health-check — see Step 12.
+That is a statement about `run-all.sh`, **not** about setup: if you pick Data Pipeline, onboarding
+sets up a local ClickHouse (Step 7.4) and a local Prefect estate on `:4200` (Step 7.5), and both are
+required. You start that server yourself when you work on flows.
 
 ### 1.2 Do you have `.env` files ready?
 
@@ -138,7 +207,19 @@ Present ALL questions in a single message:
 | API | `api/.env` | arhen |
 | Frontend | `web/.env.local` | fahrizky, daffa |
 | AI Service | `ai-service/.env` | rifki |
-| Data Service | `data-service/.env` | kemal, iru |
+| Data Service | `data-service/.env` | fahmi, arhen |
+| Data Pipeline | Prefect Secret blocks — **not** a `.env` ¹ | fahmi |
+
+¹ Data Pipeline is the one service whose runtime credentials do not live in a `.env`. ClickHouse
+host/port/user/password, the data-service callback token and the AWS keys are **Prefect Secret
+blocks**, fetched from the Prefect server at flow runtime (`data-pipeline/AGENTS.md` hard rule 10 —
+never print or commit a block value). The committed template is
+`prefect_blocks.staging.example.yaml`; the real `prefect_blocks.staging.yaml` is gitignored. Setup
+script: `scripts/setup_staging_blocks.py`, dry-run by default. Full procedure: **Step 6b**.
+
+> ⚠️ `data-pipeline/AGENTS.md` and `integrations/clickhouse.py` both reference
+> `prefect_blocks.example.yaml` and `scripts/setup_prefect_blocks.py`. **Neither has ever existed in
+> that repo.** Use the `staging` names above; do not go looking for the ones the docs name.
 
 ### 1.3 Which editor/CLI do you use?
 
@@ -272,6 +353,35 @@ fi
 | git | `command -v git` | Missing → `brew install git`. Installed → keep |
 | gh | `command -v gh` | Missing → `brew install gh`. Installed → keep |
 
+**Data-stack tools — Data Pipeline and/or Data Service only.** Skip this table entirely if the user
+selected neither.
+
+| Tool | Check | Action |
+|------|-------|--------|
+| ClickHouse ¹ | `command -v clickhouse` | Missing → `brew install --cask clickhouse`. Installed → keep |
+| Python 3.12 ² | `command -v python3.12` | Missing → `brew install python@3.12`. Installed → keep |
+
+¹ **It is a Homebrew `--cask`, not a formula.** `brew install clickhouse` fails with
+`No available formula`, and `clickhouse-cpp` is a C++ client *library*, not the CLI. Verified
+2026-09-03: the cask resolves to **26.8.2.7-lts**. The official single-binary installer from
+`clickhouse.com` (`curl https://clickhouse.com/ | sh`) is an equally valid route and is what produces
+the `clickhouse` binary people often already have in `~/.local/bin` — if `command -v clickhouse` finds
+one, keep it and do not install a second.
+
+> **One binary is both client and server.** `clickhouse client` connects to a cluster;
+> `clickhouse server` runs one. That is why there is no separate client package. The local server is
+> set up in **Step 7.4**, not here — this row only guarantees the binary exists.
+>
+> **This row is the macOS route.** ClickHouse has no native Windows build — Windows installs inside
+> **WSL2**, and Linux uses the distro packages. Both are in Step 7.4.2; the `brew` line above does
+> not apply there.
+
+² **Data Pipeline's deployed Prefect worker runs Python 3.12**, and `data-pipeline/pyproject.toml`
+pins `target-version = "py312"` with a comment stating it matches *"the runtime this repo actually
+deploys on — not the interpreter that happens to be on a contributor's PATH."* Note that brew's
+`python@3.12` is **keg-only**: installing it does **not** relink `python3`, so `python3` may still be
+a different version. Step 5.1 resolves `python3.12` explicitly for that reason.
+
 #### 2.3 Verify all versions after install
 
 ```bash
@@ -351,7 +461,7 @@ JJ enables parallel feature development via isolated workspaces — useful when 
 4. **After clone (Step 4)**, if `jj_available` is `true`:
    - Automatically run the equivalent of `/jj-workflow init`:
      ```bash
-     for service in api web ai-service data-service; do
+     for service in api web ai-service data-service data-pipeline; do
        if [ -d "$service/.git" ] && [ ! -d "$service/.jj" ]; then
          cd "$service" && jj git init --colocate && cd ..
        fi
@@ -398,7 +508,28 @@ Only clone services the user selected. Skip if directory already exists.
 
 # Data Service
 [ -d "data-service" ] || (git clone git@github.com:alva-intelligence/frnd-clickhouse-api.git data-service && cd data-service && git checkout development)
+
+# Data Pipeline — the transform layer (raw -> staging -> frnd_agg_marts).
+# Standard branch shape: `development` is the working base. See the warning
+# below — what differs is that there is no deploy step.
+[ -d "data-pipeline" ] || (git clone https://github.com/alva-intelligence/frnd-orchestration.git data-pipeline && cd data-pipeline && git checkout development)
 ```
+
+> **Why data-pipeline is worth cloning even if you never edit it.** The marts every dashboard reads
+> are produced here — data-service *serves* them. So "why is this metric empty?" is usually answered
+> in this repo, and adding a metric is a **two-repo change**: the projection that computes the column
+> lives here, the endpoint that exposes it lives in data-service. Without this clone, half of every
+> data question is invisible.
+
+> ⚠️ **Both branches are live Prefect estates, and there is no deploy step.** The branch shape is
+> the standard one — `development` is the staging estate, `main` the production one. What differs: a
+> Prefect worker polls each estate and `git clone`s the branch **at run time**, so a merge is live
+> the moment it lands. There is no build or release to forget about.
+>
+> **Feature work branches from `development` and PRs into `development`.** Promotion is a **separate
+> PR (`development` → `main`)**, opened deliberately by a human, never as part of a feature. Open the
+> PR and stop either way: never merge it yourself, and never push directly to `development` or
+> `main`.
 
 ## Step 5: Install Dependencies
 
@@ -411,12 +542,49 @@ Only clone services the user selected. Skip if directory already exists.
 These must exist before installing Python deps:
 
 ```bash
-# AI Service — uses uv for venv
-cd ai-service && uv venv && cd ..
+# Resolve 3.12 ONCE — every Python service below wants it, and `python3` is NOT reliably
+# 3.12: brew's python@3.12 is keg-only and does not relink `python3`, so a bare
+# `python3 -m venv` silently builds on whatever happens to be first on PATH.
+PY312="$(command -v python3.12 || command -v python3)"
+"$PY312" -V   # expect 3.12.x — if this prints 3.13/3.14, install python@3.12 (Step 2) first
 
-# Data Service — uses standard venv as .venv
-cd data-service && python3 -m venv .venv && cd ..
+# AI Service — uses uv for venv
+cd ai-service && uv venv --python "$PY312" && cd ..
+
+# Data Service — standard venv as .venv, on 3.12 (see the version cap below)
+cd data-service && "$PY312" -m venv .venv && cd ..
+
+# Data Pipeline — standard venv as .venv, on 3.12 (the deployed worker's runtime)
+cd data-pipeline && "$PY312" -m venv .venv && cd ..
 ```
+
+> ⚠️ **Data Service has a hard upper bound, not just a preference.** `requirements.txt` pins
+> `clickhouse-connect==0.9.2`, which declares `>=3.9,<3.14`. On a machine where `python3` is 3.14 —
+> the default from a current `brew install python` — a bare `python3 -m venv` succeeds and the
+> **`pip install -r requirements.txt` afterwards fails hard**, with a resolver error that names the
+> interpreter rather than this line. Measured on this machine: `python3` → 3.14.6, `python3.12` →
+> 3.12.14; the venv had to be deleted and rebuilt. `data-service/pyproject.toml` also pins
+> `target-version = "py312"`, same as data-pipeline.
+
+> **AI Service has no pin at all** — no `pyproject.toml`, so nothing declares a floor or a ceiling
+> and `uv venv` on its own takes whatever interpreter it resolves. `--python "$PY312"` above is
+> onboarding's choice for consistency, not a repo requirement. If a future dependency actually needs
+> something newer, change it here rather than assuming the pin was load-bearing.
+
+**Data Pipeline — verify the interpreter before installing anything into it:**
+
+```bash
+data-pipeline/.venv/bin/python --version
+```
+
+> ⚠️ **If that is not 3.12, say so and ask the user before continuing.** The deployed Prefect worker
+> runs 3.12 and `data-pipeline/pyproject.toml` pins `target-version = "py312"`. A newer interpreter
+> installs and runs fine today, so the divergence is **silent** — which is exactly why it is worth
+> catching here rather than in a production-only failure later. If `python3.12` is absent, Step 2's
+> data-stack table installs it.
+>
+> ⚠️ `data-pipeline/README.md` says `python -m venv venv` (no dot). Use **`.venv`** so the path
+> matches ai-service and data-service, and so the editor tooling in Step 9 finds it.
 
 ### 5.2 Install deps per service
 
@@ -434,7 +602,26 @@ cd ai-service && source .venv/bin/activate && uv pip install -r requirements.txt
 
 # Data Service (venv already created in 5.1)
 cd data-service && source .venv/bin/activate && pip install -r requirements.txt && deactivate; cd ..
+
+# Data Pipeline (venv already created in 5.1) — BOTH files: requirements-dev.txt carries
+# pytest and ruff, and the runtime install deliberately omits them.
+cd data-pipeline && source .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt && deactivate; cd ..
 ```
+
+> **Data Pipeline — confirm `prefect` actually landed.** It is the only service whose CLI the rest of
+> onboarding calls by path, and nothing later installs it:
+>
+> ```bash
+> data-pipeline/.venv/bin/prefect version | head -3
+> ```
+>
+> `data-pipeline/requirements.txt` pins `prefect>=3.0.0` — an **open upper bound**, so a fresh install
+> takes the newest 3.x and two machines onboarded a month apart will not match. If this line errors,
+> Step 6b and every command in Step 7.5 fails with command-not-found.
+>
+> The same file also pins `alembic==1.19.1`, `SQLAlchemy==2.0.52` and `clickhouse-sqlalchemy==0.3.2`
+> **exactly** — `alembic/env.py` uses Alembic's private `context.get_context()._version`, so a minor
+> bump can break every mart migration. Do not loosen them.
 
 **IMPORTANT:**
 - **Do NOT run `cp .env.example .env`** — the user will drop real .env files in Step 6.
@@ -458,7 +645,7 @@ Use the ask tool:
 > | API | `api/.env` | arhen |
 > | Frontend | `web/.env.local` | fahrizky, daffa |
 > | AI Service | `ai-service/.env` | rifki |
-> | Data Service | `data-service/.env` | kemal, iru |
+> | Data Service | `data-service/.env` | fahmi, arhen |
 >
 > - Yes, I have all the .env files ready
 > - I have some but not all
@@ -491,12 +678,105 @@ Use the ask tool:
    ```
 8. Mark `env_status` per service and set `steps.env_files` accordingly.
 
+> **Computing `steps.env_files` when Data Pipeline is selected.** Aggregate over the services that
+> actually need a file: a service whose `env_status` is `"n/a"` counts as **satisfied**, not pending.
+> Data Pipeline has no `.env` (Prefect Secret blocks — Step 6b), so if every other selected service
+> is `"completed"`, `steps.env_files` is `"completed"`. This is the field `/workflow start` gates on;
+> treating `"n/a"` as unresolved blocks the workflow permanently for no real reason.
+
 **If "No, I'll get them later":**
 - Mark all `env_status.<service>` as `"pending"`
 - Tell user: "Contact the service owners listed above. `/workflow start` will block until all .env files are provided."
 - Continue onboarding with remaining steps
 
 **The user can continue onboarding with missing .env files, but `/workflow start` will block until ALL are provided.**
+
+## Step 6b: Prefect profiles for the **shared** estate — **STOP** (Data Pipeline only)
+
+**Skip this entire step if the user did not select Data Pipeline.**
+
+> **This step is optional, and it is the only optional Prefect step.** It configures access to the
+> team's **shared** estate. The **local** estate is Step 7.5, it needs no credential from anyone, and
+> it is **required** — skipping this step never means skipping that one.
+
+Data Pipeline is the one service with **no `.env`**. Its runtime credentials are Prefect Secret
+blocks fetched from the server at flow time, and the server connection itself comes from a profile
+file that lives **outside the workspace**. Two artifacts, two different places:
+
+| Artifact | Path | Contains | Source |
+|---|---|---|---|
+| Prefect profiles | `~/.prefect/profiles.toml` (**outside the repo**) | API URL + auth string per estate | the team's shared `secrets` folder — ask fahmi |
+| Secret blocks | on the Prefect server, not on disk | ClickHouse host/port/user/pass, callback token, AWS keys | created in Step 7.5.3 |
+
+**Local-only developers can skip the profile entirely.** Step 7.5 stands up a local Prefect server
+and creates its blocks with pure-local values — nothing secret, nothing to ask anyone for, and it
+runs either way. The profile below is only needed to *read* the shared estate (inspecting real flow
+runs and deployments).
+
+### 6b.1 Profiles — ask, then wait
+
+The committed placeholder template is `data-pipeline/config_handover/profiles.toml.example`. The
+real file is **not** in the repo and must never be committed.
+
+Use the ask tool:
+
+> "Data Pipeline can connect to the team's shared Prefect estate to inspect real flow runs. That
+> needs `~/.prefect/profiles.toml`, which carries the server URL and an auth string. Do you have it?"
+> - Yes — I have the file (or the values)
+> - No — I need it from fahmi
+> - Skip — local-only development is fine for now
+>
+> Say plainly, in the same message, that the answer only affects access to the **shared** estate and
+> that the local estate in Step 7.5 is set up regardless.
+
+If **"No"**: tell the user to ask **fahmi** for the shared `profiles.toml`. Mark
+`steps.prefect_setup` as `"pending"` and continue — this does not block anything.
+
+If **"Skip"**: mark `steps.prefect_setup` as `"skipped"` with the reason, and continue. **Step 7.5
+still runs — it is not optional and this answer does not affect it.**
+
+If **"Yes"**: **the user puts it in place themselves — the agent must not write this file.** It
+contains a plaintext credential for a shared estate and it lives outside the workspace.
+
+```bash
+# The USER runs this, not the agent:
+mkdir -p ~/.prefect
+cp "<downloaded>/profiles.toml" ~/.prefect/profiles.toml
+chmod 600 ~/.prefect/profiles.toml
+```
+
+### 6b.2 Verify — read-only, never mutate
+
+```bash
+cd data-pipeline
+.venv/bin/prefect profile ls                                     # expect: frndos_prefect, local
+PREFECT_PROFILE=frndos_prefect .venv/bin/prefect deployment ls
+```
+
+Any deployment output means the profile works.
+
+> `prefect` is installed **into `data-pipeline/.venv`** by `requirements.txt` (Step 5.2). Every
+> Prefect command in this skill is written as `.venv/bin/prefect` for that reason. On a fresh machine
+> a bare `prefect` fails with command-not-found; on a machine that already does data work it may
+> resolve to a **different install at a different version** reading the same profiles file. The bare
+> name is not the program this skill means.
+
+> ⚠️ **Never run `prefect profile use` or `prefect config set`.** Both rewrite
+> `~/.prefect/profiles.toml` **globally** and silently retarget every later Prefect command on the
+> machine — including the user's own terminal, and including commands that reach production. Pin the
+> profile per command with the `PREFECT_PROFILE=` prefix, every time. Both are denied in
+> `.claude/settings.json`; if one prompts, that is the guard working — ask, do not route around it.
+
+### 6b.3 Record
+
+Set `steps.prefect_setup` to `"completed"`, `"pending"` or `"skipped"`. **This field covers this step
+only** — the local estate is recorded separately as `steps.prefect_local` in Step 7.5.
+
+**This does NOT block `/workflow start`** — unlike the API's database dump. Data Pipeline work is
+possible without a *shared*-estate connection: reading flows, editing transforms, running the test
+suite (`.venv/bin/pytest` — no `PYTHONPATH=` prefix needed, `pyproject.toml` sets `pythonpath`), and
+running flows locally against Step 7.5's estate. Only inspecting the shared estate's real flow runs
+needs it. Warn, don't block.
 
 ## Step 7: Initialize Local Databases & Services
 
@@ -593,6 +873,673 @@ Use the ask tool:
 
 **The DB dump is REQUIRED for API.** `/workflow start` will block if `db_setup` is not `"completed"` and the user selected the API service.
 
+### 7.4 Local ClickHouse — **required for Data Service and/or Data Pipeline**
+
+**Skip this entire section if the user selected neither. If either was selected, this section is
+required — do not offer it as a choice and do not ask whether the user wants it.** The only questions
+in it are about *how* to proceed on a machine that already has a cluster (7.4.1), never *whether* to.
+
+This is the ClickHouse equivalent of 7.1's PostgreSQL setup, and it is **shared**: data-pipeline
+writes `frnd_agg_marts.*` into this cluster and data-service reads them out. Set it up once, for both.
+
+> **Why this step exists.** `data-service` documents a local ClickHouse in its own `README.md` §4 and
+> data-pipeline's raw seeder refuses to run against anything else — but onboarding has never set one
+> up. So a data developer got a `.env` pointing at a shared remote cluster and no local database at
+> all. `api` gets `initdb`, a dump, `artisan migrate` and a blocking gate; ClickHouse got nothing.
+
+> ⛔ **The agent does not execute anything against the cluster — the user does.**
+> `Bash(clickhouse client:*)` and `Bash(clickhouse-client:*)` are denied in `.claude/settings.json`,
+> because a `clickhouse client --query "…"` invocation carries **arbitrary SQL as its payload**: the
+> permission pattern cannot tell a `SELECT` from a `DROP`, and the sub-steps below create users, grant
+> privileges and apply DDL.
+>
+> So follow `references/external-steps.md` for each: **tell the user exactly what to run, ask, wait,
+> verify what you can see, do not skip.** The agent may read `.sql` files, count them, check paths and
+> `curl` the HTTP endpoint — it may not execute SQL. If a `clickhouse client` call prompts, that is
+> the guard working: ask, do not route around it.
+
+#### 7.4.1 Probe first — never propose before you know what exists
+
+**Run all three before deciding anything.** A developer who already does data work on this machine
+very likely has some of this already, and the wrong move is to install a second copy or re-apply
+schema over a working cluster.
+
+```bash
+# 1. Is the binary present, and where?
+command -v clickhouse && clickhouse client --version || echo "no clickhouse binary"
+
+# 2. Is a server already listening? (agent CAN run this — plain HTTP, no SQL payload)
+curl -s --max-time 3 http://localhost:8123/ping || echo "no server on :8123"
+
+# 3. What is already in it? — USER runs this one
+clickhouse client --query "SHOW DATABASES"
+```
+
+**Then branch on the result. Report what you found before proposing the next step.**
+
+> **7.4b is split by an ordering gate.** Its read-only half (`db-sync.sh --status` / `--verify`,
+> plus data-service's `alembic heads` / `current`) runs where it sits. Its **marts write** half
+> (`db-sync.sh --local`) needs the Prefect Secret blocks from **7.5.3**, so the real order for a
+> Data Pipeline developer is `7.4b (read) → 7.5.2 → 7.5.3 → 7.4b (write) → 7.4c`. data-service's
+> write half has no such dependency and runs in place.
+
+| Probe result | What to do |
+|---|---|
+| No binary, no server | Install (Step 2 data-stack table), then 7.4.2 → 7.4.3 → 7.4b → 7.4c |
+| Server up, **no** `frnd_*` databases | Skip install. Continue at 7.4.3 (bootstrap) |
+| Server up, `frnd_agg_marts` / `frnd_os_master` **already present** | **Confirm and ask — see below. Never wipe.** |
+
+**If the cluster already has the databases**, tell the user exactly what was found (database names and
+whether `alembic_version` exists in each), then use the ask tool:
+
+> "You already have a local ClickHouse with `<names>`. What would you like to do?"
+> - **Bring the schema up to date** (Recommended) — run the Alembic check in 7.4b; it adopts an
+>   existing cluster by stamping the revision it **verified** is present, then applies only what is
+>   genuinely missing
+> - **Add the seed data only** — skip schema, jump to 7.4c, so your local data matches the team's
+> - **Leave it alone** — record and move on
+
+Nothing in this section drops a database, truncates a table, or rewrites existing rows.
+
+#### 7.4.2 Install and start a local server
+
+Only needed if the probe in 7.4.1 found no server. The server binds `:8123` (HTTP) and `:9000`
+(native), and the terminal running it stays open.
+
+Verify once it is up — the agent can run the `curl`, the user runs the client:
+
+```bash
+curl -s http://localhost:8123/ping                  # expects "Ok."  (agent)
+clickhouse client --query "SELECT version()"        # (user)
+```
+
+**Pick the install route by OS.** Every route below gives you the same `:8123` HTTP endpoint; only
+the packaging differs. Detect with `uname -s` — `Darwin` = macOS, `Linux` = Linux (**or WSL**), anything
+else means you are on native Windows tooling.
+
+#### macOS — native binary (default)
+
+```bash
+brew install --cask clickhouse    # or: curl https://clickhouse.com/ | sh
+clickhouse server                 # keep this terminal open
+```
+
+One binary is both client and server. This is what `data-service/README.md` §4 documents.
+
+#### Linux — distro packages
+
+```bash
+sudo apt-get install -y clickhouse-server clickhouse-client
+sudo systemctl start clickhouse-server
+```
+
+#### Windows — WSL2 (the official path; there is **no** native installer)
+
+> ⚠️ **ClickHouse ships no native Windows build.** There is no `.exe`, no MSI, and no Windows
+> binary — official support is Linux and macOS only, and ClickHouse's own Windows page says to run
+> the install *inside WSL*. Native Windows remains open upstream with no timeline
+> ([ClickHouse/ClickHouse#86093](https://github.com/clickhouse/clickhouse/issues/86093)). So on
+> Windows the "native installer" is **WSL2**: a real local Linux kernel, not a container runtime.
+
+```powershell
+# 1. PowerShell as Administrator — one time, then reboot if prompted
+wsl --install -d Ubuntu
+```
+
+```bash
+# 2. Inside the Ubuntu shell — install and run ClickHouse
+curl https://clickhouse.com/ | sh
+./clickhouse server                 # keep this WSL terminal open
+```
+
+WSL2 forwards `localhost`, so `:8123` and `:9000` are reachable from Windows itself — a GUI client
+(Step 9.6) and a data-service running on Windows both connect to `localhost:8123` unchanged. Verify
+from PowerShell:
+
+```powershell
+curl.exe -s http://localhost:8123/ping    # expects "Ok."
+```
+
+> If `localhost` forwarding does not work (older WSL builds, or `networkingMode=mirrored` disabled),
+> get the WSL IP with `wsl hostname -I` and use that instead of `localhost` in the GUI and in
+> `data-service/.env`'s `CH_HOST`.
+
+**PostgreSQL on Windows, for contrast, *does* have a real native installer** — the EDB installer
+from postgresql.org. It is a normal Windows service; no WSL needed. Only ClickHouse forces WSL.
+
+#### Docker — last resort, any OS
+
+Only when the routes above are unavailable (locked-down machine, or you already run everything in
+containers). It works everywhere but adds a runtime nothing else in this workspace needs:
+
+```bash
+docker run -d --name clickhouse-local \
+  -p 8123:8123 -p 9000:9000 \
+  -v clickhouse-data:/var/lib/clickhouse \
+  -e CLICKHOUSE_USER=default -e CLICKHOUSE_PASSWORD= \
+  -e CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1 \
+  clickhouse/clickhouse-server
+```
+
+**The macOS and Docker routes are also written up in `data-service/README.md` §4** — send the user
+there for those rather than re-documenting. The WSL2 path above is **not** in that README; it is
+documented here.
+
+**Local vs remote — the trade-off worth stating up front:**
+
+| Mode | What works | What does not |
+|---|---|---|
+| **Local server** (recommended) | Everything, including 7.4c's raw seed and a full raw → staging → mart chain offline | Nothing real — it starts empty |
+| **Remote cluster** | Querying real data | **Seeding.** `data-pipeline/scripts/seed_raw.py` **refuses any host but `localhost`** by design |
+
+#### 7.4.3 Bootstrap the service user — **user runs this**
+
+**Run this before any mart DDL.** 17 of data-pipeline's 20 `v2` migrations end in
+`CREATE ROW POLICY … TO frndos_data_service`, and `alembic/env.py` calls
+`_assert_policy_grantee_exists` which **refuses before any DDL runs** if that user is missing.
+ClickHouse DDL is not transactional, so a missing grantee would otherwise leave a mart table live
+with no row-level security — and RLS is the only tenant boundary the serving layer has.
+
+`data-service` ships one idempotent file that does the whole job:
+
+```bash
+clickhouse client --queries-file data-service/database/bootstrap/setup.sql
+```
+
+It creates the `frndos_data_service` user, revokes anything over-granted, and grants exactly what the
+service's code paths need. Re-runnable on any environment, so it is safe on an existing cluster.
+
+What the **agent** can verify without executing SQL: that the file exists, and that
+`data-service/database/bootstrap/` also contains the numbered `001`–`006` history plus a README (the
+consolidated `setup.sql` supersedes them for new setups).
+
+#### 7.4b Schema versioning — Alembic, not a manual apply loop
+
+**This is how an existing cluster is handled safely**, and why the answer to "the developer may
+already have the DDL, or an *old* DDL" is Alembic rather than a for-loop over `.sql` files.
+
+**Always pull first.** The revisions are code — a checkout from last month describes last month's
+schema:
+
+```bash
+cd data-pipeline && git pull && cd ../data-service && git pull && cd ..
+```
+
+**There are two Alembic lineages. They are never merged.** They partition the databases cleanly:
+
+| Lineage | Run from | Owns | Revisions |
+|---|---|---|---|
+| Marts | `data-pipeline/` | `frnd_agg_marts` | 24 |
+| Master / AI / RAFI | `data-service/` | `frnd_os_master`, `frnd_ai_database`, `temp_telkomsel_rafi` | 24 |
+
+Run the same check **once per lineage**, from that lineage's repo root. The *shape* is the same
+for both; the tooling is not — marts now ships a script that performs all four steps and refuses to
+guess, while data-service is still driven by hand:
+
+```
+Step 1  git pull                     # newest revisions          (done above)
+Step 2  what does the repo expect?   # alembic heads
+Step 3  what does THIS cluster have? # alembic current -- the version row's CLAIM, not a measurement
+Step 4  branch on the comparison:
+          no alembic_version + tables already present  ->  adopt: stamp the VERIFIED revision
+          no alembic_version + empty database          ->  build: upgrade head
+          current == heads                             ->  nothing to do
+          current behind heads                         ->  upgrade head (apply only the delta)
+```
+
+> ⛔ **Never type `stamp head`.** Step 4's first branch is the dangerous one. Stamping *head* on a
+> cluster that is missing a revision marks that revision applied, so its DDL never runs — silently,
+> and permanently. The revision actually present has to be **measured**, not assumed.
+> frnd-orchestration's **Do-Not-Touch 4** now forbids `stamp head` by hand or by agent. For marts,
+> `scripts/db-sync.sh` does the measuring; for data-service, see its own subsection below.
+
+**Marts lineage — data-pipeline. Use `scripts/db-sync.sh`, never raw Alembic.** Shipped
+2026-09-07 in `alva-intelligence/frnd-orchestration#77`, specifically to replace the four steps
+above with something that measures instead of assuming:
+
+```bash
+cd data-pipeline
+scripts/db-sync.sh --status     # agent may run: revision + table count
+scripts/db-sync.sh --verify     # agent may run: the TRUE revision, read from system.columns
+# then — USER runs it. One pass: verify -> stamp the true revision -> upgrade head:
+scripts/db-sync.sh --local
+cd ..
+```
+
+| Flag | Who runs it | Reaches ClickHouse how | Needs Prefect? |
+|---|---|---|---|
+| `--status` (the default) | agent | direct HTTP to `localhost:8123` | **no** |
+| `--verify` | agent | direct HTTP to `localhost:8123` | **no** |
+| `--local` | **user** | `--verify`, then Alembic | **yes** — see the gate below |
+| `--remote` | nobody | **not implemented** — warns and exits | — |
+
+`--status` and `--verify` read `FRND_LOCAL_CH_HOST` / `FRND_LOCAL_CH_PORT` (defaulting to
+`localhost` / `8123`) and query ClickHouse over plain HTTP, so they work before any Prefect setup
+exists at all. `--local` shells out to Alembic, and that is what pulls in the dependency below.
+
+> ⚠️ **`--local` is gated on Step 7.5, which is ~240 lines below this one.** `alembic/env.py::_target()`
+> loads the `clickhouse-host` / `-port` / `-user` / `-pass` **Prefect Secret blocks** even under
+> `FRND_ENVIRONMENT=local`. Those blocks are created in **7.5.3**, against a server started in
+> **7.5.2**. So: run `--status` / `--verify` here, then run `--local` **after 7.5.3** and come back.
+> Running it now dies with `ValueError: Unable to find block document named clickhouse-host`, which
+> reads as a broken tool rather than as a missing prerequisite.
+>
+> If the user did **not** select Data Pipeline they never reach 7.5, so the marts lineage cannot be
+> migrated on this laptop. Say that plainly rather than routing them around the gate.
+
+> **Locality is verified, not declared.** `db-sync.sh` refuses when its own resolved `CH_HOST` is not
+> loopback, and `_assert_local_target()` refuses again when the *resolved* `clickhouse-host` block is
+> not loopback. The declared label is a claim; the resolved host is the fact, and both layers check
+> the fact.
+
+> ⛔ **SUPERSEDED** by the `db-sync.sh --local` block above (2026-09-07, ledger row
+> `ONB-MARTS-LOCAL-1`). Kept for history — do not build from this.
+>
+> ~~**`FRND_ENVIRONMENT` is an estate label, not a branch name.** It selects which cluster the
+> migration lands on (`staging` → the `clickhouse-host-staging` block, anything else → the
+> production `clickhouse-host` block). It is unrelated to which git branch you have checked out, and
+> it does **not** become `development` when the branch does. Keep `staging` here: it is what points a
+> local or staging run away from the production cluster.~~
+>
+> **Why this was wrong.** `staging` resolves the `clickhouse-host-staging` block — a block **7.5.3
+> never creates**, so the step could not succeed as written; and on any laptop where that block does
+> hold a real host, `upgrade head` would have migrated **staging**. `local` (added 2026-09-07, FR-25)
+> resolves `clickhouse-host`, which 7.5.3 *does* create, and is locality-checked on the resolved
+> host. `FRND_ENVIRONMENT` is still an estate label and still unrelated to the git branch — that part
+> was always true, and `unset` still means production.
+
+**Master lineage — data-service.** `alembic` is **missing from its `requirements.txt`** despite 24
+revisions and a committed `alembic.ini`, so install it into that venv first, at data-pipeline's exact
+pins:
+
+```bash
+cd data-service && source .venv/bin/activate
+pip install alembic==1.19.1 SQLAlchemy==2.0.52 clickhouse-sqlalchemy==0.3.2
+.venv/bin/alembic heads && .venv/bin/alembic current   # agent may run (read-only)
+# then, USER runs ONE of these — see the stamp asymmetry below:
+.venv/bin/alembic stamp head      # cluster provisioned, never stamped -> adopt
+.venv/bin/alembic upgrade head    # empty, or stamped and behind -> apply
+deactivate; cd ..
+```
+
+> ⚠️ **The two lineages do not share an environment contract. Do not carry one's prefix to the
+> other.** This is the single easiest way to break this step, because the commands look identical.
+
+| | Marts — `data-pipeline` | Master / AI / RAFI — `data-service` |
+|---|---|---|
+| Target selected by | `FRND_ENVIRONMENT` (`local` / `staging` / `production`) | `CH_MIGRATE_HOST` → falls back to `CH_HOST` |
+| Read from | Prefect **Secret blocks** (`_target()`) | **`data-service/.env`**, via pydantic-settings |
+| If unset | **→ PRODUCTION** — fails *unsafe*, so the var is mandatory | **→ refuses**, unless `FRND_MIGRATE_ALLOW_REMOTE=1` — fails *safe* |
+| Locality guard | `_assert_local_target()` (only under `local`) | `_assert_intentional_target()` (always) |
+| Verified-stamp tool | `scripts/db-sync.sh` | **none — does not exist** |
+| Needs local Prefect (7.5) | **yes**, for `--local` | **no** |
+
+So: `FRND_ENVIRONMENT=…` in front of a **data-service** Alembic command is **inert** — it selects
+nothing and protects nothing. And `db-sync.sh` does **not** exist in data-service; do not go looking
+for it or write one here.
+
+> ⚠️ **Set `CH_MIGRATE_HOST` / `CH_HOST` in `data-service/.env`, not on the command line.**
+> `_target()` reads through `settings`, and the docstring records the measured reason: `.env` is
+> parsed by pydantic-settings and **is not exported to the process environment**, so code reaching
+> for `os.getenv("CH_MIGRATE_USER")` gets `None` for a value plainly present in `.env` and silently
+> falls back to the read-only app user — failing with ClickHouse **code 497** at the first DDL
+> statement. `CH_MIGRATE_*` wins over `CH_*`; they differ on every deployed environment because the
+> app user holds no DDL grant.
+
+> ⚠️ **Known asymmetry — `stamp head` is still the documented remedy on data-service.** The
+> ⛔ rule above is scoped to marts, where frnd-orchestration's Do-Not-Touch 4 forbids it *and*
+> `db-sync.sh` supplies the measured alternative. data-service has no such tool, so its
+> `_assert_stamped_or_empty` still prints `stamp head` and `stamp` is deliberately left unguarded so
+> the remedy stays reachable. The same silent-skip risk therefore still exists on this lineage — it
+> is simply not solved yet. Do not "fix" it by pointing at `db-sync.sh`; that script is hardcoded to
+> `frnd_agg_marts` and would target the wrong databases.
+
+**Warnings that change what happens — state all of these:**
+
+> ⚠️ **`FRND_ENVIRONMENT` unset resolves to PRODUCTION — on the marts lineage.**
+> `data-pipeline/alembic/env.py` implements `_assert_environment_declared()` precisely because
+> `_is_staging()` is false when the variable is unset, and "no marker ⇒ production" is that repo's
+> hard rule 11. It refuses to act from a terminal until you name the cluster. **Carry the prefix on
+> every `data-pipeline` Alembic command** — `db-sync.sh` already sets `FRND_ENVIRONMENT=local`
+> internally, which is the other reason to prefer the script. This warning does **not** apply to
+> data-service; see the contract table above.
+
+> ⚠️ **An `upgrade` that refuses is the guard working, not a failure.** Both lineages implement
+> `_assert_stamped_or_empty`: it refuses to `upgrade` a cluster that already holds tables but has no
+> `alembic_version` row, because that would replay the whole chain against a provisioned database.
+> The printed remedy is `stamp head` — and `stamp` is deliberately **not** guarded, so the remedy is
+> reachable. `stamp` writes the version row and applies **no DDL**: it is how you adopt an existing
+> cluster into version control, which is exactly the case here.
+>
+> **On marts, take that remedy via `db-sync.sh --local`, not by typing it.** The script stamps the
+> revision it *verified* against `system.columns` rather than `head`, so a cluster missing a revision
+> gets that revision's DDL applied instead of marked-done. On data-service, typing it is still the
+> only route — see the asymmetry note above.
+
+> ⚠️ **The two lineages must never be merged**, and only ever run from their own repo root. They are
+> indistinguishable at the command line — same binary, same `stamp head` — and only the working
+> directory decides which lineage and which cluster you hit. Both `env.py` files announce themselves
+> on stderr before acting, for exactly this reason — **read that line**. They do not print the same
+> thing: data-pipeline prints `lineage=frnd_agg_marts (frnd-orchestration) | env=… | host_block=…`
+> (the block *name*, never its value — denylist row 10), data-service prints
+> `lineage=frnd_os_master+frnd_ai_database+temp_telkomsel_rafi (frnd-clickhouse-api) | host=…`
+> (a resolved host, and no `env=` at all, because it has no `FRND_ENVIRONMENT`). `db-sync.sh` adds
+> its own `db-sync: lineage=frnd_agg_marts  host=…  mode=…` line ahead of Alembic's.
+
+> ⚠️ **`data-service/database/README.md` says "Do not use Alembic/Flyway" — that guidance is stale.**
+> Its own tree contains `alembic.ini` and 24 revisions. The objection was that Alembic assumes
+> transactional rollbacks; here nothing rolls back (`downgrade` is irreversible by construction) and
+> Alembic is used purely as an *ordering and tracking wrapper* — each revision runs one `.sql` file
+> and records that it ran. The SQL is the same SQL.
+
+> ⚠️ **The two mart DDL trees are not identical, which is the whole reason to use Alembic.** Measured
+> 2026-09-03: `data-pipeline/database/migrations/frnd_agg_marts/` has **58** `.sql` files,
+> `data-service/database/migrations/frnd_agg_marts/` has **55**. All 55 shared files are byte-identical
+> — but data-pipeline carries three extra, and they are real `ALTER`s on a shared table:
+> `v2/021_add_duration_seconds_to_social_content_performance.sql`, `v2/022_add_skip_rate_3s_…`,
+> `v2/023_add_completion_rate_…`. A developer who hand-applies data-service's tree alone ends up with
+> three missing columns and no signal why. Data Pipeline's Alembic chain is the only thing that
+> carries them, so **run the marts lineage even if you only work on data-service.**
+
+> **Mart DDL ownership moved to data-pipeline on 2026-08-26**, but only on the working branches —
+> `frnd-orchestration:development` and `frnd-clickhouse-api:development`, **neither repo's `main`**.
+> So which copy is authoritative depends on the branch you checked out. Adding a mart column is an
+> data-pipeline change on those branches. Check before you write one.
+
+> **There is no manual migration runner, and you do not need one.** `data-service/database/README.md`
+> describes one that "could" live at `database/migrate.py`; it does not exist. Alembic is the runner.
+> Do not hand-execute the 93 `.sql` files.
+
+**Also, if you followed a README that had you create the tracker table by hand:** that snippet uses
+`ENGINE = SharedMergeTree(...)`, which is **ClickHouse Cloud only** and fails on an OSS server with
+`Code: 56 … Unknown table engine SharedMergeTree`. Alembic creates its own `alembic_version` with a
+`MergeTree` engine and needs no help. None of the 93 mart/master migrations use a Cloud-only engine
+(65 `ReplacingMergeTree`, 14 `MergeTree`, 1 `SummingMergeTree`), so they all run locally.
+
+Record `steps.ch_local` in `.onboard-state.json` — `"completed"`, or `"pending"` if something is
+genuinely unresolved. There is no `"skipped"` value for this step.
+
+#### 7.4c Seed — so everyone's local data matches
+
+**Offer this even when the cluster already existed.** Schema without rows renders every dashboard as
+em-dashes, which reads as a bug rather than as "no data yet". Seeding is additive and safe to re-run.
+
+> **If the developer runs `data-service/scripts/setup-local-demo.sh`, it does 7.4b's marts stamp for
+> them — conditionally.** Its step 3b (FR-28, added 2026-09-07) locates the orchestration checkout by
+> probing `$ROOT_DIR/orchestration`, `$ROOT_DIR/frnd-orchestration`, then `$ROOT_DIR/data-pipeline`
+> (or `FRND_ORCHESTRATION_DIR`), and calls `db-sync.sh --local` against a **pinned** local target
+> (`FRND_LOCAL_CH_HOST=localhost FRND_LOCAL_CH_PORT=8123`) rather than inheriting the caller's
+> exports.
+>
+> ⚠️ **Step 3b is non-fatal on purpose, so "the demo worked" does not mean the chain was stamped.**
+> A data-service-only developer may have no data-pipeline venv, and `db-sync.sh` then falls back to a
+> `python3` with no alembic. It `warn`s with the exact remedy and the script still exits 0. **Read
+> the warnings.** If it did not stamp, `frnd_agg_marts` holds tables with no `alembic_version` row,
+> and every future `upgrade` on this laptop is refused by `_assert_stamped_or_empty` — which is the
+> guard working, not damage. Confirm with `scripts/db-sync.sh --status` (read-only, no Prefect
+> needed) rather than assuming.
+>
+> ⚠️ **`setup-local-demo.sh` runs `017_fix_social_mart_sorting_keys.sql` unattended, and nothing
+> here changes that.** Its `apply_dir` globs `*.sql` and pipes every file to `ch --multiquery`;
+> **nothing reads file contents**, so that revision's `DO NOT RUN THIS AUTOMATICALLY` marker — an
+> INSERT + `EXCHANGE TABLES` across both social marts — has never been honoured on any laptop this
+> script provisioned. Pre-existing, documented in both repos on 2026-09-07, and **deliberately left
+> alone** because fixing it changes what the script applies. `db-sync.sh` does skip m017, but for an
+> unrelated reason (the marker bars it from reasoning about that revision at all) — that is not
+> coverage. Do not read any of the above as this being handled.
+
+**Marts and master data — data-service's Python seeders.** Plain scripts, no runner; from the repo root:
+
+```bash
+cd data-service && source .venv/bin/activate
+python database/seeders/frnd_agg_marts/v2/000_generate_fake_data.py    # medium-volume base
+python database/seeders/frnd_agg_marts/demo/seed_demo.py               # demo workspace + 3 brands
+deactivate; cd ..
+```
+
+`000_generate_fake_data.py` inserts as the `default` superuser and **does not truncate** — re-running
+adds duplicates, which `ReplacingMergeTree` dedups by `ORDER BY`. `seed_demo.py` copies rows from the
+realistic brands, rewrites them with the demo ULIDs, shifts every date into a rolling 90-day window
+ending today, and applies a per-brand volume multiplier; it auto-generates its source data if absent.
+The 30 `.sql` seeders under `database/seeders/frnd_agg_marts/` are the older v1 set — the Python ones
+supersede them.
+
+**Raw layer — data-pipeline's seeder.** Only useful with a **local** server; it refuses any other host.
+
+```bash
+cd data-pipeline
+.venv/bin/python scripts/seed_raw.py --list
+.venv/bin/python scripts/seed_raw.py --brand <ulid>          # the brand's registered platforms
+.venv/bin/python scripts/seed_raw.py --brand all --drop      # every demo brand
+cd ..
+```
+
+Omit `--platforms` and the seeder resolves each brand's own registered set from api's
+`DemoWorkspaceSeeder`. It never defaults to all nine — that would be right for `frndbank` and
+overshoot the other four.
+
+Why it matters: the demo cluster's raw tables are *placeholders* (five columns), so the transforms
+have nothing real to read and every downstream metric renders as an em dash. That is an absent source,
+not a pipeline bug. This script builds the source with real table shapes derived from
+`data-pipeline/config_handover/*.yaml` — the Fivetran allow-list each transformer reads against — so
+**the fixture cannot drift from the allow-list**.
+
+It *can* still drift from the transforms, and it is worth knowing where. A transformer sometimes
+`argMax`es a column the allow-list never enables, so the seeder carries a second, **hand-maintained**
+input — `REQUIRED_COLUMNS` — regenerated by a grep a human has to remember to run. The two Google-Sheet
+sources go further and declare no columns at all (the sheet's shape is operator-authored), so their
+contract is read from `GS_{EARNED,ATL}_CANONICAL_COLUMNS` in `tasks/transform_helpers.py`. Both are in
+the script's module docstring.
+
+> ⚠️ **The demo ULIDs are a cross-repo contract with no shared source.** `seed_demo.py` reads them
+> from `data-service/demo-ulids.json`; the api's `DemoWorkspaceSeeder` reads the same values from
+> `api/demo-ulids.json`. **Two copies.** If Postgres and ClickHouse demo data disagree, this is why.
+> Do not edit one without the other.
+
+### 7.5 Local Prefect estate — **required for Data Pipeline**
+
+**Skip if the user did not select Data Pipeline. If Data Pipeline was selected, this section is
+required — do not offer it as a choice and do not ask whether the user wants it.**
+
+> Every value this step needs is **pure-local** (7.5.3): there is no credential to request, nobody to
+> wait on, and nothing secret. That is what separates it from Step 6b, which configures the *shared*
+> estate and is optional. A "skip" answer in 6b has no bearing here.
+
+**Prerequisite: 7.4 must have produced a running local ClickHouse on `:8123`.** Every flow — the smoke
+test included — resolves ClickHouse from Secret blocks and writes to it. Prefect alone starts fine,
+but nothing it runs will complete.
+
+**The whole path, so a new developer can see the shape before walking it.** Six sub-steps, three
+terminals, roughly 15 minutes:
+
+```
+7.5.1  confirm .venv/bin/prefect and the `local` profile        (agent can run)
+7.5.2  Terminal 1:  prefect server start    -> http://127.0.0.1:4200   (leave running)
+7.5.3  Terminal 2:  create 6 Secret blocks  -> pure-local values, NO secrets needed
+       Terminal 2:  <- go back and finish 7.4b:  db-sync.sh --local   (gated on 7.5.3)
+7.5.4  Terminal 2:  set the staging_date_cutoff Variable
+7.5.5  Terminal 2:  work-pool -> register deployments -> worker start   (leave running)
+7.5.6  Terminal 3:  prefect deployment run testing-worker/smoke-testing
+```
+
+Terminal 1 and the worker in Terminal 2 both stay running. 7.5.5 and 7.5.6 are **user-run** — those
+commands are denied to the agent on purpose, each with the reason stated where it appears.
+
+#### 7.5.1 Confirm the install and the `local` profile
+
+This step installs nothing. Prefect is **not** a system package and has no Homebrew row — it arrives
+in `data-pipeline/.venv` from `requirements.txt` at Step 5.2:
+
+```bash
+cd data-pipeline && .venv/bin/prefect version | head -3
+```
+
+Expect `Version: 3.x` and a Python version matching the interpreter Step 5.1 resolved. If it errors,
+go back to Step 5.2; nothing below can work.
+
+> ⚠️ **A global `prefect` may already exist, and it is not this one.** A machine that already does
+> data work can easily have `~/.local/bin/prefect` at a *different* 3.x version, answering to whatever
+> `~/.prefect/profiles.toml` currently defaults to. **Always `.venv/bin/prefect`.** A bare `prefect`
+> is a different program reading the same profiles file.
+
+Then confirm a `local` profile exists — don't create one blindly:
+
+```bash
+cd data-pipeline && .venv/bin/prefect profile ls    # expect `local` in the list
+```
+
+> If `local` is missing, **the user creates it, not the agent.** The two commands that would do it —
+> `prefect profile use` and `prefect config set` — are denied because they rewrite
+> `~/.prefect/profiles.toml` globally and silently retarget every later Prefect command on the
+> machine, including ones that reach production. Hand the user these two lines and wait:
+>
+> ```bash
+> prefect profile create local
+> prefect config set PREFECT_API_URL="http://127.0.0.1:4200/api"
+> ```
+
+**Every command below pins the profile with a `PREFECT_PROFILE=` prefix.** That is not style: the
+prefix is scoped to one command, `profile use` is not.
+
+#### 7.5.2 Terminal 1 — the local server (leave running)
+
+```bash
+cd data-pipeline && PREFECT_PROFILE=local .venv/bin/prefect server start
+```
+
+Serves `http://127.0.0.1:4200`. **This is the one port data-pipeline can contend for** — it is in the
+Step 12 port-conflict check for that reason.
+
+#### 7.5.3 Terminal 2 — six Secret blocks, all pure-local
+
+The flows read **every** credential from Prefect `Secret` blocks, never a `.env`. Create these on the
+**local** server via the UI at `http://127.0.0.1:4200` → Blocks → Secret.
+
+> **The server from 7.5.2 must be running before this step and before any flow run.**
+> `Secret.load(...)` is an **API call** to `127.0.0.1:4200`, not a file read — with the server down it
+> fails and the caller sees an empty value, which reads as a missing block rather than a stopped server.
+
+**Nothing here is secret and there is nothing to ask anyone for.** This is the default for a new
+developer: it points every flow at the ClickHouse 7.4 just started on this machine.
+
+| Block | Value | Why |
+|---|---|---|
+| `clickhouse-host` | `localhost` | `get_client()` passes a bare hostname straight through and defaults to non-TLS. A `https://…` URL is parsed; `localhost` is not. |
+| `clickhouse-port` | `8123` | The HTTP port 7.4.2 starts |
+| `clickhouse-user` | `default` | The OSS server's superuser |
+| `clickhouse-pass` | *(empty string)* | Create it **with an empty value** — do not skip it; `get_client()` loads it unconditionally |
+| `environment` | `local` | `resolve_environment()` returns this verbatim, and `local` is what the S3 upload guard checks before short-circuiting |
+| `clickhouse-host-staging` | `localhost` | A seatbelt, never a target — see the note below. Loaded *instead of* `clickhouse-host` if any staging signal fires |
+
+That set is enough for **7.5.6's smoke test**, and for **7.4b's `db-sync.sh --local`**, and for any transform that does not call an external API.
+
+> **Create `clickhouse-host-staging` = `localhost` as a sixth block.** It is loaded **instead of**
+> `clickhouse-host` whenever a staging signal fires, so on a pure-local estate a stray signal would
+> otherwise reach a real cluster. It is a seatbelt, not a target: nothing in onboarding should ever
+> *select* it. `data-pipeline/alembic/env.py` names this exact workaround in its own docstring
+> (citing a `setup_local_blocks.py` that is **not in the repo** — do not go looking for it), which is
+> why the marts step now declares `local` instead of leaning on the block being harmless.
+
+**Only if you need real external API calls** do you need real secrets — `openai-key`,
+`data-service-callback-token`, the four `aws-*`, `github-pat`, `rapid-api-key`. Ask **fahmi**. Never
+print, log or commit a block value (hard rule 10).
+
+> **The agent cannot do this step.** `prefect block create` / `delete` are denied, and no script
+> creates *local* blocks — `scripts/setup_prefect_blocks.py` and `prefect_blocks.example.yaml` are
+> referenced by that repo's own docs but **have never existed**. The only block script in the repo is
+> `scripts/setup_staging_blocks.py`, which creates `-staging` siblings on a **remote** estate and is
+> not the local path. UI or nothing.
+
+**Confirm what landed** — read-only, the agent can run this:
+
+```bash
+cd data-pipeline && PREFECT_PROFILE=local .venv/bin/prefect block ls
+```
+
+Expect all six names above. `block ls` prints names and types only, never values.
+
+> ⬅️ **Now go back and finish 7.4b.** `scripts/db-sync.sh --local` was gated on this step: it drives
+> Alembic, and `alembic/env.py::_target()` resolves `clickhouse-host` / `-port` / `-user` / `-pass`
+> from the blocks you just created, against the server started in 7.5.2. Both must be up.
+>
+> ```bash
+> cd data-pipeline && scripts/db-sync.sh --local && cd ..
+> ```
+>
+> Record the result in `steps.ch_local` before moving on to 7.5.4 — this is the write half of a step
+> that was split across the ordering gate, and it is the easiest thing in this document to forget.
+
+#### 7.5.4 The `staging_date_cutoff` Variable
+
+One Prefect Variable gates how far back data is kept project-wide — rows older than it are dropped
+from staging, marts and creative assets:
+
+```bash
+cd data-pipeline && PREFECT_PROFILE=local .venv/bin/prefect variable set staging_date_cutoff "2025-01-01"
+```
+
+The source of truth is the live Variable on the shared estate; read it any time with
+`PREFECT_PROFILE=frndos_prefect .venv/bin/prefect variable get staging_date_cutoff` (needs Step 6b)
+and keep local in sync. The hardcoded constant in `tasks/transform_helpers.py` is a last-resort
+default only.
+
+#### 7.5.5 Work pool, deployments, worker — **user runs these**
+
+```bash
+# Terminal 2
+cd data-pipeline
+PREFECT_PROFILE=local .venv/bin/prefect work-pool create local-pool --type process
+PREFECT_PROFILE=local .venv/bin/python scripts/register_paid_deployments.py --env production
+PREFECT_PROFILE=local .venv/bin/prefect worker start --pool local-pool   # leave running
+```
+
+> **On a local server the worker runs the code on your disk.** The register script switches on
+> `PREFECT_API_URL`: remote → a fresh git clone pinned to the environment's branch; **local
+> (`localhost`/`127.0.0.1`) → the repo root path**, so there is no clone, no branch pin, and an edit
+> to a flow is live on the next run. That is what makes a local estate worth standing up.
+
+> ⚠️ **The agent must not run the middle line.** `Bash(*register_paid_deployments*)` is denied on
+> purpose: the script takes `--env`, but the **active profile** decides *which server* it writes to —
+> so the same command that registers six local deployments will register them against the shared
+> production estate if the profile is wrong. `--env production` is correct here: it produces the
+> unsuffixed deployment names the local worker expects, and it does **not** mean production. Have the
+> user confirm the `PREFECT_PROFILE=local` prefix is present before they run it.
+
+#### 7.5.6 Smoke test — **user runs this**
+
+```bash
+# Terminal 3, with the server (7.5.2) and the worker (7.5.5) both still running
+cd data-pipeline
+PREFECT_PROFILE=local .venv/bin/prefect deployment run testing-worker/smoke-testing
+```
+
+> ⚠️ **The agent must not run this.** `prefect deployment run` is denied in both invocation forms —
+> the deployment is chosen by name but the *profile* decides which server hears it, so the same line
+> fires a local test or a production flow depending on a prefix. Hand it to the user.
+
+A `Completed` run proves the whole chain in one shot: the worker picked up a deployment, resolved
+Prefect Secrets, connected to ClickHouse and wrote to it. It creates its own database
+`smoke_prefect_testing` and appends one row per run, stamped with the environment label — safe to
+re-run, touches nothing else. Watch it at `http://127.0.0.1:4200`.
+
+Read the result back — the agent can run this (plain HTTP, no SQL client):
+
+```bash
+curl -s 'http://localhost:8123/' --data-binary 'SELECT count() FROM smoke_prefect_testing.smoke_test'
+```
+
+**If it fails, check in this order:** server running (7.5.2)? worker running and polling `local-pool`
+(7.5.5)? all six blocks present (`block ls`)? ClickHouse up (`curl :8123/ping`)? The flow-run page in
+the UI shows which of those it got stuck on.
+
+> **Step 12 re-runs this as data-pipeline's health check**, with a four-probe readiness pass in front
+> of it and a symptom→cause table. If you are setting up now, running it once here is enough; Step 12
+> is where it becomes the standing verification.
+
+Record `steps.prefect_local` in `.onboard-state.json` — `"completed"`, or `"pending"` if something
+is genuinely unresolved. There is no `"skipped"` value for this step. Do **not** write
+`steps.prefect_setup` here; that field belongs to Step 6b.
+
 ## Step 7: Create run-all.sh
 
 If `run-all.sh` doesn't exist in the workspace root, create it from the template at [references/run-all-template.sh](references/run-all-template.sh).
@@ -685,7 +1632,188 @@ The template configures:
 
 All commands run directly against tools on `PATH`. Infrastructure services (PostgreSQL, Redis) should start before app services.
 
+## Step 9.6: Database GUI client — **STOP, ask user**
+
+A GUI client is how a developer actually *sees* the local databases Steps 7.1–7.4 just built. Both
+engines are involved: **PostgreSQL** (api, `:5432`) and **ClickHouse** (data-service + data-pipeline,
+`:8123`). Run this step for every workspace — it is useful even with only `api` selected.
+
+### 9.6.1 Detect what is already installed
+
+```bash
+ls /Applications 2>/dev/null | grep -iE "tableplus|dbeaver|datagrip|beekeeper|postico|pgadmin|sequel" || echo "no GUI client found"
+```
+
+Also check Homebrew's view, since a cask can be installed without an `/Applications` entry:
+
+```bash
+brew list --cask 2>/dev/null | grep -iE "tableplus|dbeaver|datagrip|beekeeper|pgadmin|sequel-ace" || true
+```
+
+### 9.6.2 Ask — **even when one is already installed**
+
+**Name what was found first, then ask anyway.** Never silently skip because something is present, and
+never silently install over it. This mirrors how Step 2 handles a pinned tool at the wrong version:
+report, then let the user decide.
+
+If a client **was** found, phrase it as an addition:
+
+> "You already have **<name>** installed, which can handle both PostgreSQL and ClickHouse. Want to
+> add another client as well?"
+> - **No, <name> is fine** (Recommended) — I'll register the local connections in it
+> - **TablePlus** — native macOS, fastest, both engines in one window
+> - **DBeaver** — free and unlimited, Java-based
+> - **DataGrip** — JetBrains, paid, strongest SQL editor
+
+If **nothing** was found:
+
+> "Install a database GUI to browse your local PostgreSQL and ClickHouse?"
+> - **TablePlus** (Recommended) — native macOS, fastest, handles Postgres + ClickHouse in one window;
+>   free tier covers 2 open connections, which is exactly what onboarding sets up
+> - **DBeaver** — free, unlimited connections, Java-based; the only one whose connections this agent
+>   can register for you automatically
+> - **DataGrip** — JetBrains, paid (or bundled with an All Products Pack); strongest SQL editor
+> - **Skip** — I'll use the `psql` and `clickhouse client` CLIs
+
+### 9.6.3 Install the chosen client
+
+```bash
+brew install --cask tableplus          # TablePlus
+brew install --cask dbeaver-community  # DBeaver
+brew install --cask datagrip           # DataGrip
+```
+
+All three cask names verified 2026-09-03. If the user picked one already installed, skip the install
+and go straight to 9.6.4.
+
+### 9.6.4 Register the two local connections
+
+**Both connections are local and need no credentials**, so nothing secret is written anywhere:
+PostgreSQL uses local trust auth (`api/.env` ships `DB_USERNAME=` and `DB_PASSWORD=` empty), and the
+OSS ClickHouse `default` user has no password.
+
+| Connection name | Driver | Host | Port | Database | User / password |
+|---|---|---|---|---|---|
+| `frnd-postgre-local` | PostgreSQL | `localhost` | `5432` | value of `DB_DATABASE` in `api/.env` | *(empty)* / *(empty)* |
+| `frnd-ch-local` | ClickHouse | `localhost` | `8123` | `frnd_agg_marts` | `default` / *(empty)* |
+
+> **Register **local only**.** Do not add staging or production connections during onboarding: their
+> hosts and passwords are real credentials, and the same rule that keeps them out of a `.env`
+> (Step 6b) keeps them out of a GUI config the agent writes.
+
+**The three clients are not equally automatable.** Verified 2026-09-03 — treat them differently rather
+than pretending parity:
+
+| Client | Config | Agent can register? |
+|---|---|---|
+| **DBeaver** | `~/Library/DBeaverData/workspace6/General/.dbeaver/data-sources.json` — **plain JSON** | **Yes.** Passwords live in a separate encrypted file that local connections never need |
+| **TablePlus** | keychain-backed; no config dir until first launch | No — guide the user |
+| **DataGrip** | JetBrains XML, regenerated on launch; no dir until first run | No — guide the user |
+
+#### DBeaver — the agent registers them, additively
+
+**Preconditions, each checked and reported before touching anything:**
+
+1. `data-sources.json` exists and parses as JSON. If it does not exist, DBeaver has never been
+   launched — tell the user to open it once, then re-run this step.
+2. **DBeaver is not running:** `pgrep -i dbeaver`. It rewrites this file on quit, so a write while it
+   is open is silently discarded. If running, ask the user to close it and wait.
+
+Then merge — **add, never replace:**
+
+```bash
+python3 - <<'PY'
+import json, os, re, secrets, subprocess
+cfg = os.path.expanduser("~/Library/DBeaverData/workspace6/General/.dbeaver/data-sources.json")
+doc = json.load(open(cfg))                      # PRESERVE the developer's existing connections
+conns = doc.setdefault("connections", {})
+existing = {v.get("name") for v in conns.values()}
+
+# Postgres database name comes from api/.env, not a guess.
+pgdb = "frnd"
+try:
+    for line in open("api/.env"):
+        if line.startswith("DB_DATABASE="):
+            pgdb = line.split("=", 1)[1].strip() or pgdb
+except FileNotFoundError:
+    pass
+
+# `home` must point at a real local install, resolved not hardcoded.
+try:
+    bindir = subprocess.run(["pg_config", "--bindir"], capture_output=True, text=True).stdout.strip()
+    pghome = os.path.dirname(bindir) if bindir else ""
+except Exception:
+    pghome = ""
+
+want = [
+    ("postgresql", "postgres-jdbc", "frnd-postgre-local", {
+        "host": "localhost", "port": "5432", "database": pgdb,
+        "url": f"jdbc:postgresql://localhost:5432/{pgdb}",
+        "configurationType": "MANUAL", "type": "dev", "auth-model": "native",
+        **({"home": pghome} if pghome else {}),
+    }),
+    ("clickhouse", "com_clickhouse", "frnd-ch-local", {
+        "host": "localhost", "port": "8123", "database": "frnd_agg_marts",
+        "url": "jdbc:clickhouse://localhost:8123/frnd_agg_marts",
+        "configurationType": "MANUAL", "type": "dev", "auth-model": "native",
+    }),
+]
+
+added, skipped = [], []
+for provider, driver, name, conf in want:
+    if name in existing:
+        skipped.append(name)                    # already there — leave it exactly as it is
+        continue
+    key = f"{driver}-{secrets.token_hex(8)}"
+    conns[key] = {"provider": provider, "driver": driver, "name": name,
+                  "save-password": True, "configuration": conf}
+    added.append(name)
+
+if added:
+    tmp = cfg + ".tmp"                          # atomic: temp in the same dir, then rename
+    with open(tmp, "w") as fh:
+        json.dump(doc, fh, indent="\t")
+    os.replace(tmp, cfg)                        # a failed write leaves the original intact
+
+print("added:  ", added or "(none)")
+print("skipped:", skipped or "(none)", "— already present, untouched")
+print("total connections now:", len(conns))
+PY
+```
+
+Then **report exactly what happened** — added vs skipped, and the new total. If both were already
+present, "nothing to add" is the correct successful outcome, not a failure.
+
+> **Why merge-and-skip rather than write-and-backup:** the file holds the developer's *other*
+> connections, quite possibly including staging and production. The script reads the existing document
+> and appends only missing names, so nothing is ever replaced — and because the write is a temp file
+> plus `os.replace`, an interrupted write leaves the original file untouched instead of truncated.
+> There is no `.bak` to clean up, and no window where the connection list is half-written.
+
+The connection appears with DBeaver's built-in **`dev`** connection type (white label), distinct from
+its `test` and `prod` types — so a local connection never visually resembles a production one.
+
+#### TablePlus / DataGrip — guide, do not write
+
+Neither has a safe writable config. Print the table from 9.6.4 as literal values and walk the user
+through it once:
+
+1. New connection → choose **PostgreSQL** (or **ClickHouse**).
+2. Host `localhost`, Port `5432` (or `8123`), Database as in the table.
+3. **Postgres:** leave user and password empty. **ClickHouse:** user `default`, password empty.
+4. **Test** / **Test Connection** — it should succeed while the local servers are running.
+5. Save with the name from the table, so everyone's connections are named the same.
+
+> If the test fails, the database is not running, not the GUI's fault: `pg_isready -h localhost -p 5432`
+> for Postgres, `curl -s http://localhost:8123/ping` for ClickHouse (Step 7.4.2 keeps that terminal open).
+
+### 9.6.5 Record
+
+Set `steps.db_gui` to `"completed"` (installed and/or registered) or `"skipped"` (user declined) in
+`.onboard-state.json`. Advisory — it never blocks `/workflow start`.
+
 ## Step 10: Install Community Skills
+
 
 Skills are installed via [skills.sh](https://skills.sh/) using `npx skills add`.
 
@@ -823,7 +1951,7 @@ Use the ask tool:
 
 1. **Check for port conflicts first** (same ports as run-all.sh):
 ```bash
-for port in 9191 3000 8000 9999 1025 8025; do
+for port in 9191 3000 8000 9999 1025 8025 8123 4200; do
   pid=$(lsof -ti :$port 2>/dev/null)
   if [ -n "$pid" ]; then
     echo "⚠ Port $port in use by PID $pid — $(ps -p $pid -o comm= 2>/dev/null)"
@@ -831,6 +1959,11 @@ for port in 9191 3000 8000 9999 1025 8025; do
 done
 ```
 If any ports are in use, ask user: "These ports are already in use (possibly from another workspace). Should I kill these processes?" Use the ask tool. Only kill after confirmation.
+
+> ⚠️ **`8123` and `4200` are different in kind — do not offer to kill them.** They are the local
+> ClickHouse server (Step 7.4.2) and the local Prefect server (Step 7.5.2), which onboarding asked the
+> user to leave running in their own terminals. Killing ClickHouse mid-session drops the local cluster
+> the marts live in. If either is in use, report it as **expected** and move on.
 
 2. Run preflight: `./run-all.sh --check`
 3. If preflight passes, start services: `./run-all.sh`
@@ -858,7 +1991,120 @@ redis-cli ping &>/dev/null && echo "✓ Redis" || echo "✗ Redis — down"
 
 # Mailhog (optional)
 curl -sf http://localhost:8025 &>/dev/null && echo "✓ Mailhog" || echo "○ Mailhog — not running (optional)"
+
+# ClickHouse (only if data-service or data-pipeline was selected)
+curl -sf http://localhost:8123/ping &>/dev/null && echo "✓ ClickHouse (8123)" || echo "○ ClickHouse — not running (start with: clickhouse server)"
 ```
+
+> **Data Pipeline has no HTTP health check, by design.** It runs no long-lived server and is absent
+> from `run-all.sh`; its flows execute on a Prefect worker. Do not report it as "down" — there is
+> nothing to be down.
+
+**Instead, verify the local estate in two tiers.** Tier 1 is four read-only probes the agent runs
+itself and is enough for a Step 12 verdict. Tier 2 is the real end-to-end smoke test, which the
+**user** fires because triggering a flow run is denied to the agent.
+
+**If Data Pipeline was selected, Step 7.5 ran, so run both.** Should the estate somehow not be in
+place, that is an **unfinished required step, not an opt-out**: say so plainly ("data-pipeline
+selected, local Prefect not configured — Step 7.5 is incomplete"), leave `steps.prefect_local` at
+`"pending"`, and tell the user what is left to finish.
+
+#### Tier 1 — agent-run readiness probes (read-only)
+
+```bash
+cd data-pipeline
+
+# 1. Is the local Prefect API up? (the UI at :4200 is the same process)
+curl -s --max-time 3 http://127.0.0.1:4200/api/health && echo " ✓ Prefect API" || echo "✗ Prefect API — start it: PREFECT_PROFILE=local .venv/bin/prefect server start"
+
+# 2. Are the six Secret blocks present? (names + types only, never values)
+PREFECT_PROFILE=local .venv/bin/prefect block ls
+
+# 3. Is a worker actually polling? A pool with NO healthy worker means runs queue forever.
+PREFECT_PROFILE=local .venv/bin/prefect work-pool ls --verbose
+
+# 4. Are the deployments registered?
+PREFECT_PROFILE=local .venv/bin/prefect deployment ls
+```
+
+Read the results as a chain — each step is meaningless if the one above it failed:
+
+| Probe | Healthy looks like | If it fails |
+|---|---|---|
+| `/api/health` | any 200 response | Server not started (7.5.2). Everything below is noise until it is. |
+| `block ls` | `clickhouse-host`, `-port`, `-user`, `-pass`, `environment`, `clickhouse-host-staging` | Blocks missing (7.5.3). Flows will fail at `Secret.load`, reporting an empty value rather than a stopped server — a confusing symptom worth pre-empting. |
+| `work-pool ls --verbose` | `local-pool`, type `process`, **READY** | `NOT_READY` means no worker is polling — start it (7.5.5). Runs will sit in `Pending` forever, which looks like a hang, not an error. |
+| `deployment ls` | `testing-worker/smoke-testing` among them | Deployments not registered (7.5.5). |
+
+**ClickHouse must also be up**, since every flow writes to it:
+
+```bash
+curl -s http://localhost:8123/ping    # expects "Ok."
+```
+
+If all five are green, report the estate as **ready** — that is the data-pipeline equivalent of a
+green health check, and it is sufficient for Step 12.
+
+#### Tier 2 — the real smoke test — **user runs this**
+
+Tier 1 proves the plumbing is in place; only an actual run proves it works. `flows/testing_worker_flow.py`
+exists for exactly this:
+
+```bash
+# Terminal 3, with the server (7.5.2) and worker (7.5.5) both running
+cd data-pipeline
+PREFECT_PROFILE=local .venv/bin/prefect deployment run testing-worker/smoke-testing
+```
+
+> ⚠️ **The agent must not run this.** `prefect deployment run` is denied: the deployment is chosen by
+> name, but the **active profile decides which server hears it** — so the identical line fires a
+> local test or a production flow depending on one prefix. Hand it to the user and wait.
+
+**What a `Completed` run proves, in one shot** — this is why it is worth the extra step over Tier 1:
+
+1. The worker picked up a deployment from the pool (scheduling works).
+2. `Secret.load` resolved the `clickhouse-*` blocks (the Prefect API answered).
+3. `resolve_environment()` returned a label — for a pure-local estate, `local`.
+4. The worker connected to ClickHouse **and wrote to it** (`CREATE DATABASE`, `CREATE TABLE`, `INSERT`).
+
+It is **safe to re-run**: it creates its own `smoke_prefect_testing` database, appends exactly one row
+per run stamped with the environment label, and touches nothing else — no mart, no staging table.
+
+**Read the result back** — the agent can run these two:
+
+```bash
+# Row count climbs by one per smoke run
+curl -s 'http://localhost:8123/' --data-binary \
+  'SELECT count() FROM smoke_prefect_testing.smoke_test'
+
+# Most recent run, with the environment label it resolved
+curl -s 'http://localhost:8123/' --data-binary \
+  'SELECT run_id, marker, environment, created_at FROM smoke_prefect_testing.smoke_test ORDER BY created_at DESC LIMIT 1 FORMAT Vertical'
+```
+
+> **Check the `environment` column, not just the row count.** A local estate must report `local`. If
+> it says `production`, `_is_staging()` resolved false *and* the `environment` block is set to
+> production — which means `get_client()` loaded the `clickhouse-host` block. Verify that block points
+> at `localhost` before running anything heavier than this smoke test.
+
+**If the run does not complete**, the state tells you which link broke — check in this order:
+
+| Symptom | Cause |
+|---|---|
+| Stuck in `Pending`, never starts | No worker polling `local-pool` — Tier 1 probe 3 |
+| Fails immediately at `Secret.load` | Server down, or a block missing / misnamed — probes 1 and 2 |
+| Fails connecting to ClickHouse | CH not running, or `clickhouse-host` points elsewhere |
+| `Completed` but the row count did not move | You read a different cluster than the flow wrote to |
+
+The flow-run page in the UI at `http://127.0.0.1:4200` shows the failing task and its traceback
+directly — send the user there rather than guessing.
+
+The agent may also inspect run history read-only:
+
+```bash
+cd data-pipeline && PREFECT_PROFILE=local .venv/bin/prefect flow-run ls --limit 5
+```
+
 
 5. **If ALL health checks pass:**
    - Tell user: "All services are running and healthy!"
@@ -878,6 +2124,25 @@ curl -sf http://localhost:8025 &>/dev/null && echo "✓ Mailhog" || echo "○ Ma
    ```bash
    ./run-all.sh --stop
    ```
+
+   > ⚠️ **Check the script before running this if the workspace predates 2026-09-07.** `--stop`
+   > sweeps ports after killing tracked PIDs. In the version generated from the current template
+   > that sweep iterates `OWNED_PORTS` only (`9191 3000 8000 9999 1025 8025`) and deliberately
+   > leaves `SHARED_PORTS` (`8123` ClickHouse, `4200` Prefect) alone. **Older generated copies
+   > included 8123 and 4200 in the sweep and `kill -9`'d them** — the same local ClickHouse and
+   > Prefect server this run told the developer to leave running, and the same two ports the old
+   > script's own header claimed it "never starts or stops". `--kill-ports` had the identical bug,
+   > and the conflict message recommended it.
+   >
+   > Confirm before running either:
+   >
+   > ```bash
+   > grep -n 'OWNED_PORTS\|8123' run-all.sh | head
+   > ```
+   >
+   > If `8123` appears inside a `kill` loop, regenerate `run-all.sh` from
+   > `references/run-all-template.sh` rather than running `--stop`. If ClickHouse or Prefect did get
+   > killed, nothing is lost — restart them per 7.4.2 and 7.5.2; only unsaved flow-run state goes.
 
 ### Final summary
 

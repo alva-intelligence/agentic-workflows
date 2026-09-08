@@ -4,6 +4,13 @@
 #
 # Requires the toolchain from /onboard Step 2 to be on PATH.
 # Services: API (9191), Frontend (3000), AI Service (8000), Data Service (9999)
+#
+# NOT started here: Data Pipeline has no long-running server (flows run on a Prefect
+# worker) and is absent by design. Ports 8123 (local ClickHouse) and 4200 (local Prefect)
+# are SHARED_PORTS: reported by --check and --status, and NEVER killed by --stop or
+# --kill-ports. /onboard tells the developer to leave both running, so killing them here
+# would break the estate the same run just set up. Enforced by the two arrays below --
+# every kill loop iterates OWNED_PORTS only.
 
 set -euo pipefail
 
@@ -36,22 +43,40 @@ read_pid() {
 
 is_running() { [[ -n "${1:-}" ]] && kill -0 "$1" 2>/dev/null; }
 
+# ── Ports ────────────────────────────────────────────────────────────────────
+# OWNED: started by this script, so this script may stop them.
+# SHARED: started by the developer per /onboard 7.4.2 and 7.5.2 and left running on
+#         purpose. Observed, never killed. Do not merge these two lists.
+OWNED_PORTS=(9191 3000 8000 9999 1025 8025)
+SHARED_PORTS=(8123 4200)
+
+port_pid() { lsof -ti :"$1" 2>/dev/null || true; }
+port_cmd() { ps -p "$1" -o comm= 2>/dev/null || echo "unknown"; }
+
 # ── Port conflict check ──────────────────────────────────────────────────────
 check_ports() {
   local conflicts=0
-  for port in 9191 3000 8000 9999; do
+  for port in "${OWNED_PORTS[@]}"; do
     local pid
-    pid=$(lsof -ti :"$port" 2>/dev/null || true)
+    pid=$(port_pid "$port")
     if [[ -n "$pid" ]]; then
-      local cmd
-      cmd=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
-      log_warn "Port $port in use by PID $pid ($cmd)"
+      log_warn "Port $port in use by PID $pid ($(port_cmd "$pid"))"
       conflicts=$((conflicts + 1))
+    fi
+  done
+  # Shared ports are reported for orientation only. In use is the EXPECTED state for a
+  # data developer and must never count as a conflict or trigger a kill suggestion.
+  for port in "${SHARED_PORTS[@]}"; do
+    local pid
+    pid=$(port_pid "$port")
+    if [[ -n "$pid" ]]; then
+      log_ok "Port $port in use by PID $pid ($(port_cmd "$pid")) — shared, left alone"
     fi
   done
   if [[ $conflicts -gt 0 ]]; then
     echo ""
     log_warn "$conflicts port conflict(s). Stop existing processes or use: ./run-all.sh --kill-ports"
+    log_warn "(--kill-ports never touches ${SHARED_PORTS[*]}.)"
     return 1
   fi
   return 0
@@ -59,9 +84,9 @@ check_ports() {
 
 # ── Kill conflicting ports ───────────────────────────────────────────────────
 kill_ports() {
-  for port in 9191 3000 8000 9999; do
+  for port in "${OWNED_PORTS[@]}"; do
     local pid
-    pid=$(lsof -ti :"$port" 2>/dev/null || true)
+    pid=$(port_pid "$port")
     if [[ -n "$pid" ]]; then
       kill "$pid" 2>/dev/null && log_ok "Killed PID $pid on port $port" || log_warn "Failed to kill PID $pid"
     fi
@@ -82,10 +107,12 @@ stop_all() {
     fi
   done
 
-  # 2. Kill anything still on our ports (catches orphaned processes)
-  for port in 9191 3000 8000 9999 1025 8025; do
+  # 2. Kill anything still on OUR ports (catches orphaned processes).
+  #    OWNED_PORTS only -- 8123/4200 belong to the developer's local ClickHouse and
+  #    Prefect, which /onboard asked them to leave running.
+  for port in "${OWNED_PORTS[@]}"; do
     local pid
-    pid=$(lsof -ti :"$port" 2>/dev/null || true)
+    pid=$(port_pid "$port")
     if [[ -n "$pid" ]]; then
       kill -9 "$pid" 2>/dev/null && log_ok "Killed orphaned process on port $port (PID $pid)" || true
     fi
@@ -258,8 +285,9 @@ case "${1:-}" in
     echo "    (no args)      Run preflight checks, then start all services"
     echo "    --check        Run preflight checks only"
     echo "    --status       Show status of all services + health checks"
-    echo "    --stop         Stop all running services"
-    echo "    --kill-ports   Kill processes on ports 9191, 3000, 8000, 9999"
+    echo "    --stop         Stop the services this script starts (never ${SHARED_PORTS[*]})"
+    echo "    --kill-ports   Kill processes on ports ${OWNED_PORTS[*]}"
+    echo "                   (never ${SHARED_PORTS[*]} — shared ClickHouse / Prefect)"
     echo "    --help         Show this help message"
     echo ""
     ;;

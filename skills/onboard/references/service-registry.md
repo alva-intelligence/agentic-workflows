@@ -4,10 +4,37 @@
 
 | Service | Directory | Repository | Stack | Default Branch | Port |
 |---------|-----------|-----------|-------|---------------|------|
-| API | `api/` | alva-intelligence/frnd-api-php | Laravel 13, PHP 8.5, PostgreSQL, Sanctum + JWT | `develop` | 9191 |
-| Frontend | `web/` | alva-intelligence/frnd-web | Next.js 16, React 19, TypeScript, Tailwind CSS, Zustand, TanStack Query v5, Bun | `develop` | 3000 |
-| AI Service | `ai-service/` | alva-intelligence/frnd-ai-services | FastAPI, Python, Agno, OpenAI/Anthropic/Google, pgvector, Redis | `development` | 8000 |
-| Data Service | `data-service/` | alva-intelligence/frnd-clickhouse-api | FastAPI, Python, pandas, Sentry | `development` | 9999 |
+| API | `api/` | alva-intelligence/frnd-api-php | Laravel 13, PHP 8.5, PostgreSQL, Sanctum + JWT | `develop` | **9191** + pg `:5432` |
+| Frontend | `web/` | alva-intelligence/frnd-web | Next.js 16, React 19, TypeScript, Tailwind CSS, Zustand, TanStack Query v5, Bun | `develop` | **3000** |
+| AI Service | `ai-service/` | alva-intelligence/frnd-ai-services | FastAPI, Python, Agno, OpenAI/Anthropic/Google, pgvector, Redis | `development` | **8000** + pg `:5432`, redis `:6379` |
+| Data Service | `data-service/` | alva-intelligence/frnd-clickhouse-api | FastAPI, Python, pandas, Sentry | `development` | **9999** + ch `:8123`, prefect `:4200` |
+| Data Pipeline | `data-pipeline/` | alva-intelligence/frnd-orchestration | Prefect 3, Python 3.12, ClickHouse, AWS S3 | `development` | prefect `:4200` + ch `:8123` |
+
+> **Bold = the port the service itself serves on. Unbolded = a backing service it connects to.**
+> Only the bold ones are `run-all.sh`'s to start, health-check or stop; Postgres `:5432`, Redis
+> `:6379`, ClickHouse `:8123` and Prefect `:4200` are shared infrastructure the developer runs, and
+> the template reports them without ever killing them (`SHARED_PORTS`).
+>
+> Ports are the local defaults, read from each repo's `.env` / `.env.example` on 2026-09-07. Two
+> corrections worth carrying: **API does not use Redis locally** — `.env.example` ships `REDIS_*`,
+> but `QUEUE_CONNECTION=database` and `CACHE_STORE=file`, so nothing connects to `:6379`; and
+> **Data Service talks to Prefect too** (`PREFECT_API_URL=http://127.0.0.1:4200/api`), which is easy
+> to miss because Prefect reads as a data-pipeline concern.
+
+> ⚠️ **`data-pipeline/` breaks two assumptions the other four services share.**
+> 1. **No port of its own.** It runs no long-lived process and is absent from `run-all.sh` by design.
+>    Its Port cell lists what its flows *connect to*, not what it serves: the local Prefect server on
+>    `:4200` (onboarding Step 7.5, required for anyone who picked Data Pipeline) and local ClickHouse
+>    on `:8123` (Step 7.4.2). You start both by hand when you work on flows, so `run-all.sh` has
+>    nothing to launch and nothing to health-check here.
+>    It is also the only service with **no `.env`** — every credential comes from Prefect Secret
+>    blocks (7.5.3), which is why there is no file to point at a port.
+> 2. **There is no deploy step — both branches are live estates.** The branch shape is the standard
+>    one (`development` for work, `main` for release), but a Prefect worker polls each estate and
+>    `git clone`s the branch **at run time**. So a merge is live the moment it lands — there is no
+>    build or release to forget. Feature work branches from and PRs into `development`; promotion to
+>    `main` is a deliberate PR opened by a human. Open PRs; never merge them yourself, never push
+>    directly to either branch.
 
 ### Service Owners & Contacts
 
@@ -16,7 +43,16 @@
 | API | arhen | arhen |
 | Frontend | fahrizky, daffa | fahrizky, daffa |
 | AI Service | rifki | rifki |
-| Data Service | kemal, iru | kemal, iru |
+| Data Service | fahmi, arhen | fahmi, arhen |
+| Data Pipeline | fahmi (data engineer) | fahmi |
+
+> **Fivetran and connector changes are NOT part of a normal code change.** Enabling, pausing or
+> re-scheduling a connector costs money on someone else's budget. Connectors land the `raw_*` tables
+> that data-pipeline transforms, so a change there is owned jointly by **fahmi and arhen** (the
+> data-service PICs) — raise it as its own request, never as a side effect of a metric change.
+>
+> **Data Pipeline itself is fahmi's.** The transform layer, its Prefect estate and its Secret blocks
+> have a single PIC; the joint ownership above applies to the Fivetran/connector boundary feeding it.
 
 ### Start Commands (EXACT — do NOT guess)
 
@@ -53,7 +89,13 @@
 | API | `api/.env` | arhen |
 | Frontend | `web/.env.local` | fahrizky, daffa |
 | AI Service | `ai-service/.env` | rifki |
-| Data Service | `data-service/.env` | kemal, iru |
+| Data Service | `data-service/.env` | fahmi, arhen |
+| Data Pipeline | **none** — Prefect Secret blocks | fahmi |
+
+> **Data Pipeline has no `.env`.** Its runtime credentials are Prefect Secret blocks fetched from the
+> server at flow time, so its `env_status` in `.onboard-state.json` is the literal string `"n/a"` —
+> and `"n/a"` **satisfies** the `env_files` gate. A strict `== "completed"` check would block
+> `/workflow start` forever for anyone who selects it. Setup: onboard Steps 6b and 7.5.
 
 ### All Services
 
@@ -63,7 +105,7 @@ Use `./run-all.sh --status` to check which services are running.
 
 **Before starting services,** always check for port conflicts:
 ```bash
-for port in 9191 3000 8000 9999; do
+for port in 9191 3000 8000 9999 8123 4200; do
   pid=$(lsof -ti :$port 2>/dev/null)
   if [ -n "$pid" ]; then
     echo "⚠ Port $port in use by PID $pid — $(ps -p $pid -o comm= 2>/dev/null)"
@@ -71,3 +113,8 @@ for port in 9191 3000 8000 9999; do
 done
 ```
 Kill conflicting processes before starting, or the services will fail silently.
+
+> ⚠️ **`8123` and `4200` are exceptions — never kill them.** They are the local ClickHouse server and
+> the local Prefect server, which the developer was asked to leave running in their own terminals
+> (onboard Steps 7.4.2 and 7.5.2). Neither is started or stopped by `run-all.sh`. Killing ClickHouse
+> drops the local cluster every mart lives in. In-use on those two ports is **expected**, not a conflict.
