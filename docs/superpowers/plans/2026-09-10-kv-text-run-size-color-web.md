@@ -602,18 +602,37 @@ In `KvGeneratorLayout.tsx`, replace the body of the `onPatch` closure (lines 789
 
 Add the import at the top of the file and drop `RUN_PROPS`, `applyRunStyle` and `clearRunProp` from its import list if nothing else in the file uses them.
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [ ] **Step 5: Give the fill event a scope**
+
+A colour edit is now either layer-wide or range-scoped, and `kv_generator.text_fill_changed` cannot currently tell them apart — `KvTextFillChangedProps` carries only `fill_type`. House rule: analytics ships with the interaction, not after it (`.claude/skills/frndos-analytics-events`). This is a property added to an existing event, not a new or renamed one, so it needs no taxonomy row.
+
+In `src/lib/analytics/kv-generator-events.ts`:
+
+```ts
+export interface KvTextFillChangedProps {
+  fill_type: KvTextFillType;
+  /** `"range"` when the edit was committed against a non-collapsed text
+   *  selection, so a per-run colour is distinguishable from a layer-wide one. */
+  scope: KvTextStyleScope;
+}
+```
+
+Pass `scope={styleScope}` from `TextTypographyControls` into `FillControls`, and include it in the `trackKvTextFillChanged` call there. `styleScope` is already computed and already passed to this component — do not recompute it.
+
+Do NOT use a raw `posthog.capture`; the typed helper is the only sanctioned path and the review bot flags inline captures.
+
+- [ ] **Step 6: Run the tests to verify they pass**
 
 ```bash
 bun test src/components/studio/kv-generator/overlays/commitSemantics.test.tsx src/components/studio/kv-generator/overlays/TextTypographyControls.analytics.test.tsx
 ```
 
-Expected: PASS. The analytics suite matters here: `styleScope` is computed from the same range condition, so a mismatch between it and the dispatcher would report the wrong scope.
+Expected: PASS. The analytics suite matters here: `styleScope` is computed from the same range condition, so a mismatch between it and the dispatcher would report the wrong scope. Add a case asserting a range-scoped colour edit reports `scope: "range"`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/components/studio/kv-generator/overlays/dispatchTextPatch.ts src/components/studio/kv-generator/overlays/commitSemantics.test.tsx src/components/studio/kv-generator/KvGeneratorLayout.tsx
+git add src/components/studio/kv-generator/overlays/dispatchTextPatch.ts src/components/studio/kv-generator/overlays/commitSemantics.test.tsx src/components/studio/kv-generator/KvGeneratorLayout.tsx src/components/studio/kv-generator/overlays/FillControls.tsx src/components/studio/kv-generator/overlays/TextTypographyControls.tsx src/lib/analytics/kv-generator-events.ts
 git commit -m "feat(web): route per-run colour edits to the selected range
 
 Extracts the panel's patch dispatcher out of a JSX closure so it can be
@@ -1215,18 +1234,28 @@ The size field's `onCommit` (line 244) stays exactly as it is — it already emi
     return out;
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [ ] **Step 5: Correct the analytics docstring that this task falsifies**
+
+`KvTextStyleChangedProps` in `src/lib/analytics/kv-generator-events.ts` currently documents its own behaviour as:
+
+> `scope` is `"range"` only for `font_weight`/`font_style` edits committed while a non-collapsed text selection is active — every other property (and font_weight/font_style with no selection) is `"layer"`.
+
+That sentence becomes false the moment `fontSize` joins `RUN_PROPS`. Rewrite it to name the run-scoped properties as the set they now are (font family, weight, style, size, colour), and confirm the size field's `trackKvTextStyleChanged({ property: "font_size", scope: styleScope })` call passes the real `styleScope` rather than a hardcoded `"layer"`.
+
+A stale docstring on an analytics type is not cosmetic: it is what the next person reads before deciding whether a dashboard's `scope` breakdown is trustworthy.
+
+- [ ] **Step 6: Run the tests to verify they pass**
 
 ```bash
-bun test src/components/studio/kv-generator/overlays/TextTypographyControls.test.tsx src/components/studio/kv-generator/overlays/commitSemantics.test.tsx
+bun test src/components/studio/kv-generator/overlays/TextTypographyControls.test.tsx src/components/studio/kv-generator/overlays/TextTypographyControls.analytics.test.tsx src/components/studio/kv-generator/overlays/commitSemantics.test.tsx
 ```
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/components/studio/kv-generator/overlays/TextTypographyControls.tsx src/components/studio/kv-generator/overlays/FontSizeField.tsx src/components/studio/kv-generator/overlays/TextTypographyControls.test.tsx src/components/studio/kv-generator/overlays/dispatchTextPatch.ts src/components/studio/kv-generator/overlays/commitSemantics.test.tsx
+git add src/lib/analytics/kv-generator-events.ts src/components/studio/kv-generator/overlays/TextTypographyControls.tsx src/components/studio/kv-generator/overlays/FontSizeField.tsx src/components/studio/kv-generator/overlays/TextTypographyControls.test.tsx src/components/studio/kv-generator/overlays/dispatchTextPatch.ts src/components/studio/kv-generator/overlays/commitSemantics.test.tsx
 git commit -m "feat(web): range-scoped font size with a mixed state
 
 A range that mixes sizes shows no concrete number, so committing the
