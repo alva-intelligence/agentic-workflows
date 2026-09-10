@@ -724,7 +724,7 @@ export type MeasureFn = (
 ) => number;
 ```
 
-Add `sizeScale: number;` to `StyledSpan` and to `LayoutSpan`.
+Add `sizeScale?: number;` to `StyledSpan` — **optional**, meaning 1. A layout caller that does not mix sizes must not be forced to write `sizeScale: 1` on every span, and Task 2's tests already construct spans without it. `LayoutSpan.sizeScale` is **required** (`packLine` sets `a.sizeScale ?? 1`), because every consumer downstream of layout reads it unconditionally. `RunSpan.sizeScale` stays required — `resolveRunSpans` always resolves it.
 
 Give `measureAtom`, `makeAtom` and `splitAtomToFit` an extra `fontSizePx: number` parameter — the *resolved* per-run px — and pass it to `measure(...)`. `splitAtomToFit`'s rebuilt `style` object must carry `sizeScale` alongside `color`.
 
@@ -809,7 +809,7 @@ parity is what keeps the Konva.Text/run-Shape swap seamless."
 - Test: `src/components/studio/kv-generator/overlays/textRunLayout.test.ts`
 
 **Interfaces:**
-- Produces: `LayoutLine` gains `heightPx: number`. `RunTextLayout.lineHeightPx` is **removed**; `height` becomes the sum of line heights. Task 7 consumes both.
+- Produces: `LayoutLine` gains `heightPx: number`; `height` becomes the sum of line heights. `RunTextLayout.lineHeightPx` **stays** in this task and is removed in Task 7 — removing it here would leave `paintRunLayout` reading a field that no longer exists, so this task's own commit would not compile.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -845,7 +845,7 @@ Expected: FAIL — `heightPx` is undefined on a line.
 
 - [ ] **Step 3: Compute height per line**
 
-Add `heightPx: number;` to `LayoutLine`. Remove `lineHeightPx` from `RunTextLayout`. In `layoutRunText`, delete `const lineHeightPx = fontSizePx * lineHeight;` and inside the `rows.map` compute:
+Add `heightPx: number;` to `LayoutLine`. **Keep** `lineHeightPx` on `RunTextLayout` and keep `const lineHeightPx = fontSizePx * lineHeight;` — it now means the layer's own default line height, and `paintRunLayout` still reads it until Task 7. Inside the `rows.map` compute:
 
 ```ts
     // Fabric's rule: a line is as tall as its tallest character. Matching it
@@ -857,7 +857,7 @@ Add `heightPx: number;` to `LayoutLine`. Remove `lineHeightPx` from `RunTextLayo
 
 Note the `fontSizePx` floor in the `Math.max`: an empty row (a bare `\n`) has no atoms, and a blank line must still occupy the layer's own line height rather than collapsing to zero.
 
-Return `height: lines.reduce((h, l) => h + l.heightPx, 0)` and include `heightPx` in each returned line object.
+Return `height: lines.reduce((h, l) => h + l.heightPx, 0)`, include `heightPx` in each returned line object, and keep returning `lineHeightPx` unchanged.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
@@ -865,7 +865,7 @@ Return `height: lines.reduce((h, l) => h + l.heightPx, 0)` and include `heightPx
 bun test src/components/studio/kv-generator/overlays/textRunLayout.test.ts
 ```
 
-Expected: PASS. TypeScript will now flag every remaining reader of `layout.lineHeightPx` — those are fixed in Task 7.
+Expected: PASS, and the tree still compiles — `paintRunLayout` keeps reading `lineHeightPx`, so uniform text is unchanged and mixed-size text is merely not yet painted at its new heights. Task 7 switches the painter over and then deletes the field.
 
 - [ ] **Step 5: Commit**
 
@@ -888,7 +888,7 @@ an empty paragraph does not collapse."
 
 **Interfaces:**
 - Consumes: `LayoutLine.heightPx` (Task 6), `LayoutSpan.sizeScale` (Task 5).
-- Produces: `resolveBaseline` returns a per-line `translateY`; its signature becomes `(ctx, layout, fontSizePx) => { baseline, translateY: number[] }`.
+- Produces: `resolveBaseline` returns a per-line `translateY`; its signature becomes `(ctx, layout, fontSizePx) => { baseline, translateY: number[] }`. This task also **deletes** `RunTextLayout.lineHeightPx` — Task 6 deliberately left it so the tree kept compiling; once the painter walks `heightPx`, nothing reads it. Run `bunx tsc --noEmit` after removing it and fix any remaining reader.
 
 **The constraint that governs this task:** `resolveBaseline`'s existing docstring explains it mirrors `Konva.Text._sceneFunc` because **both nodes are live at once** — a layer is a `Konva.Text` until a run overrides something and a custom Shape afterwards, so a baseline that differs would make the whole block jump the moment one word is bolded. It also states that metrics come from the **first span's font**, deliberately, so every line shares one baseline. Keep that: vary only the **size** per line. Re-deriving the font per line would change mixed-family multi-line text and break parity for a case this feature never touches.
 
@@ -1342,11 +1342,15 @@ Expected: PASS.
 - [ ] **Step 6: Full suite + typecheck**
 
 ```bash
-bun test src/components/studio/kv-generator
+bun test src/components/studio/kv-generator/overlays src/components/studio/kv-generator/fabricExport.runs.test.ts src/components/studio/kv-generator/renderBoardStage.test.ts
 bunx tsc --noEmit
 ```
 
-Expected: PASS. `tsc` is the real gate for this plan — removing `RunTextLayout.lineHeightPx` in Task 6 and widening `MeasureFn` in Task 5 are both breaking changes, and the compiler is what proves no render site was left behind.
+Expected: PASS.
+
+**Do NOT run `bun test src/components/studio/kv-generator` as a gate.** That whole-directory run is already red on `origin/develop` — 25-26 pre-existing failures, varying between runs — caused by cross-file interference, not by anything in this plan. Every file this plan touches passes in isolation. The pre-existing list is captured at `.superpowers/sdd/2026-09-10-kv-text-run-size-color-web/baseline-failures.txt`; compare against it rather than against zero, and never "fix" a test to make that run green.
+
+`tsc` is the real gate for this plan — removing `RunTextLayout.lineHeightPx` in Task 6 and widening `MeasureFn` in Task 5 are both breaking changes, and the compiler is what proves no render site was left behind.
 
 - [ ] **Step 7: Commit**
 
