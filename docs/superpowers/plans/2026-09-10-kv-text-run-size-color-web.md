@@ -716,6 +716,8 @@ describe("per-run size", () => {
   });
 
   it("wraps earlier when a run is enlarged", () => {
+    const lineText = (l: RunTextLayout) =>
+      l.lines.map((ln) => ln.spans.map((s) => s.text).join(""));
     const small = layoutRunText({
       ...base, boxWidth: 100, fontSizePx: 20,
       spans: [sizedSpan("aaa bbb ccc")], measure: sizedMeasure,
@@ -724,7 +726,13 @@ describe("per-run size", () => {
       ...base, boxWidth: 100, fontSizePx: 20,
       spans: [sizedSpan("aaa ", 2), sizedSpan("bbb ccc")], measure: sizedMeasure,
     });
-    expect(large.lines.length).toBeGreaterThan(small.lines.length);
+    // Assert the WRAP POINT, not the line count. Doubling the first run pushes
+    // "bbb" off line 1 — which is exactly what "wraps earlier" means — but both
+    // layouts still occupy 2 lines. A line-count change only appears around
+    // scale 3.4+, where it comes from a mid-word split (a different mechanism,
+    // covered by its own test) rather than from an earlier wrap.
+    expect(lineText(small)[0]).toBe("aaa bbb ");
+    expect(lineText(large)[0]).toBe("aaa ");
   });
 });
 ```
