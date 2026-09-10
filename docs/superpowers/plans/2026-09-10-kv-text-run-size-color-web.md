@@ -762,13 +762,23 @@ type Atom = Omit<StyledSpan, "text"> & {
 };
 ```
 
-and `makeAtom` sets `resolvedPx: fontSizePx,` in the object it returns.
+`makeAtom` builds its `Atom` from explicit fields — it does **not** spread the span — so it must set BOTH new fields itself:
+
+```ts
+    resolvedPx: fontSizePx,
+    sizeScale: span.sizeScale ?? 1,
+```
+
+Miss `sizeScale` there and `packLine`'s merge test below compares `undefined === undefined` for every atom, silently merging a 2x run into its neighbour. (Task 2 hit exactly this shape of bug with `color`: the type additions were listed, the one place atoms are *built* was not.)
 
 In `layoutRunText`, resolve each span's size before building atoms:
 
 ```ts
   const atoms = toAtoms(
-    args.spans.map((s) => ({ ...s, resolvedPx: fontSizePx * s.sizeScale })),
+    // `sizeScale` is OPTIONAL on StyledSpan, so the `?? 1` is load-bearing:
+    // `fontSizePx * undefined` is NaN, and a NaN width propagates silently
+    // through wrapping into an empty layout.
+    args.spans.map((s) => ({ ...s, resolvedPx: fontSizePx * (s.sizeScale ?? 1) })),
     measure,
     letterSpacingPx
   );
@@ -776,7 +786,7 @@ In `layoutRunText`, resolve each span's size before building atoms:
 
 `packLine`'s merge test gains `prev.sizeScale === a.sizeScale`, and the pushed span gains `sizeScale: a.sizeScale`.
 
-`measureRunSpansWidth` takes the layer `fontSizePx` and multiplies per span: `measure(part, s.fontFamily, s.fontWeight, s.fontStyle, fontSizePx * s.sizeScale)`.
+`measureRunSpansWidth` takes the layer `fontSizePx` and multiplies per span: `measure(part, s.fontFamily, s.fontWeight, s.fontStyle, fontSizePx * (s.sizeScale ?? 1))` — same `?? 1` for the same NaN reason.
 
 - [ ] **Step 4: Make `canvasMeasure` size-agnostic**
 
