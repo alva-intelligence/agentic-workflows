@@ -1408,7 +1408,18 @@ Expected: PASS.
 
 **Do NOT run `bun test src/components/studio/kv-generator` as a gate.** That whole-directory run is already red on `origin/develop` — 25-26 pre-existing failures, varying between runs — caused by cross-file interference, not by anything in this plan. Every file this plan touches passes in isolation. The pre-existing list is captured at `.superpowers/sdd/2026-09-10-kv-text-run-size-color-web/baseline-failures.txt`; compare against it rather than against zero, and never "fix" a test to make that run green.
 
-`tsc` is the real gate for this plan — removing `RunTextLayout.lineHeightPx` in Task 6 and widening `MeasureFn` in Task 5 are both breaking changes, and the compiler is what proves no render site was left behind.
+**`tsc --noEmit` is NOT clean on this branch either, and never was.** It reports ~867 pre-existing errors repo-wide — 265 inside `src/components/studio/kv-generator/`, almost all of them `.test.tsx` files whose tsconfig does not pull in bun's test types, plus 13 genuine ones in `KvFabricCanvas.tsx`, `KvGeneratorLayout.tsx` and `renderBoardStage.ts`. Zero of them are in the layout/run modules this plan authors.
+
+So the typecheck gate is a **comparison**, not a pass:
+
+```bash
+bunx tsc --noEmit 2>&1 | grep -E "error TS" | sort > /tmp/tsc-now.txt
+diff <(sort .superpowers/sdd/2026-09-10-kv-text-run-size-color-web/tsc-baseline.txt) /tmp/tsc-now.txt
+```
+
+Lines only in `/tmp/tsc-now.txt` are errors this branch introduced and must be fixed. Lines only in the baseline are errors it fixed, which is fine. Additionally these files must have **zero** errors, since the plan authors them outright: `overlays/textRuns.ts`, `overlays/textRunLayout.ts`, `overlays/konvaRunText.ts`, `overlays/dispatchTextPatch.ts`, `fabricExport.ts`.
+
+With that understood, the typecheck is the real gate for this plan — removing `RunTextLayout.lineHeightPx` in Task 6 and widening `MeasureFn` in Task 5 are both breaking changes, and the compiler is what proves no render site was left behind.
 
 - [ ] **Step 7: Commit**
 
