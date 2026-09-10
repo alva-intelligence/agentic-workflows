@@ -6,7 +6,7 @@
 
 **Architecture:** The run model is already prop-generic — `RUN_PROPS` drives coalescing, clearing and the panel dispatcher — so adding two entries carries most of the model layer. Colour has no layout consequence and lands first (Tasks 1–4). Size does: the shared layout module threads one scalar `fontSizePx` through measurement, line height and baseline, and all three become per-run or per-line (Tasks 5–7). Fabric gets both props via its native per-character styles; Konva gets them through the shared layout module.
 
-**Tech Stack:** Next.js 16, React 19, TypeScript, Fabric v6, Konva 10, Bun test (with `canvas@3.2.3` via fabric's optionalDependencies, so text measurement is real in tests).
+**Tech Stack:** Next.js 16, React 19, TypeScript, Fabric v7 (7.4.0), Konva 10, Bun test (with `canvas@3.2.3` via fabric's optionalDependencies, so text measurement is real in tests).
 
 **Spec:** `docs/superpowers/specs/2026-09-10-kv-text-run-size-color-design.md`
 
@@ -405,6 +405,9 @@ it("writes a run's colour onto the Textbox as a per-character fill", () => {
   expect(box.getSelectionStyles(0, 1)[0].fill).toBe("#FF0066");
   // An un-overridden run must write NO fill, so the object-level fill (which
   // may be a gradient) still governs those characters.
+  // NB: this asserts the character carries no fill, so the object-level fill
+  // governs it. It does NOT prove the key was never written — fabric@7 strips
+  // undefined values on the way in, so both spellings read back identically.
   expect(box.getSelectionStyles(6, 7)[0].fill).toBeUndefined();
 });
 ```
@@ -424,8 +427,14 @@ In `fabricExport.ts::applyRunStylesToTextbox`, replace the `setSelectionStyles` 
 ```ts
     // Only properties a run actually overrides are written, so an unstyled span
     // inherits the object-level font AND the object-level fill — which may be a
-    // gradient. Writing `fill: undefined` would not be equivalent: Fabric stores
-    // the key and the character stops inheriting.
+    // gradient.
+    //
+    // Not writing the key is a contract, not a workaround. On fabric@7 it
+    // happens to make no difference — `_extendStyles` merges via
+    // `pickBy({...existing, ...style}, v => v !== undefined)` and drops the key
+    // anyway — and every call site clears `styles` first (KvFabricCanvas.tsx
+    // :2435, :2936), so the merge-over-existing case never arises either. The
+    // guard is here so this adapter depends on NEITHER of those facts.
     const style: Record<string, unknown> = {
       fontFamily: s.fontFamily,
       fontWeight: s.fontWeight,
@@ -1096,7 +1105,9 @@ In `applyRunStylesToTextbox`, extend the style object built in Task 3:
     if (s.color) style.fill = s.color;
     // The Textbox's own fontSize is the layer size in px, already denormalized
     // by the caller — so the scale applies directly and this function still
-    // needs no board height.
+    // needs no board height. Written conditionally for the same reason as
+    // `fill` above: the adapter states "no override" by omitting the key rather
+    // than by trusting Fabric to discard an undefined one.
     if (s.sizeScale !== 1) style.fontSize = (box.fontSize ?? 0) * s.sizeScale;
 ```
 
