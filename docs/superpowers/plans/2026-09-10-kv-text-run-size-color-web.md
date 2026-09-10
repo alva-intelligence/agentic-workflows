@@ -696,23 +696,27 @@ describe("per-run size", () => {
     expect(small.x).toBe(40);
   });
 
-  it("PARITY: a uniform-size payload lays out exactly as it does today", () => {
-    const spans = [sizedSpan("hello world foo bar baz"), sizedSpan(" qux")];
-    const withScale = layoutRunText({
-      ...base,
-      boxWidth: 120,
-      fontSizePx: 20,
-      spans,
-      measure: sizedMeasure,
+  it("PARITY: a run's scale is exactly equivalent to the same resolved size", () => {
+    const geom = (l: RunTextLayout) =>
+      l.lines.map((ln) =>
+        ln.spans.map((s) => ({ text: s.text, x: s.x, width: s.width }))
+      );
+    // The same resolved size (20px) reached two ways: a 2x run on a 10px
+    // layer, and a plain run on a 20px layer. Measurement must not be able to
+    // tell them apart — that equivalence IS per-run sizing being correct.
+    //
+    // Compare GEOMETRY, not the whole layout object: `sizeScale` itself
+    // legitimately differs between the two, and `lineHeightPx` still derives
+    // from the layer size until Task 6 makes it per-line.
+    const scaled = layoutRunText({
+      ...base, boxWidth: 120, fontSizePx: 10,
+      spans: [sizedSpan("hello world foo bar baz", 2)], measure: sizedMeasure,
     });
-    const uniform = layoutRunText({
-      ...base,
-      boxWidth: 120,
-      fontSizePx: 20,
-      spans: spans.map((s) => ({ ...s, sizeScale: 1 })),
-      measure: sizedMeasure,
+    const plain = layoutRunText({
+      ...base, boxWidth: 120, fontSizePx: 20,
+      spans: [sizedSpan("hello world foo bar baz")], measure: sizedMeasure,
     });
-    expect(withScale).toEqual(uniform);
+    expect(geom(scaled)).toEqual(geom(plain));
   });
 
   it("wraps earlier when a run is enlarged", () => {
