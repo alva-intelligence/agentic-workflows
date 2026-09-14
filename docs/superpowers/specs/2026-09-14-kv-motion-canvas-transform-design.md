@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-14
 **Author:** Daffa (with Claude)
-**Status:** approved for planning
+**Status:** implemented 2026-09-14 — web branch `feature/daffa/vc-kv-motion-canvas-transform`, manual e2e passed (handles, auto-preview, export)
 **Branch:** `feature/daffa/vc-kv-motion-canvas-transform` (web only)
 **Services:** web
 
@@ -52,9 +52,9 @@ complete (scale + rotate), legible (onion-skin + path), and self-confirming
 - One `Konva.Transformer` (name `motion-transformer`) on the base layer, attached to the selected overlay's node **only on the focused tile**. Poster tiles never get one — the outline rule today, kept.
 - `enabledAnchors`: the four corners only. `keepRatio: true`. Rationale: `MotionProps.scale` is uniform; side anchors would produce `scaleX ≠ scaleY`, which the document cannot store. Non-uniform scale is explicitly out of scope (it is a persisted-contract change: sampler, export, Inspector).
 - `rotateEnabled: true`, `rotationSnaps: [0, 90, 180, 270]`, `rotationSnapTolerance: 5`.
-- Not attached when the overlay is `locked` or `hidden` (same rule as `draggable`).
+- Hidden overlay → nothing. Locked overlay → the Transformer stays attached with resize/rotate disabled, so its border keeps acting as the selection outline (it is not hittable, so panning through a locked layer still works). *(Deviation from the first draft, which said "not attached when locked": the old outline also showed on locked layers, and losing all selection feedback on lock was worse.)*
 - Commit: the existing `transformend` listener — `onOverlayTransformed(ov.id, { scale: node.scaleX(), rotation: node.rotation() })`. Because `keepRatio` holds, `scaleX === scaleY`. `writeAutoKeyframes` handles t=0 / anchor exactly as for drag.
-- Position drift: Konva's Transformer moves the node's `x/y` while scaling around a corner. Since the node is center-offset and our pose is "center + uniform scale", the commit must send `x/y` too when they changed: `{ x, y, scale, rotation }` computed with the same formula as `dragend`. (Otherwise a corner-scale visually shifts the layer, then the next `applyTimeline` snaps it back.) Alternative considered: `centeredScaling: true` so the node's center never moves — simpler and matches the Inspector's semantics. **Decision: `centeredScaling: true`** and commit `{ scale, rotation }` only. No modifier modes in this branch.
+- Position drift: Konva's Transformer moves the node's `x/y` while scaling around a corner. Since the node is center-offset and our pose is "center + uniform scale", the commit must send `x/y` too when they changed: `{ x, y, scale, rotation }` computed with the same formula as `dragend`. (Otherwise a corner-scale visually shifts the layer, then the next `applyTimeline` snaps it back.) Alternative considered: `centeredScaling: true` so the node's center never moves — simpler and matches the Inspector's semantics. **Decision: `centeredScaling: true`**, and commit **only the gestured prop** — `input === "rotate" ? { rotation } : { scale }`, where `input` comes from `Transformer.getActiveAnchor() === "rotater"` captured at `transformstart`. Committing both would write an anchor + a noise keyframe (Konva's matrix decompose leaves `1.0000000000000002`-style scale after a pure rotate) on a lane the user never touched. No modifier modes in this branch.
 - **Camera-scale compensation.** The stage is CSS-scaled by the camera; at a fit scale of ~0.35 a 10 px anchor renders at ~3.5 px. The editor passes `cameraScale` (from `camera.scale`) as a prop; the stage sets `anchorSize`, `borderStrokeWidth`, `anchorStrokeWidth`, `rotateAnchorOffset` to `base / cameraScale` and updates them on change without re-attaching. Pure helper `transformerStyleForScale(scale)` returns the numbers (unit-tested).
 - Live sync while a transform is in progress: the Transformer draws its own border, so the `dragmove` outline-glue code goes away with the outline.
 
@@ -116,7 +116,7 @@ New event via the `frndos-analytics-events` skill:
 
 ### Undo
 
-Unchanged: one undo step per gesture (existing `drag:${overlayId}:${playheadMs}` label). `previewOnce`, onion-skin and badge are derived/UI state and never enter the undo stack.
+One undo step per gesture. The old `drag:${overlayId}:${playheadMs}` coalescing label was dropped: every gesture is exactly one push, and the label only ever merged *distinct* gestures at the same (overlay, t) — drag → scale → rotate at 2 s would have been one ⌘Z. `previewOnce`, onion-skin and badge are derived/UI state and never enter the undo stack.
 
 ## Not in scope
 
