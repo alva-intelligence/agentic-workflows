@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-17
 **Author:** Daffa (with Claude)
-**Status:** approved design, not implemented
+**Status:** IMPLEMENTED 2026-09-17 — web branch `feature/daffa/vc-kv-motion-path` (21 commits on top of `vc-motion-build-tab`), unpushed; 1160 unit tests green; manual pass (Step 8 of the plan) pending. See **Outcome** at the end.
 **Services:** web only (api stores `timeline` opaquely — `array` + `MaxJsonBytes`, no inner validation)
 **Depends on:** `2026-08-31-motion-build-tab-design.md` (Build tab, revived 2026-09-17 on `feature/daffa/vc-motion-build-tab`), `2026-09-14-kv-motion-canvas-transform-design.md` (Transformer, onion-skin, camera-scale compensation, auto-preview badge)
 
@@ -265,3 +265,20 @@ Tests are written first per task (TDD); expected numbers come from running
   construction (same deletes, plus dropping `path`), but it is the one place
   this feature edits code that already ships; the mutation test above is
   what makes that safe.
+
+## Outcome (2026-09-17)
+
+Built via subagent-driven development from `docs/superpowers/plans/2026-09-17-kv-motion-path.md`. Where the code differs from the design above, the code is right:
+
+- **§2 curve** — the plan's `knot()` guard used truthiness and skipped the epsilon on the doubled endpoint (≈4e-8 asymmetry). Fixed with an explicit zero check; symmetry holds to 1e-10.
+- **§4 exclusivity** lives in `SlotPlaceholder`'s toggle (via `BUILD_EXCLUSIVE_GROUPS`), not as a `MotionPresetGrid` prop.
+- **§5 Delete path** — strips the START's x/y only when it is a redundant hold (no earlier x/y keyframe, or one with the same pose). When the start is another motion's destination (In path + emphasis path sharing a keyframe) it keeps its x/y, otherwise the layer would be stranded at the In path's off-screen origin.
+- **§5 duration edit** — `activePath` follows the keyframe whose `t_ms` is NEW after the stretch (a before/after diff), not `start + duration`, because the stretch is neighbour-clamped.
+- **§6 onion-skin** — the polyline is built from the SAMPLED poses (so `shake`'s x-only and `bounce`'s y-only keyframes keep their line) and curves a pair only under the sampler's own rule.
+- **§6 poster tiles: "curve only"** — NOT built. Nothing path-related draws on unfocused tiles, matching onion-skin; recorded as a deliberate deviation.
+- **§6 handles effect** is keyed on a derived geometry string (not `activePath` identity), so a host re-render mid-drag cannot destroy the dot under the pointer. End-handle drag preview keeps the deltas (mids ride along), matching what the drop commits.
+- **§7 templates** rebuild keyframe objects and needed an explicit `path` passthrough (with `path: null` tolerated and the x/y invariant enforced on bake); the design assumed they copied objects.
+- **Added rule** — `trackSegments` treats a keyframe with a non-empty `path` as motion across its gap, or an emphasis loop (start pose = end pose) would be two still points with no bar.
+- **Popover ↔ canvas** — a Base UI outside-press on a tile canvas is cancelled (`details.cancel()`), or the first handle drag would close the popover and destroy the handles; the dock's Backspace/Space shortcuts ignore keys typed inside the popover; initial focus is the Duration field.
+
+Known follow-ups (ledgered, none blocking): the outside-press guard also matches the audio-row waveform canvas (popover lingers after an audio-clip press — tighten to `[data-tile-stage]`); `hasXY` is written five times; the ~210-line handles effect could be a `mountPathHandles` module; analytics fire on no-op edits; duration on a merged bar rescales the whole cluster while the popover shows only the path's span.
