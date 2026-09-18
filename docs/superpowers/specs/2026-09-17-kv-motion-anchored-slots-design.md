@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-17
 **Author:** Daffa (with Claude)
-**Status:** approved design, not implemented
+**Status:** IMPLEMENTED 2026-09-18 — merged (ff) into `feature/daffa/vc-kv-motion-path` (commits 77a2d148d..5a38addbf, 10 commits); manually verified by Daffa; unpushed
 **Services:** web only
 **Branch:** `feature/daffa/vc-kv-motion-anchored-slots`, stacked on `feature/daffa/vc-kv-motion-path`; merged back into the Path branch when done (one PR to `develop`).
 **Supersedes:** the "elastic slots" rule of `2026-08-29-kv-motion-timeline-upgrades-design.md` (`assignSegmentsToSlots`, 2026-08-30).
@@ -56,3 +56,16 @@ A document whose **preset-labelled entrance was dragged off 0** during the elast
 ## Non-goals
 
 Per-layer persisted start/end; delaying a layer that has no entrance (add one first); In/Out on the Keyframes view.
+
+## Outcome (2026-09-18)
+
+Rulings that changed the design during implementation:
+
+- **Persisted `role?: "in" | "out"` on `MotionKeyframe`** — the spec's "derived, no persisted field" could not tell a Build/hand entrance that was *delayed* from an emphasis *added* at that time; both are unlabelled segments off 0. Stamped by preset/Build writers and by the first In-bar (or empty-lane) shift. Bucket order: role → position/family.
+- **Authoring reads use `sampleTimelinePropsAt`** (raw); `sampleTimelineAt` = raw + visibility clamp for playback/tiles/preview/export. Without the split, "make keyframe here" before a delayed entrance baked `opacity: 0` and the layer stayed invisible for the rest of the clip.
+- **Empty In/Out zones reserve 0.25 s** (`SLOT_RESERVED_MS`), not the 750 ms notional; `+ In`/`+ Out` placeholders shrink live under a dragged emphasis down to that floor (Daffa's call during the manual pass).
+- **Dragging a lane's empty background shifts the whole track** (same commit as the In-bar body drag) — added on request.
+- **The transport's elapsed readout is a go-to-time field** — added on request; not in this spec's scope but landed on the same branch.
+- Build keyframes are stamped with their channel label (`Move`, `Scale`, …) so the bar reads what was clicked.
+
+Known limitations (ledgered): a hand-authored Out dragged off the end re-buckets to emphasis (no Out mirror of the role stamp on drag); elastic-era documents with an exit *before* an emphasis pin that emphasis's rightward drag; clips shorter than ~1.67 s show a small gap between the placeholder edge and the 250 ms wall; a hand drag before a delayed entrance merges into it and un-delays the layer.
