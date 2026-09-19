@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-20
 **Author:** Daffa (with Claude)
-**Status:** APPROVED (design), not implemented
+**Status:** IMPLEMENTED 2026-09-20 on `feature/daffa/vc-kv-motion-multi-select` (web, 14 commits `fae3e8b92..41484e90e`), unpushed; unit/RTL green, whole-branch review clean after one fix wave; **browser e2e checklist not run** (login needed — Daffa to verify manually)
 **Services:** web only
 **Branch:** `feature/daffa/vc-kv-motion-multi-select`, from `develop` (the Path + anchored-slots work is already on `develop`).
 **Source:** MFS live simulation session, 16 Sep 2026 — "user cannot select multiple layers at once and apply one animation/preset to all of them; has to apply the same animation to each layer individually, one at a time."
@@ -26,7 +26,7 @@ The only bulk path is the toolbar **Stagger** pill, which deals one preset acros
 | Which menu actions fan out | Every action that **writes keyframes**: entrance/exit preset, emphasis preset, saved template (Motions), Paste motion. Copy motion, Save as template, Duplicate, Delete stay primary-only and are **hidden** from the menu while N > 1. | "Apply motion" is the ask. Hiding rather than disabling avoids an ambiguous "which one gets deleted?" |
 | Undo | One `push()` per bulk action. | One decision, one undo step — the same rule `applyStagger` and `applyBuild` follow. |
 | Members that can't take it | An emphasis with no room, a template that can't bake, a paste that can't place: that member is **skipped**, the rest are written, and the toast says "Applied to 3 of 4 layers". Zero written → the existing error toast, no push. | Never fail the whole gesture on one bad layer; never write a partial that lies about being complete. |
-| Eligibility | `__base__`, locked and hidden tracks can't join a multi-selection (they can't be animated: `canAnimate` in the rail, `base.has()` in the writers). Plain click on them still works as today. | Same gate the menu already uses. |
+| Eligibility | `__base__`, locked and hidden tracks can't join a multi-selection, and are pruned from it the moment they become locked/hidden (`setOverlayFlag`). Every bulk writer gates on `multiSelectOrder` membership — **not** `base.has()`, which keeps locked overlays (it only skips hidden). Plain click on them still works as today. | Same gate the menu already uses; the writer gate was corrected during implementation (final review #1). |
 | Menu on an unselected row | Right-click / ✨ on a row that is **not** a member collapses the selection to that row first (then the single-layer menu). On a member → multi menu targeting the whole selection. | Figma convention; avoids "I right-clicked X and it animated Y". |
 | Collapse | `selectKeyframe` (a diamond / bar click), canvas click, `Esc`, plain click → single. Selection persists across playhead moves, Inspector edits, undo/redo. | Any gesture that means "this one specific thing" resets. |
 | Toolbar Stagger | Targets the selection when N > 1 (label "Stagger (3)"), else all layers as today. | Same button, selection-aware. No new pill. |
@@ -92,3 +92,13 @@ The only bulk path is the toolbar **Stagger** pill, which deals one preset acros
 ## Non-goals
 
 Canvas / Transformer multi-select or marquee; bulk Delete / Duplicate / Copy; drag-moving several rows at once; persisting the selection.
+
+## Rulings made during implementation (2026-09-20)
+
+- **Toggle on an ineligible id is a no-op**, not a single-select (the plan's sample code fell through to `replace`; the Decisions table and the plan's own test say ignore).
+- **`deleteKeyframe` on the primary's selected keyframe clears the whole selection** (keeps the pre-existing deselect-on-delete; no primary hand-off). `deleteLayer` and lock/hide DO hand the primary off to the first remaining member.
+- **Primary ring is `ring-1 ring-inset ring-white/25`**, not `ring-border-default`; **hint is an inline muted span** "Shift / ⌘-click for multiple" in the Layers header, not a tooltip — more discoverable for MFS users, no new dark hex.
+- **Stagger toggle resets inside `closeMenu()`** as well as on `onOpenChange` — the popover's own close callback never fires for a pick.
+- **Menu's Stagger toggle reuses the v1 `Toggle` component** (`role="switch"`).
+- **No `KvMotionEditor` RTL test** (never had one; Konva + queries). Editor wiring is covered by helper/hook/dock/menu tests + the manual checklist in the plan's Task 10, which is still pending.
+- Parked, not fixed: `reportBulk` says "hidden, locked, or no room" even when the real cause is an unbakeable saved motion; Esc on the focused dock-resize handle also clears the selection (keyboard-only edge); `hasKeyframes` over the selection is dead in multi mode (Copy/Save hidden). Pre-existing: emphasis presets never report `motion_preset_applied`.
