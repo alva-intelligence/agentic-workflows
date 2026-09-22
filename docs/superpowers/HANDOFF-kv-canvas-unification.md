@@ -126,3 +126,25 @@ Compare `artboards` before and after opening the Resize tab. Any key that is an 
 ## The hardest-won lesson
 
 Three separate bugs in this project were found by **instrumenting and reproducing**, not by reading code. Every time a hypothesis was formed from reading alone, it was wrong — three times in a row on the board-name bug. When the screen and the database disagree, add a log at the write point and the read point, reproduce once, and read the output. It is faster than it feels.
+
+---
+
+## 2026-09-22 — direction change: ONE view, the strip. Read this before anything above.
+
+The "two views" framing above is superseded. Product decision (daffa, 2026-09-22, Figma
+`KV-Generator` node `73-16650`): Resize tiles render INSIDE the Craft canvas as a vertical
+"Resizes" strip below the Craft boards; the Resize tab goes away; the platform picker is a
+Craft bottom-nav button for the active board. The per-surface participation model
+(`docBoardId` + `layout`) is exactly what makes a shared view possible — so this lineage
+continues; the standalone `KvResizeUnifiedCanvas` branch does not (its modules were harvested).
+
+- Spec: `docs/superpowers/specs/2026-09-22-kv-craft-resize-strip-design.md`
+- Plans: `docs/superpowers/plans/2026-09-22-kv-craft-resize-strip-s{0,1,2,3}-*.md`
+- Track: `web/docs/tracks/kv-craft-resize-strip.track.md` (branch `feature/daffa/vc-kv-craft-resize-strip`, local only)
+- S0 harvest, S1 engine seam, S2 read-only strip, S3 tile editing: implemented 2026-09-22,
+  committed locally, NOT pushed, NOT browser-verified — the manual checklists per slice are
+  in the track file. S3b (frame tool / region edit / image drop / multi-select on tiles,
+  upscale / duplicate / rename / push-to-all in Craft) and S4 (delete per-tile path + Resize
+  tab; needs the KvKonvaCanvas reviewer + PRD FR-12 re-sign-off) are not started.
+- Step 3a/3b/3c above map onto S2/S2-chrome/S3; §"Keeping the list feel" is withdrawn
+  (Craft's free camera applies to the strip).
