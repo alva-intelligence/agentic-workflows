@@ -30,7 +30,7 @@ marker (`block`); the first turns out not to need one — see §2.
 
 | Decision | Choice | Why |
 | --- | --- | --- |
-| Where the Nth run lands | **Playhead if inside the block and free in that lane; else right after the channel's last run** | Two rules, but the append fallback is what makes "click Add 7 times" work without touching the playhead. |
+| Where the Nth run lands | **Playhead if inside the block and PAST the lane's last run; else right after the channel's last run** — never before an existing run | Two rules, but the append fallback is what makes "click Add 7 times" work without touching the playhead. Inserting ahead of a later run was tried live (2026-09-22) and merged into it: the new run ends at +step while the later one still starts at its old value, so the seam keeps moving and continuity draws one bar. Rewriting the later runs (rebase) was rejected — an add must never mutate what is already there. |
 | What the Nth run animates | **Cumulative from the pose at its start** | Rotate #2 starts where Rotate #1 landed and adds +15° again. No jump at the seam, works in any slot. |
 | Identity model | **One optional keyframe field, local semantics** — `block` bridge marker. (`seg` was designed, built and then REMOVED during implementation: a per-keyframe id cannot survive the span-join merge, where one keyframe serves two channels, and cumulative runs make it unnecessary — see §2.) | Not a global object — no registry, no ids to keep unique beyond "don't accidentally collide next to yourself". |
 | First add of a channel | **Unchanged** — joins over the block's span (2026-09-21 behaviour) | Only the "already here" case is new. |
@@ -96,10 +96,9 @@ over `[segStart, segEnd]`, merged additively. Now also stamped `block` (§3.1).
    block (`startMs ≥ segStart && endMs ≤ segEnd`); `last` = the latest.
 2. `W = last.endMs − last.startMs` (uniform repeats), floored at
    `MIN_BLOCK_SPAN_MS`.
-3. `start = atMs` when `segStart ≤ atMs ≤ segEnd` and no lane segment of that
-   channel has `startMs ≤ atMs ≤ endMs`; else `start = last.endMs + 1`.
-4. `end = min(start + W, nextLaneSegStart − 1, timeline.duration_ms)` where
-   `nextLaneSegStart` is the first lane segment starting after `start`.
+3. `start = atMs` when `last.endMs < atMs ≤ segEnd`; else
+   `start = last.endMs + 1`. (Never before an existing run — see Decisions.)
+4. `end = min(start + W, timeline.duration_ms)`.
 5. If `end − start < EMPHASIS_MIN_WINDOW_MS` → return `null` (the adapter
    shows the existing "not enough room" toast).
 6. `pose = sampleTimelinePropsAt(timeline, base, start).get(overlayId)`.
@@ -177,6 +176,8 @@ channel in the block) and `placement: "span" | "playhead" | "append"`.
 
 - Per-run parameters (angle, distance, duration) — defaults, tuned via lanes
 - Reordering or merging runs; deleting a run stays the lane-segment delete
+- Inserting a run BEFORE an existing run of the same lane — needs explicit
+  per-property run identity (a model change), not value rebasing
 - Changing the FIRST add (join over the block span)
 - A persisted block/segment object — this is a marker on keyframes only
 - A split marker for lanes: if a user hand-edits a run's values so the seam
