@@ -31,7 +31,7 @@ marker (`block`); the first turns out not to need one — see §2.
 | Decision | Choice | Why |
 | --- | --- | --- |
 | Where the Nth run lands | **Playhead if inside the block and PAST the lane's last run; else right after the channel's last run** — never before an existing run | Two rules, but the append fallback is what makes "click Add 7 times" work without touching the playhead. Inserting ahead of a later run was tried live (2026-09-22) and merged into it: the new run ends at +step while the later one still starts at its old value, so the seam keeps moving and continuity draws one bar. Rewriting the later runs (rebase) was rejected — an add must never mutate what is already there. |
-| What the Nth run animates | **Cumulative from the pose at its start** | Rotate #2 starts where Rotate #1 landed and adds +15° again. No jump at the seam, works in any slot. |
+| What the Nth run animates | **The channel's EMPHASIS motion from the pose at its start** (spin / pulse / shake / blink / path loop), whatever slot the block is | Revised live 2026-09-22: the first design (cumulative +15° after a 360° spin) read as "no rotation". A further run on a channel is by nature an emphasis — it goes and comes back — which is also what keeps the seam still and the bars apart, and lets runs stack without moving the layout. The first run already did the entering/leaving. |
 | Identity model | **One optional keyframe field, local semantics** — `block` bridge marker. (`seg` was designed, built and then REMOVED during implementation: a per-keyframe id cannot survive the span-join merge, where one keyframe serves two channels, and cumulative runs make it unnecessary — see §2.) | Not a global object — no registry, no ids to keep unique beyond "don't accidentally collide next to yourself". |
 | First add of a channel | **Unchanged** — joins over the block's span (2026-09-21 behaviour) | Only the "already here" case is new. |
 
@@ -102,21 +102,22 @@ over `[segStart, segEnd]`, merged additively. Now also stamped `block` (§3.1).
 5. If `end − start < EMPHASIS_MIN_WINDOW_MS` → return `null` (the adapter
    shows the existing "not enough room" toast).
 6. `pose = sampleTimelinePropsAt(timeline, base, start).get(overlayId)`.
-7. Two keyframes, `easing: "linear"` at `start`, `"out"` at `end`, `label` =
-   channel label, `block` = the block's id, no `role`. Values via
-   `BUILD_STEP_WRITERS`:
-
-| Channel | `start` | `end` |
-| --- | --- | --- |
-| Move | `x: pose.x` | `x: pose.x + SLIDE_OFFSET` |
-| Path | `x,y: pose` | `x,y: pose.x + SLIDE_OFFSET, pose.y` + arc `path` (`PATH_ARC_DY`) |
-| Rotate | `rotation: pose.rotation` | `+ BUILD_ROTATE_DEG` |
-| Scale | `scale: pose.scale` | `× BUILD_SCALE_STEP` (1.08, the pulse multiplier named) |
-| Opacity | `opacity: pose.opacity` | `pose.opacity > base.opacity × BUILD_BLINK_OPACITY` ? `× BUILD_BLINK_OPACITY` : `base.opacity` (a toggle) |
+7. The channel's emphasis writer over `[start, end]` from `pose`
+   (`writeRepeatKeyframes` = `writeBuildKeyframes("emphasis", …)`): Rotate =
+   spin (+360 at `end − 1`, hold back at the start angle at `end`), Scale =
+   pulse ×1.08, Move = shake ±0.008, Opacity = blink ×`BUILD_BLINK_OPACITY`,
+   Path = loop. `label` = channel label, `block` = the block's id, no `role`.
 
 Merged through `mergeBuildKeyframes` over `[start, end]` — it strips only the
-written props inside the window, and step 4 guarantees the window holds no
+written props inside the window, and step 3 guarantees the window holds no
 other run of the same channel.
+
+**Spin holds back (2026-09-22):** the spin emphasis writer now lands +360 at
+1ms before its end and holds at the start angle on the last keyframe — a
+360° jump nobody sees. Before, a spin left the layer at 360 numerically, so a
+spin already sitting later (0 → 360) had rotation unwind 360 → 0 across the
+seam: a visible reverse spin, and one fused bar. Applies to every spin
+writer (preset and Build).
 
 Several channels in one click (Rotate + Scale, both present) each compute
 their own window.
