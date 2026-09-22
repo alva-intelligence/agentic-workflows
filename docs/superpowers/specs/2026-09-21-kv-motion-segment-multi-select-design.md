@@ -143,3 +143,5 @@ export type MotionClip =
 ## Non-goals (v1)
 
 Cross-layer selection; marquee; "Change motion" on a selection; paste-at-playhead for a segments clip; canvas-side selection of segments; stretch-together (edge drag on a selection stretches only the dragged bar and collapses the selection to it).
+
+> **2026-09-21 follow-up — stretch/shift-together across a LAYER multi-select** (not this spec's segment selection): with ≥2 layers selected, dragging one layer's block bar also carries its *twins* — the identical-span block on every other selected layer (the multi-apply shape). Edge drag rescales all onto the same span, body drag shifts all, the In bar's body drag shifts every twin's whole track; walls = tightest twin, so the set never drifts. A nudged span is not a twin. Implemented web-only on `feature/daffa/vc-kv-motion-stretch-together` (`src/lib/video-editor/layerTwins.ts`, `useMotionEditorState.layerTwins`, dock-owned `TwinDraft`). Also fixed there: the trailing `click` after a group body drag used to collapse the selection (affected this spec's drag-together too).

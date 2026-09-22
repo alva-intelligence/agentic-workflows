@@ -19,6 +19,7 @@
 - **The review panel must be openable from a URL** (`?decomposition=<id>`), including while the job is still running. This exists for the future askFRND tool, which can only hand the user a link, and it is the one thing here that cannot be retrofitted without reworking how the panel mounts. Do not drop it as unused.
 - PostHog events ship with the feature, not after it.
 - Poll for at least **225 s** — decomposition takes ~110 s at the vendor plus mirroring, so the 180 s used elsewhere is too tight.
+- **UI components: v2 first.** This repo's `frndos-ui` skill makes `src/components/frndos/v2` (Base UI) the default and v1 the fallback. Use `import { Button } from "@/components/frndos/v2"`. v2 has no Checkbox, and the v1 one is not usable here — it renders a `<button aria-checked>` with no `role="checkbox"` and no accessible name, which is invalid ARIA and gives the control no label for a screen reader or a test to find. Use a native `<input type="checkbox">` paired with a `<label htmlFor>` instead, and say why in a comment so it does not read as an oversight.
 
 ## File Structure
 
@@ -28,7 +29,7 @@
 | `src/services/kv/api.ts` | create / get / commit calls |
 | `src/components/studio/kv-generator/layerDecomposition.ts` | start + poll helpers |
 | `src/components/studio/kv-generator/KvLayerDecomposePanel.tsx` | the review panel |
-| `src/lib/analytics/kv-generator-events.ts` | four events |
+| `src/lib/analytics/kv-generator-events.ts` | five events |
 | `src/components/studio/kv-generator/KvBoardContextMenu.tsx` | tile menu entry |
 | `src/components/studio/kv-generator/KvUploadBaseBlock.tsx` | post-upload entry |
 | `src/components/studio/kv-generator/KvGeneratorLayout.tsx` | wiring, deep link, doc seeding |
@@ -766,7 +767,7 @@ Create `src/components/studio/kv-generator/KvLayerDecomposePanel.tsx`:
 
 import { useEffect, useState } from "react";
 import { X } from "@phosphor-icons/react";
-import { Button } from "@/components/frndos/Button";
+import { Button } from "@/components/frndos/v2";
 import type { KvLayerDecomposition } from "@/types/studio";
 
 type Props = {
@@ -851,6 +852,10 @@ export function KvLayerDecomposePanel({
           <ul className="flex max-h-80 flex-col gap-2 overflow-y-auto">
             {layers.map((layer) => (
               <li key={layer.index} className="flex items-start gap-2">
+                {/* A native input, not the frndOS Checkbox: v2 has none, and
+                    the v1 one renders a <button aria-checked> with no
+                    role="checkbox" and no accessible name — invalid ARIA that
+                    leaves the control unlabelled for screen readers. */}
                 <input
                   type="checkbox"
                   id={`layer-${layer.index}`}
@@ -915,6 +920,7 @@ git commit -m "feat(web): layer-decomposition review panel"
   - `trackKvLayerDecomposeSucceeded({ layer_count: number; duration_ms: number })`
   - `trackKvLayerDecomposeFailed({ error_reason: string; duration_ms: number })`
   - `trackKvLayerDecomposeCommitted({ layer_count: number; selected_count: number })`
+  - `trackKvLayerDecomposeCommitFailed({ error_reason: string; selected_count: number })`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -947,6 +953,16 @@ describe("layer-decomposition events", () => {
   it("records how many layers were kept versus returned", () => {
     expect(() =>
       events.trackKvLayerDecomposeCommitted({ layer_count: 7, selected_count: 2 }),
+    ).not.toThrow();
+  });
+
+  it("pairs the commit mutation with a failure event", () => {
+    // House rule: a mutation is instrumented as a triple, not just a success.
+    // Without this, a commit that fails is indistinguishable from one the user
+    // never attempted.
+    expect(typeof events.trackKvLayerDecomposeCommitFailed).toBe("function");
+    expect(() =>
+      events.trackKvLayerDecomposeCommitFailed({ error_reason: "502", selected_count: 2 }),
     ).not.toThrow();
   });
 });
@@ -1001,12 +1017,22 @@ export interface KvLayerDecomposeCommittedProps {
 
 export const trackKvLayerDecomposeCommitted = (p: KvLayerDecomposeCommittedProps) =>
   safeCapture("kv_generator.layer_decompose_committed", p);
+
+export interface KvLayerDecomposeCommitFailedProps {
+  error_reason: string;
+  selected_count: number;
+}
+
+/** Mutations are instrumented as a triple, not just a success — a commit that
+ *  fails must not look like one the user never attempted. */
+export const trackKvLayerDecomposeCommitFailed = (p: KvLayerDecomposeCommitFailedProps) =>
+  safeCapture("kv_generator.layer_decompose_commit_failed", p);
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `cd web && bun test src/lib/analytics/layerDecomposition.events.test.ts`
-Expected: 3 pass
+Expected: 4 pass
 
 - [ ] **Step 5: Commit**
 
@@ -1279,7 +1305,7 @@ In `KvGeneratorLayout.tsx`:
    - `pollLayerDecomposition(...)`, then fire the succeeded or failed event
 5. Add `handleCommit(layerIndexes)`:
    - `commitLayerDecomposition(fileId, decomposition.id, layerIndexes)`
-   - `trackKvLayerDecomposeCommitted({ layer_count: decomposition.layers.length, selected_count: layerIndexes.length })`
+   - on success, `trackKvLayerDecomposeCommitted({ layer_count: decomposition.layers.length, selected_count: layerIndexes.length })`; on failure, `trackKvLayerDecomposeCommitFailed({ error_reason, selected_count: layerIndexes.length })`
    - refetch the file's generations, then seed the doc:
 
 ```ts

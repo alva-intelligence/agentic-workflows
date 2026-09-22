@@ -144,8 +144,8 @@ treatment (movable layers flattened at export).
   error / missing key: `action=none`.
 
 **`app/agents/kv_generator/context_builder.py`**
-- `_format_brand_block`: drop the `- Logo URL: …` line. Add a single line `- Brand logo: available`
-  when `request.brand_logo` is present, so the agent knows a logo can be placed.
+- `_format_brand_block`: drop the `- Logo URL: …` line. The main refiner stays logo-agnostic; logo
+  awareness lives only in the classifier (which receives `logo_available` directly).
 
 **`app/agents/kv_generator/logo_stamp.py` (new)**
 - `resolve_stamp(directive, persisted) -> Optional[BrandLogoStamp]`

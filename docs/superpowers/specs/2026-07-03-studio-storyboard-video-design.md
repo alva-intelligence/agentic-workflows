@@ -76,7 +76,7 @@ Six new tables. Naming, soft-delete, and activity conventions mirror the existin
 tables. Nothing here touches KV tables.
 
 ```
-storyboards                      the project / document
+studio_storyboards                the project / document (model `StudioStoryboard`)
   id, workspace_id, brand_id
   name, logline                  (the brief / description)
   status                         draft | ready | ...
@@ -102,7 +102,7 @@ storyboard_scenes                the ordered beats
   motion_preset                  nullable (reuse existing motion presets)
   motion_prompt                  nullable (steering text for the video step)
   duration                       seconds
-  ratio                          nullable (falls back to storyboards.ratio)
+  ratio                          nullable (falls back to studio_storyboards.ratio)
   status                         empty | frame_generating | frame_ready
                                  | clip_generating | clip_ready | failed
   current_frame_id               FK -> scene_frames (the approved frame)

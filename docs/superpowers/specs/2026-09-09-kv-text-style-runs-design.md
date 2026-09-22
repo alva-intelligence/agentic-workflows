@@ -38,13 +38,21 @@ shipped `blendMode` broken.
 | `KvResizeTileStage.tsx` | read-only Resize tile → `buildTextObject` |
 | `renderResizeBoards.ts` | `KvResizeUnifiedCanvas` (read-only spike, flag `KV_RESIZE_UNIFIED_CANVAS`) → `buildTextObject` |
 
-**Konva — 3 sites:**
+**Konva — 2 sites:**
 
 | Site | Role |
 |---|---|
 | `renderBoardStage.ts::buildBoardStage` | Motion live stage, Motion export, Motion size-picker preview, **and the public share page** (`app/share/[token]/KvShareBoardCanvas.tsx`) |
-| `KvTileOverlayEditor.tsx` | the Resize result-row editor — still the real Resize authoring surface |
 | `KvKonvaCanvas.tsx` | legacy Craft fallback |
+
+> **Corrected during implementation (2026-09-09).** This map originally listed
+> `KvTileOverlayEditor.tsx` (the Resize result-row editor) under Konva. It is
+> Fabric-based, and its text already routes through `fabricExport.buildTextObject`
+> — so it gained run rendering from the Fabric change, not the Konva one. It still
+> edits through a plain `<textarea>`, so `remapRuns` is still needed on that path.
+> The claim that this repo has no `canvas` package was also wrong: `canvas@3.2.3`
+> arrives via fabric's `optionalDependencies`, so text measurement is real under
+> `bun test` and cross-engine parity is genuinely testable.
 
 Both engines already funnel geometry through `overlayGeometry.ts`
 (`overlayTextMetrics`) and text semantics through `overlays/textProps.ts`
@@ -71,7 +79,8 @@ Settled with Daffa on 2026-09-09. Do not re-litigate.
    overrides. (Figma/Canva semantics.)
 5. **Content edits keep runs** via a common-prefix/common-suffix diff. This is
    not an edge case: Resize editing goes through a `<textarea>`
-   (`OverlayTextEditor`) on a Konva surface, so it is a daily path.
+   (`OverlayTextEditor`), which hands back a whole new string with no notion of
+   what changed, so it is a daily path.
 6. **No new feature flag.** Back-compat is structural — absent `runs` means the
    legacy path, byte for byte. The font picker itself is already behind
    `KV_CUSTOM_FONTS`.

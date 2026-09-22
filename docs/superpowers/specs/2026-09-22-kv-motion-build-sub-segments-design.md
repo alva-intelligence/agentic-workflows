@@ -128,7 +128,7 @@ their own window.
 keyframe in `[segStart, segEnd]` has one, every keyframe in the span is
 stamped with a fresh id (precedent: `stampInRole` — same undo step, written
 before the add). New keyframes take that id. `applyBuildChannels` (slot-chip
-Build) mints `block` + `seg` at write time so Build blocks carry identity from
+Build) mints `block` at write time so Build blocks carry identity from
 birth; preset writers are untouched (they get an id lazily on first add).
 `planSegmentBuild(track, segStart, segEnd, channel, atMs, durationMs)` is the
 exported pure derivation of steps 1–5 (`{ startMs, endMs, placement, nth }`),
