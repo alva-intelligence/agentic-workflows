@@ -77,8 +77,10 @@ Block level (default, no option): `false` when any keyframe at `a` and any at
 
 Lane level (`propGroupSegments`): after narrowing to the group's props,
 `true` when the keyframes at `a` and at `b` both carry a defined `seg` and
-they differ; otherwise fall through to the block-level `block` rule, then
-continuity. One clustering implementation, as the lane-drag spec requires.
+they differ; otherwise continuity. Lanes deliberately do NOT bridge on
+`block` — a lane bar spanning a still seam would hide where one run ends
+and the next begins. One clustering implementation, as the lane-drag spec
+requires.
 
 Accepted consequence: a block whose lane was dragged far away still reads as
 one block spanning the still gap. A hand-inserted diamond inside that gap
@@ -147,9 +149,10 @@ birth; preset writers are untouched (they get an id lazily on first add).
 
 ## 5. UI — `BuildChannelPanel` (`MotionSourceTabs.tsx`) + `BlockTrackRow`
 
-- A `present` channel is no longer `disabled`: drawn `active` with
-  `disabledReason` replaced by a plain tooltip "Rotate already animates in
-  this block — adds another run". Picking it toggles like any card.
+- A `present` channel is no longer `disabled`: subtitle "Add another", a
+  plain tooltip (`hint`) "Rotate already animates in this block — adds
+  another run at the playhead, or right after its last one". Picking it
+  toggles like any card (`active` = selected).
 - Exclusive partners stay disabled (Move present ⇒ Path unpickable, and vice
   versa) — two writers of x/y in one lane is still wrong.
 - Panel note (block surface): "Add what animates — a channel already here gets
