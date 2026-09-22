@@ -1,6 +1,6 @@
 # KV Motion — Build Sub-Segments (many runs of one channel per block) — Design Spec
 
-> **Status:** approved (chat, 2026-09-22) — implement directly after the plan
+> **Status:** implemented 2026-09-22 (web develop 947e1bb30…88da3c25c, unpushed; live check by Daffa pending)
 > **Author:** daffa
 > **Created:** 2026-09-22
 > **Services:** web only (api stores the timeline opaquely; no schema change)
@@ -23,8 +23,8 @@ What actually blocks the thebrief behaviour is that clustering is
 **continuity-based**: two runs of one property that butt against each other
 read as one continuous motion → one long bar with many diamonds. And a run
 appended after a block's end, with nothing else moving across the 1ms seam,
-becomes a **separate block**. Both are fixed by giving keyframes two optional
-identity markers.
+becomes a **separate block**. The second is fixed by one optional identity
+marker (`block`); the first turns out not to need one — see §2.
 
 ## Decisions (from chat)
 
@@ -32,7 +32,7 @@ identity markers.
 | --- | --- | --- |
 | Where the Nth run lands | **Playhead if inside the block and free in that lane; else right after the channel's last run** | Two rules, but the append fallback is what makes "click Add 7 times" work without touching the playhead. |
 | What the Nth run animates | **Cumulative from the pose at its start** | Rotate #2 starts where Rotate #1 landed and adds +15° again. No jump at the seam, works in any slot. |
-| Identity model | **Two optional keyframe fields, local semantics** (`seg` split marker, `block` bridge marker) | `seg` alone cannot bridge a block; `block` alone cannot split adjacent bars. Neither is a global object — no registry, no ids to keep unique beyond "don't accidentally collide next to yourself". |
+| Identity model | **One optional keyframe field, local semantics** — `block` bridge marker. (`seg` was designed, built and then REMOVED during implementation: a per-keyframe id cannot survive the span-join merge, where one keyframe serves two channels, and cumulative runs make it unnecessary — see §2.) | Not a global object — no registry, no ids to keep unique beyond "don't accidentally collide next to yourself". |
 | First add of a channel | **Unchanged** — joins over the block's span (2026-09-21 behaviour) | Only the "already here" case is new. |
 
 ## 1. Document model — `src/lib/video-editor/timeline.ts`
@@ -40,16 +40,10 @@ identity markers.
 ```ts
 export type MotionKeyframe = {
   // ...existing...
-  /** Sub-motion identity: every keyframe ONE Build click writes shares it.
-   *  Read only by lane clustering (`propGroupSegments`): two consecutive
-   *  keyframes of a lane carrying DIFFERENT `seg` values always split into
-   *  two bars, even when the property moves continuously across them. One
-   *  side undefined (a hand-authored diamond) → the continuity rule decides. */
-  seg?: string;
   /** Block identity: consecutive keyframes carrying the SAME `block` never
    *  split into two blocks, even when every property is still across the
-   *  gap. Read only by block clustering (`trackSegments`). A block is the
-   *  union of its sub-motions, as in thebrief. */
+   *  gap. Read only by block clustering (`trackSegments`) — lanes never
+   *  bridge. A block is the union of its sub-motions, as in thebrief. */
   block?: string;
 };
 ```
@@ -75,11 +69,12 @@ keyframes at those two times — several when channels share a time):
 Block level (default, no option): `false` when any keyframe at `a` and any at
 `b` share a defined `block`; otherwise `undefined`.
 
-Lane level (`propGroupSegments`): after narrowing to the group's props,
-`true` when the keyframes at `a` and at `b` both carry a defined `seg` and
-they differ; otherwise continuity. Lanes deliberately do NOT bridge on
-`block` — a lane bar spanning a still seam would hide where one run ends
-and the next begins. One clustering implementation, as the lane-drag spec
+Lane level (`propGroupSegments`): no marker — continuity only. Lanes
+deliberately do NOT bridge on `block` (a lane bar spanning a still seam
+would hide where one run ends and the next begins), and they need no split
+marker either: an added run starts at exactly the value the previous run
+ended on (§3), so the 1ms seam between two runs is still and continuity
+splits them by itself. One clustering implementation, as the lane-drag spec
 requires.
 
 Accepted consequence: a block whose lane was dragged far away still reads as
@@ -93,8 +88,7 @@ marker, not a global id).
 atMs, mint?)` gains `atMs` (the playhead). Per channel:
 
 **Channel not yet in the block** → today's behaviour: `writeBuildKeyframes`
-over `[segStart, segEnd]`, merged additively. Now also stamped `seg` (one id
-per click) and `block` (§3.1).
+over `[segStart, segEnd]`, merged additively. Now also stamped `block` (§3.1).
 
 **Channel already in the block** ("add another"):
 
@@ -110,15 +104,15 @@ per click) and `block` (§3.1).
    shows the existing "not enough room" toast).
 6. `pose = sampleTimelinePropsAt(timeline, base, start).get(overlayId)`.
 7. Two keyframes, `easing: "linear"` at `start`, `"out"` at `end`, `label` =
-   channel label, `seg` = fresh id (one per click), `block` = the block's id,
-   no `role`. Values via `BUILD_STEP_WRITERS`:
+   channel label, `block` = the block's id, no `role`. Values via
+   `BUILD_STEP_WRITERS`:
 
 | Channel | `start` | `end` |
 | --- | --- | --- |
 | Move | `x: pose.x` | `x: pose.x + SLIDE_OFFSET` |
 | Path | `x,y: pose` | `x,y: pose.x + SLIDE_OFFSET, pose.y` + arc `path` (`PATH_ARC_DY`) |
 | Rotate | `rotation: pose.rotation` | `+ BUILD_ROTATE_DEG` |
-| Scale | `scale: pose.scale` | `× PULSE_SCALE` (the pulse constant) |
+| Scale | `scale: pose.scale` | `× BUILD_SCALE_STEP` (1.08, the pulse multiplier named) |
 | Opacity | `opacity: pose.opacity` | `pose.opacity > base.opacity × BUILD_BLINK_OPACITY` ? `× BUILD_BLINK_OPACITY` : `base.opacity` (a toggle) |
 
 Merged through `mergeBuildKeyframes` over `[start, end]` — it strips only the
@@ -126,7 +120,7 @@ written props inside the window, and step 4 guarantees the window holds no
 other run of the same channel.
 
 Several channels in one click (Rotate + Scale, both present) each compute
-their own window; they share one `seg`.
+their own window.
 
 ### 3.1 Block id stamping
 
@@ -136,16 +130,19 @@ stamped with a fresh id (precedent: `stampInRole` — same undo step, written
 before the add). New keyframes take that id. `applyBuildChannels` (slot-chip
 Build) mints `block` + `seg` at write time so Build blocks carry identity from
 birth; preset writers are untouched (they get an id lazily on first add).
+`planSegmentBuild(track, segStart, segEnd, channel, atMs, durationMs)` is the
+exported pure derivation of steps 1–5 (`{ startMs, endMs, placement, nth }`),
+shared with the editor's analytics.
 
 ## 4. Carrying the ids
 
 | Path | Change |
 | --- | --- |
-| `movePropGroup` (lane shift/stretch/diamond move) | the moving half is built from scratch today — it must carry `seg` and `block` from the source keyframe (still dropping `label`/`role`) |
+| `movePropGroup` (lane shift/stretch/diamond move) | the moving half is built from scratch today — it must carry `block` from the source keyframe (still dropping `label`/`role`) |
 | Block ops (`shiftSegmentKeyframes`, `stretchSegmentKeyframes`, `deleteSegmentKeyframes`, `stripProps`, `pathEdit`) | already spread `...k` — nothing to do; a test pins it |
-| `templates.ts` | `MotionTemplateKeyframe` gains `seg?`/`block?` (explicit whitelist); `normalizeTrackToTemplate` carries them; `bakeTemplateToTrack` re-mints |
+| `templates.ts` | `MotionTemplateKeyframe` gains `block?` (explicit whitelist); `normalizeTrackToTemplate` carries it; `bakeTemplateToTrack` re-mints |
 | `motionClip.ts` (`cloneKeyframe` users: `pasteMotionClip`, `placeMotionClipAt`, `pasteSegmentsClip`) | re-mint on paste |
-| New helper `remintMotionIds(keyframes, mint?)` in `timeline.ts` | maps every distinct `seg`/`block` value to a fresh one consistently; used by both of the above |
+| New helper `remintMotionIds(keyframes, mint?)` in `timeline.ts` | maps every distinct `block` value to a fresh one consistently; used by both of the above |
 
 ## 5. UI — `BuildChannelPanel` (`MotionSourceTabs.tsx`) + `BlockTrackRow`
 
@@ -158,7 +155,8 @@ birth; preset writers are untouched (they get an id lazily on first add).
 - Panel note (block surface): "Add what animates — a channel already here gets
   another run at the playhead, or right after its last one."
 - `TimelineDockProps.onAddSegmentBuild` and the adapter's `addSegmentBuild`
-  pass the playhead through.
+  pass the playhead through; the adapter returns `"ok" | "unavailable" |
+  "no_room"` so the editor can show the room toast for a refused run.
 
 ## 6. Analytics
 
@@ -169,15 +167,18 @@ channel in the block) and `placement: "span" | "playhead" | "append"`.
 
 | File | Covers |
 | --- | --- |
-| `blocks.test.ts` / `blocks.propGroups.test.ts` | `block` bridges a still gap; `seg` splits a continuous lane run; undefined on one side → continuity; block level ignores `seg` |
-| `presets.addSegmentBuild.test.ts` | playhead vs append placement; `W` from last run; clamp against next run and duration; `null` under min window; cumulative values per channel; one `seg` per click; block stamping of a preset block; first add unchanged |
-| `blocks.propGroupDrag.test.ts` | moving half carries `seg`/`block` |
+| `blocks.markers.test.ts` | `block` bridges a still gap; differing/missing `block` → continuity; lanes never bridge |
+| `presets.addSegmentBuild.test.ts` | playhead vs append placement; `W` from last run; clamp against duration; `null` under min window; cumulative values per channel; block stamping of a preset block; first add unchanged; `planSegmentBuild` |
+| `blocks.propGroupDrag.test.ts` | moving half carries `block` |
 | `templates.test.ts`, `motionClip.test.ts` | ids carried and re-minted |
-| `TimelineDock.buildtab.test.tsx` | present card pickable, partner still disabled, playhead reaches the handler |
+| `BuildChannelPanel.test.tsx`, `TimelineDock.segmentReplace.test.tsx`, `useMotionEditorState.build.test.ts` | present card pickable, partner still disabled, playhead reaches the handler, tri-state adapter result |
 
 ## Non-Goals
 
 - Per-run parameters (angle, distance, duration) — defaults, tuned via lanes
 - Reordering or merging runs; deleting a run stays the lane-segment delete
 - Changing the FIRST add (join over the block span)
-- A persisted block/segment object — these are markers on keyframes only
+- A persisted block/segment object — this is a marker on keyframes only
+- A split marker for lanes: if a user hand-edits a run's values so the seam
+  moves again, the two bars merge — the honest derived picture, same as every
+  other bar in this editor
