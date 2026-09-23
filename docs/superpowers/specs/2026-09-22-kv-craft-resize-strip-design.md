@@ -27,7 +27,7 @@ A tile is not a generation; the model says so explicitly and the canvas never ha
 Product (daffa, 2026-09-22):
 
 1. **Single view, no Resize tab.** Replaces the PRD's `canvasMode: "resize"` mode swap. Requires re-sign-off of FR-12.
-2. **One global strip** below the bounding box of all Craft boards, tiles **stacked vertically**, grouped per parent board in Craft board order. No master/original tile — the parent Craft board *is* the master.
+2. **One column per parent board**, left-aligned under that board, tiles **stacked vertically**; every column starts from a **shared baseline below the bounding box of ALL Craft boards** (so a column can never cover a board that sits lower than its parent). One divider spans the bbox; no group headers — position names the parent. No master/original tile — the parent Craft board *is* the master. *(Revised 2026-09-23 after seeing two boards live: the original single global column hid which board a tile belonged to.)*
 3. **Entry point** is the existing "Toggle platform picker" bottom-nav button, shown in Craft, opening `KvResizePanel` for the active board. "Send to Resize" on the board context menu activates the board and opens the same picker.
 4. **Tile header** carries caption + history + download. Everything else is on the tile context menu. Retry/Cancel stay on the status chrome.
 
@@ -61,7 +61,7 @@ Binding decisions inherited unchanged: layout is derived, never persisted (branc
 
 **Producer `resizeSurfaces(exportsByParent, craftBbox)`** — pure, tested. For each parent board in Craft order, for each export in row order: `{ id: export.id, docBoardId: null, layout: "view", imageUrl: export.image_url ?? null, fallbackAspect: width/height, label: export.name ?? platformLabel, isActive, center }`. No master surface.
 
-**Column layout** — derived every render, never stored:
+**Column layout** — derived every render, never stored (revised 2026-09-23: one column per parent, `x` = that board's left edge, shared baseline `y`; the bullets below describe the shared parts):
 - `x` = left edge of `boardsBoundingBox(craftSurfaces)`; tile world width = `BOARD_WORLD_WIDTH` (512), height from aspect.
 - `y` starts at `bbox.bottom + STRIP_GAP` (room for divider + first header), then `y += tileHeight + TILE_GAP`. `TILE_GAP` is wide enough that a ghosted overflow does not sit inside the next tile.
 - Adding or moving a Craft board changes the bbox and the strip follows. The strip never moves a Craft board.
