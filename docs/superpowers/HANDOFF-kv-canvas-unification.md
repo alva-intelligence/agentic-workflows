@@ -141,10 +141,13 @@ continues; the standalone `KvResizeUnifiedCanvas` branch does not (its modules w
 - Spec: `docs/superpowers/specs/2026-09-22-kv-craft-resize-strip-design.md`
 - Plans: `docs/superpowers/plans/2026-09-22-kv-craft-resize-strip-s{0,1,2,3}-*.md`
 - Track: `web/docs/tracks/kv-craft-resize-strip.track.md` (branch `feature/daffa/vc-kv-craft-resize-strip`, local only)
-- S0 harvest, S1 engine seam, S2 read-only strip, S3 tile editing: implemented 2026-09-22,
-  committed locally, NOT pushed, NOT browser-verified — the manual checklists per slice are
-  in the track file. S3b (frame tool / region edit / image drop / multi-select on tiles,
-  upscale / duplicate / rename / push-to-all in Craft) and S4 (delete per-tile path + Resize
-  tab; needs the KvKonvaCanvas reviewer + PRD FR-12 re-sign-off) are not started.
+- S0–S3b implemented 2026-09-22/23. **S4 done 2026-09-23/24** on
+  `feature/daffa/vc-kv-craft-resize-strip` (web, pushed; no PR yet by Daffa's decision): the
+  Resize tab and the per-tile editor path (20 modules / 9.3k lines), the KV_RESIZE_UNIFIED_CANVAS
+  and KV_RESIZE_MASTER_EDIT flags, and — on Daffa's call after the reviewer handed it back —
+  `KvKonvaCanvas` + the KV_MULTI_BOARD kill switch are deleted. PRD re-signed (fahrizky + Jeff).
+  The strip is the only Resize surface. Runtime checklist (AC-11) + PostHog live events are
+  Daffa's. Tech debt still parked: the overflow part of a cover-scaled tile layer is clickable
+  outside the tile clip (track file, "TECH DEBT").
 - Step 3a/3b/3c above map onto S2/S2-chrome/S3; §"Keeping the list feel" is withdrawn
   (Craft's free camera applies to the strip).

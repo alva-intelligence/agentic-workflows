@@ -123,6 +123,11 @@ wiring intact — the buttons stay buttons.
 
 ### Keeping the list feel
 
+> **Withdrawn (2026-09-23, Craft Resize strip S4).** "Two views" became ONE view with
+> participation per surface: Resize tiles are a strip inside Craft
+> (`docs/superpowers/specs/2026-09-22-kv-craft-resize-strip-design.md`), under Craft's
+> free camera. Nothing below is built.
+
 The Resize view constrains the world so it still reads as a scrollable list of
 results:
 
