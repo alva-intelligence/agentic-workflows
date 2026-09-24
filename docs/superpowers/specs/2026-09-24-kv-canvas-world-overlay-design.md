@@ -44,7 +44,8 @@ separate team decision, out of scope here.
 
 ## Approach (chosen: "world layer driven by CSS variables")
 
-Industry pattern for DOM-over-canvas editors (tldraw, Excalidraw): position
+Industry pattern for DOM-over-canvas editors (tldraw's HTML layer, React Flow's
+transformed viewport): position
 chrome in **world** coordinates and let the camera move it through CSS,
 written synchronously by the same code that moves the canvas.
 
@@ -53,7 +54,7 @@ written synchronously by the same code that moves the canvas.
    `createCameraStore` (KV's `kvCameraStore.ts` becomes a thin re-export
    until its imports are moved) and gains `subscribe(listener) →
    unsubscribe`. `set` and `setLive` call listeners
-   right after `applyToFabric`, in the same event — before any React work.
+   right after `applyToEngine`, in the same event — before any React work.
 2. **CSS variables on the chrome's root.** A hook
    `useCameraCssVars(elementRef, store)` subscribes and writes, as inline
    custom properties on that element:
