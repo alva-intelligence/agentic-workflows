@@ -1,7 +1,7 @@
 # KV — Resize tile version history
 
 **Status:** draft for review · **Date:** 2026-09-24 · **Owner:** daffa · **Services:** api + web (no ai-service change)
-**Branches:** new — `feature/daffa/vc-kv-resize-tile-versions` in api/ and web/, cut from the resize-strip branch state (web) and develop (api)
+**Branch:** `feature/daffa/vc-kv-craft-resize-strip` in both repos (Daffa, 2026-09-24) — web: the existing branch; api: a new branch of the same name cut from latest `develop`
 
 ## Problem
 
