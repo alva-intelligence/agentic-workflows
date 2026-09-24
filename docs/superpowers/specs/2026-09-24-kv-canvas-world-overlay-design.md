@@ -1,6 +1,6 @@
-# KV canvas world overlay — DOM chrome that moves with the camera, not after it
+# Canvas world overlay — DOM chrome that moves with the camera, not after it (KV first)
 
-**Status:** draft for review · **Date:** 2026-09-24 · **Owner:** daffa · **Service:** web
+**Status:** draft for review (revised 2026-09-24: generic foundation + ADR) · **Date:** 2026-09-24 · **Owner:** daffa · **Service:** web
 **Branch:** `feature/daffa/vc-kv-craft-resize-strip`
 
 ## Problem
@@ -31,14 +31,28 @@ Every always-on piece of chrome stays glued to its board/tile through pan AND
 zoom — the same experience the tiles have — and a gesture no longer
 re-renders the layout every frame.
 
+## Decision taken (Daffa, 2026-09-24)
+
+More features will be built on canvases (KV Craft, Motion, the runner board,
+decks, …) and each has grown its own camera. The mechanism below is built as
+a **shared canvas foundation in `src/lib/canvas/`** — the module that already
+holds the shared viewport math for the Fabric surfaces (`viewport.ts`,
+`gestures.ts`) — not as KV-specific code. KV Craft is its first consumer.
+The layering rule is recorded as an ADR so new canvas features start from it.
+Unifying engines (Konva in Motion vs Fabric) or adopting a canvas SDK is a
+separate team decision, out of scope here.
+
 ## Approach (chosen: "world layer driven by CSS variables")
 
 Industry pattern for DOM-over-canvas editors (tldraw, Excalidraw): position
 chrome in **world** coordinates and let the camera move it through CSS,
 written synchronously by the same code that moves the canvas.
 
-1. **Camera store publishes synchronously.** `createKvCameraStore` gains
-   `subscribe(listener) → unsubscribe`. `set` and `setLive` call listeners
+1. **Camera store publishes synchronously.** The store moves to
+   `src/lib/canvas/cameraStore.ts` as a surface-agnostic
+   `createCameraStore` (KV's `kvCameraStore.ts` becomes a thin re-export
+   until its imports are moved) and gains `subscribe(listener) →
+   unsubscribe`. `set` and `setLive` call listeners
    right after `applyToFabric`, in the same event — before any React work.
 2. **CSS variables on the chrome's root.** A hook
    `useCameraCssVars(elementRef, store)` subscribes and writes, as inline
@@ -48,10 +62,13 @@ written synchronously by the same code that moves the canvas.
    - `--cam-cs-ready` = `min(1, scale)` (the ready-chip clamp).
    It writes once on mount so the first paint is correct.
 3. **World-positioned elements.** A pure helper turns a world rect/point plus
-   chrome offsets into a style object of `calc()` expressions, e.g.
-   `left: calc(<wx>px * var(--cam-s) + var(--cam-x))`,
-   `top: calc(<wy>px * var(--cam-s) + var(--cam-y) - 22px * var(--cam-cs))`,
-   `font-size: calc(14px * var(--cam-cs))`. Elements keep their current
+   chrome offsets into a style object of `calc()` expressions. Position goes
+   through `transform: translate(calc(<wx>px * var(--cam-s) + var(--cam-x)),
+   calc(<wy>px * var(--cam-s) + var(--cam-y) - 22px * var(--cam-cs)))` on an
+   element anchored at `left: 0; top: 0` — a compositor-only change during a
+   pan (no layout). Sizes that follow the zoom use `calc(<w>px *
+   var(--cam-s))`; clamped chrome uses `var(--cam-cs)`, e.g.
+   `font-size: calc(14px * var(--cam-cs))` (layout only while zooming). Elements keep their current
    visual rules (what scales with zoom, what is clamped, what is fixed) — only
    the source of the numbers moves from React state to CSS.
 4. **World rects instead of screen rects across boundaries.** Consumers that
@@ -77,15 +94,38 @@ keeps relying on it.
   exact for pan, but text/icons visibly scale during zoom and React still
   re-renders every frame. Rejected as a patch, not a pattern.
 
+### Shared module (`src/lib/canvas/`)
+
+| File | Purpose |
+|---|---|
+| `cameraStore.ts` | `Camera = {scale, x, y}`; `createCameraStore({ applyToEngine, commit })` with `set` (commit now), `setLive` (commit once per frame), `subscribe`, `dispose`. Engine-agnostic: Fabric/Konva/CSS surfaces pass their own `applyToEngine`. |
+| `worldOverlay.ts` | Pure: the CSS variable names, `cameraCssVars(camera, {chromeScale})`, `worldBoxStyle(rect, opts)` / `worldPointStyle(point, opts)` returning `calc()`/`transform` style objects, and `worldToScreen` parity helpers for tests. |
+| `useCameraCssVars.ts` | React hook: subscribe an element to a store and write the variables on every camera change (and on mount). |
+| `screenAnchor.ts` | Layer-3 helper: keep a screen-anchored popover glued to a world point while it is open (subscribe → reposition), for popovers that today capture a screen point once. Built in P3 for the comment thread popover; available to others. |
+
+`chromeScale` (KV's caption clamp) is passed in as an option, not hard-wired,
+so each surface keeps its own chrome rules — the same stance `viewport.ts`
+takes on zoom bounds ("what they share is the math, not the numbers").
+
+### ADR
+
+`web/docs/adr/0005-canvas-layering.md` (status Proposed, then Accepted with
+P1): canvases have four layers — **content** (engine pixels), **world
+overlay** (DOM in world coords, moved by camera CSS variables, never by a
+per-frame React render), **screen overlay** (menus/popovers anchored from
+world points through the store), **interaction** (one tool/pointer system).
+High-frequency view state (camera, drag, hover) lives in stores with
+`subscribe`, outside React state; documents stay in world units.
+
 ## Scope and phases
 
 Each phase is independently shippable and smoke-testable.
 
 | Phase | Chrome migrated | Where |
 |---|---|---|
-| **P1 — mechanism + board chrome** | camera store `subscribe`; `useCameraCssVars`; world-style helper; BoardChrome always-on items: board labels, tile captions, Concept badge, ready-to-share chips, "+" variant button, rationale card | `kvCameraStore.ts`, `fabric/useCanvasCamera.ts`, new `fabric/worldStyle.ts` + hook, `fabric/BoardChrome.tsx`, `KvFabricCanvas.tsx` |
+| **P1 — foundation + board chrome** | `src/lib/canvas/{cameraStore,worldOverlay,useCameraCssVars}.ts` + ADR 0005; KV adopts the shared store; BoardChrome always-on items: board labels, tile captions, Concept badge, ready-to-share chips, "+" variant button, rationale card | `src/lib/canvas/*`, `web/docs/adr/`, `kvCameraStore.ts`, `fabric/useCanvasCamera.ts`, `fabric/BoardChrome.tsx`, `KvFabricCanvas.tsx` |
 | **P2 — strip chrome** | "Resizes" divider, tile header icon row, tile status layer, tile frame-box layer (positions from `computeResizeStrip`'s world rects) | `KvCanvas.tsx`, `KvResizeStripChrome.tsx` |
-| **P3 — comment pins** | `CommentPinOverlay` pins + draft pin, `CommentThreadPopover` anchor; layout reads board **world** rects; per-frame `onBoardRectsChange` removed once unused | `KvGeneratorLayout.tsx`, `components/comments/*`, `lib/studio/kv/commentPartRect.ts`, `KvFabricCanvas.tsx` |
+| **P3 — comment pins** | `CommentPinOverlay` pins + draft pin, `CommentThreadPopover` anchor (via `screenAnchor.ts`); layout reads board **world** rects; per-frame `onBoardRectsChange` removed once unused | `KvGeneratorLayout.tsx`, `components/comments/*`, `lib/studio/kv/commentPartRect.ts`, `src/lib/canvas/screenAnchor.ts`, `KvFabricCanvas.tsx` |
 | **P4 — optional, same pattern** | grid background position, ruler ticks, persisted guides, presence cursors | `KvGridOverlay`, `KvRulerOverlay`, `KvGuideLines`, `PresenceCursors` |
 
 **Out of scope:** transient selection/gesture chrome (`ObjectSelectChrome`,
@@ -109,7 +149,7 @@ Known stale spots noted, not fixed here: the tile detect prompt's captured
 
 ## Testing
 
-- Pure, test-first: world-style helper (pan only, zoom at a point, chrome
+- Pure, test-first (in `src/lib/canvas/`): world-style helper (pan only, zoom at a point, chrome
   offsets scaled by `--cam-cs`, fixed-px offsets not scaled), camera store
   `subscribe` (listeners fire synchronously on `set` and `setLive`, before
   the rAF commit; unsubscribe stops them), world→screen parity (the CSS
