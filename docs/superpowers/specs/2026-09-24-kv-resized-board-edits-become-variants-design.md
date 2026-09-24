@@ -68,17 +68,17 @@ export function editOutcome(args: {
 - else `parentResizeCount > 0` → `"variant"`.
 - else `"rekey"`.
 
-`boardResizeCount(rows: readonly unknown[] | undefined): number` — the
-number of rows the strip would draw for that tip. `undefined` (query not
-loaded) counts as 0: the strip draws nothing either, so the user saw no
-resizes. Rows in any status count (an in-flight resize would otherwise be
+`boardResizeCount(rows, tipId): number` — the number of strip rows under
+that tip. Rows not loaded yet count as 0: the strip draws nothing either, so
+the user saw no resizes. Rows in any status count (an in-flight resize would otherwise be
 orphaned the moment it lands).
 
-**Source of `rows`:** the react-query cache the strip already fills —
-`queryClient.getQueryData(resizeExportsQueryKey(fileId, tipId))`
-(`useResizeExports.ts`). `KvCanvas` fetches exports for every board tip
-whenever the canvas has ≥1 board, so the cache is warm for any board the
-user can see. No new request.
+**Source of `rows`:** the strip's own rows — `stripExports`, which
+`KvCanvas` publishes up to the layout (`onStripExportsChange`) and which are
+exactly the tiles the strip draws (every board tip's exports, fetched
+whenever the canvas has ≥1 board). The count is the rows whose
+`parentGenerationId` is the tip. No new request. The completion effect reads
+them through a ref so strip updates do not re-run it.
 
 ### 2. Completion effect — the redirect
 
@@ -120,7 +120,9 @@ export function overlaysForVariant(
 Takes `overlaysForTile(overlays, parentChain)` (same rule the board renders
 with), and for each: new `tmp_` id (the autosave's tmp→ULID remap handles
 persistence, as for paste), `board_generation_id = variantId`, geometry,
-rotation, z order and payload copied verbatim. Geometry needs no
+rotation and payload copied verbatim; the copies keep the parent's layer
+ORDER (sorted by source z) and get fresh z values from `docAddOverlays`, so
+they never collide with the parent's. Geometry needs no
 re-projection: a craft edit keeps the base's aspect (the ai-service conforms
 to it), so the variant has the parent's shape. Legacy overlays with a null
 `board_generation_id` are not copied (they belong to no board).
@@ -191,10 +193,10 @@ resizes, the same edits still append versions.
 
 ## Risks
 
-- **Strip width vs. adjacent slot.** `adjacentFreeCenter` steps by
-  `ARTBOARD_STEP`; a parent whose strip row is wider than one step could sit
-  under the variant. `computeResizeStrip` lays strips out from the board
-  rects; the plan verifies it keeps groups apart, and if not, places the
-  variant past the parent group's strip width.
-- **Cold cache.** A board whose exports never loaded (strip disabled) counts
-  as "no resizes" and gets a version — same as what the user sees.
+- **Strip vs. adjacent slot — checked, no overlap.** `computeResizeStrip`
+  gives each parent one column exactly one board wide (512) under its own
+  board, below the bbox of all boards; boards sit `ARTBOARD_STEP` (640)
+  apart. The variant's column (if it ever gets resizes) sits under the
+  variant, never under the parent.
+- **Cold strip.** A board whose exports never loaded counts as "no resizes"
+  and gets a version — same as what the user sees.
