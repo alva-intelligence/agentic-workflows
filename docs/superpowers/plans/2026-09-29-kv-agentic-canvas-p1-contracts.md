@@ -262,6 +262,19 @@ Amendments from the api plan (binding; full list in the api plan's "Contract dev
 - Additional codes: `run_mismatch`, `undo_in_progress`, `invalid_input`, `invalid_style_key`, 404 `not_found`.
 - `asset_url` must be on the platform's own bucket (the api fetches it to read dimensions).
 - `/complete` never carries `agent_canvas`.
+Amendments from the cross-repo review (binding):
+- `GET kv/canvas/{fileId}` accepts optional `board_id` (any id in the board's version chain; unknown → 404 `board_not_found`): only that board and its sizes. When a surface exceeds 60 layers the **highest-z** layers are kept (then listed in z order). ai-service's `get_kv_canvas(board_id)` passes it through instead of filtering locally.
+- A write whose adds would take the file past 300 layers is refused whole with 422 `too_many_layers` (the normaliser's list cap would otherwise freeze REST materialisation and every browser save).
+- Doc-sink ops are ledgered immediately after the collab write; a failing tile write becomes a per-target skip, never a 500 that hides an applied change.
+- Detach snapshots are taken from the post-write board layers.
+- `set.style` keys that text runs can override are removed from every run.
+- `set.text` does not accept `null`.
+- `skipped[]` entries may carry `detail` (first validation message) for `invalid_payload`.
+- MCP error messages end with the machine code in parentheses.
+- Undo holds the write lock with a 150 s TTL; ai-service read timeout is 130 s.
+- Layer text values are quote-escaped in `<kv_canvas_state>`.
+- Known limitations (accepted for P1): a stale tab can overwrite agent writes to detached sizes; layer-decomposition commits race with agent writes; an MCP run blocks in-app runs on the same file for up to 10 minutes.
+
 - Every canvas write (update/add/remove and undo replay) holds a per-file lock `kv-canvas-write:{fileId}` (TTL 90 s, waits up to 20 s); after the wait api answers 409 `write_in_progress` and sends nothing. ai-service passes it to the model as `error_code` (no automatic retry) and its read timeout is 100 s so an applied write is never reported as failed.
 - No realtime channel exists for resize exports: web refetches `resizeExportsQueryKey(fileId)` after a live run that touched sizes and after undo (web Task 5). Other open tabs update on their next refetch.
 
