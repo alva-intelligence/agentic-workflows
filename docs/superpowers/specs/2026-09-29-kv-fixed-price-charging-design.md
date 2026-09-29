@@ -231,13 +231,19 @@ rows that will actually be new, not the count requested — otherwise a user wit
 **Ordering.** The *affordability check* precedes any write in every case; where
 the deduction itself falls differs, and the difference is forced by the code:
 
-- **Motion** — check, deduct, insert. The size count is known up front, so the
-  deduction can precede the write. Deduction and insert share one transaction.
+- **Motion** — pre-check affordability, then in one transaction insert the
+  project, deduct, and write `CostHistory`. Insert-before-deduct rather than
+  deduct-before-insert so the charge has a stable, row-derived idempotency key
+  (see below); the transaction gives the identical guarantee, since a failed
+  deduction rolls the project back and the user is left exactly as they started.
 - **`createBatch`** — which rows are new is only knowable *after* `firstOrCreate`
   runs, so the order is: count the platform ids that do not yet exist, check
   affordability against that count, create, then deduct for the rows that came
-  back `wasRecentlyCreated`. All inside one transaction, so a deduction failure
-  rolls the rows back and the user is left exactly as they started.
+  back `wasRecentlyCreated`. All inside one transaction, same rollback property.
+
+Both sites therefore share one shape: **check → transaction { write, deduct,
+audit } → rollback on shortfall.** The pre-check is what produces the clean
+refusal; the transaction is what makes it true under a race.
 
 The pre-count and the post-count can differ under a concurrent request for the
 same sizes; the transaction and `firstOrCreate`'s unique key make the loser a
@@ -249,9 +255,25 @@ passing a computed cost of 0 would demand 1 credit and refuse a broke user a
 free action. When the resolved total is 0, skip the affordability check, the
 deduction and the `CostHistory` row entirely.
 
-**Idempotency.** Each charge writes a `CostHistory` row with a fresh **UUID**
-`batch_identifier`. The debt tables require UUID batch ids; a non-UUID id
-silently drops the charge when the deduction overdraws.
+**Idempotency.** Each charge writes a `CostHistory` row whose
+`batch_identifier` is derived from the row it pays for, matching the readable
+convention every other KV charge uses (`kv_upscale_{ulid}`,
+`kv_resize_{ulid}_{run}`):
+
+- `kv_resize_overlay_{$export->id}` — one per created export row, from both
+  `createBatch` and `duplicate()`, so the same row can never be billed twice.
+- `kv_motion_create_{$project->id}` — which is why the project is inserted
+  inside the transaction before the deduction rather than after it.
+
+A UUID is **not** required. `batch_identifier` was uuid-typed on
+`cost_histories` and `user_workspace_chat_debts`, and a non-uuid string there
+used to drop the charge silently; both were relaxed to varchar
+(`2026_04_30_000002_…` and `2026_08_22_100000_relax_chat_debt_batch_identifier_to_string`).
+Row-derived string ids are now the house style and are what these charges use.
+
+Note this idempotency key only guards the `CostHistory` write. Because these
+charges use `deductCredits` (refuse on shortfall) rather than
+`deductCreditsWithDebt`, no debt row is ever written on this path.
 
 `cost_type` values follow the existing `kv_*` convention
 (`kv_resize_export`, `kv_generation_upscale`, …):
@@ -316,6 +338,7 @@ User exports the Motion, now or next month
   unchanged).
 - A price of `0` lets the action through for a user with zero credits, and
   writes no `CostHistory` row.
+- Charging the same export row twice writes one `CostHistory` row, not two.
 - Motion `store()` with `size_count: 3` deducts `3 × price`, and with an
   insufficient balance returns 400 and writes no `KvMotionProject` row.
 - `size_count` that disagrees with `snapshot.tiles` is rejected.
@@ -342,6 +365,7 @@ worktree rather than trusting a clean build.
 
 | Risk | Mitigation |
 |------|-----------|
+| `CostHistory.batch_identifier` is unique — a collision throws | Keys are derived from a freshly created row's ULID, so they are unique by construction; the write is still wrapped for `UniqueConstraintViolationException` the way `KvCreditMeteringService` does. |
 | Quote shown ≠ amount charged after an admin edit mid-session | Server is authoritative and reads live. Worst case is a stale *quote* bounded by the hook's `staleTime`, never an inconsistent charge. The PRD's "already in progress keeps the price it started with" is satisfied: the action starts at the button press, which is the charge moment. |
 | Double-charging through `firstOrCreate` | Charge keyed on `wasRecentlyCreated`, with an explicit test. |
 | A price row missing makes a paid feature free | Read falls back to the code default, never 0. |
