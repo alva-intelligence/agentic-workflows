@@ -290,9 +290,11 @@ used to drop the charge silently; both were relaxed to varchar
 (`2026_04_30_000002_…` and `2026_08_22_100000_relax_chat_debt_batch_identifier_to_string`).
 Row-derived string ids are now the house style and are what these charges use.
 
-Note this idempotency key only guards the `CostHistory` write. Because these
-charges use `deductCredits` (refuse on shortfall) rather than
-`deductCreditsWithDebt`, no debt row is ever written on this path.
+Note this idempotency key only guards the `CostHistory` write. The refusal comes
+from the **pre-check** (§4.3), not from the deduction: the deduction is
+`deductCreditsWithDebt`, so a concurrent spend landing between the check and the
+deduction can still write a debt row. That narrow race is the same one every
+other charge in the system accepts.
 
 `cost_type` values follow the existing `kv_*` convention
 (`kv_resize_export`, `kv_generation_upscale`, …):
@@ -304,8 +306,15 @@ charges use `deductCredits` (refuse on shortfall) rather than
 
 `amount` (the platform's USD cost) is `0.0`. Every other KV row derives it from
 a vendor invoice, but these two actions make no vendor call at all — that is
-precisely why they were free. Recording 0 is accurate, and admin margin analysis
-will correctly show them as pure margin rather than inventing a cost.
+precisely why they were free. Recording 0 is accurate.
+
+**Correction to an earlier draft of this section:** admin margin analysis does
+NOT read `amount`. `AdminRevenueController::costsSummary` and
+`AdminMetricsService::consumedCredits()` both derive platform cost from
+`SUM(actual_credit)`; `amount` is summed nowhere. So these zero-vendor-cost rows
+will *inflate* `total_cost_idr` and *understate* `margin_percent` rather than
+showing as pure margin. Nothing breaks, but the two new `cost_type`s should be
+excluded from the cost side of margin reporting. Tracked as open item 3 below.
 `prompt_tokens` / `completion_tokens` / `total_tokens` are 0 for the same
 reason, matching the flat-rate camera-angle path.
 
@@ -342,7 +351,7 @@ User presses Create motion
     → size_count cross-checked against snapshot.tiles
     → CreditPrice::credits('kv_motion_create') × 3        (read live)
     → hasSpendableCredits? no  → 400 "Insufficient user credits", nothing created
-    → yes → transaction { deductCredits; CostHistory(uuid); KvMotionProject::create }
+    → yes → transaction { KvMotionProject::create; deductCreditsWithDebt; CostHistory }
     → 201
 
 User exports the Motion, now or next month
@@ -396,7 +405,7 @@ worktree rather than trusting a clean build.
 
 | Risk | Mitigation |
 |------|-----------|
-| `CostHistory.batch_identifier` is unique — a collision throws | Keys are derived from a freshly created row's ULID, so they are unique by construction; the write is still wrapped for `UniqueConstraintViolationException` the way `KvCreditMeteringService` does. |
+| A charge is written twice for the same row | Keys are derived from a freshly created row's ULID, so they cannot collide across requests. Note `cost_histories.batch_identifier` carries only a PLAIN btree index, **not** a unique constraint — verified against the live schema — so the `exists()` check in `charge()` is best-effort, not race-safe. Any future retry/replay caller that reuses a batch id needs a partial unique index first. |
 | Quote shown ≠ amount charged after an admin edit mid-session | Server is authoritative and reads live. Worst case is a stale *quote* bounded by the hook's `staleTime`, never an inconsistent charge. The PRD's "already in progress keeps the price it started with" is satisfied: the action starts at the button press, which is the charge moment. |
 | Double-charging through `firstOrCreate` | Charge keyed on `wasRecentlyCreated`, with an explicit test. |
 | A price row missing makes a paid feature free | Read falls back to the code default, never 0. |
@@ -424,3 +433,14 @@ Recorded so the doc can be amended:
    must be found and updated alongside the charge.
 2. The pre-existing estimate-vs-charged gap on AI Resize, which the PRD itself
    flags as possibly a standing bug. Untouched by this work.
+3. Margin reporting counts these zero-vendor-cost charges as platform cost (see
+   §4.5). Excluding `kv_resize_overlay_only` and `kv_motion_create` from the
+   cost side is a small admin-side change, out of scope here.
+4. **Product decision, unresolved:** removing a layer-composed size and re-adding
+   it charges again. `KvResizeExportController::destroy` hard-deletes, so the
+   re-add is a genuinely new row. This is consistent with AI resize (where a
+   re-add really does re-run the model) but for a deterministic projection the
+   user pays twice for byte-identical output, reachable in two clicks from the
+   shipped remove-tile control. Either accept it and warn in the UI before the
+   delete, or key the charge on `(parent_generation_id, platform_id)` rather
+   than row identity.
