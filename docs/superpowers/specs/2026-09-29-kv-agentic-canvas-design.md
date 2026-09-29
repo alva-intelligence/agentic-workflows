@@ -364,10 +364,13 @@ Table `kv_agent_runs`: `id` (ULID, = `run_id`), `studio_file_id`, `user_id`,
 - **Final report:** the agent's closing text is written from tool results;
   the honesty ledger footnotes any claim the server did not accept. Pixel jobs
   finishing later only update the run card — no second LLM turn.
-- **Analytics (PostHog):** `kv_agent_run_completed` (op and target counts,
-  source), `kv_agent_targets_suggested`, `kv_agent_plan_shown`,
-  `kv_agent_plan_confirmed`, `kv_agent_plan_cancelled`, `kv_agent_run_undone`.
-  Taxonomy row added with the web change.
+- **Analytics (PostHog):** dot-namespaced like `deck_agent.*`:
+  `kv_agent.run_completed` (op and target counts, source),
+  `kv_agent.run_undone`, `kv_agent.run_undo_failed`,
+  `kv_agent.run_target_focused` (P1); `kv_agent.targets_suggested` (P2, needs
+  `purpose: "targets"` on the question card), `kv_agent.plan_shown`,
+  `kv_agent.plan_confirmed`, `kv_agent.plan_cancelled` (P2/P3). Taxonomy rows
+  added with the web change.
 
 Out of scope for v1 (YAGNI): an "FRND" presence avatar on the canvas,
 highlighting agent-touched layers, per-op undo.
