@@ -262,6 +262,7 @@ Amendments from the api plan (binding; full list in the api plan's "Contract dev
 - Additional codes: `run_mismatch`, `undo_in_progress`, `invalid_input`, `invalid_style_key`, 404 `not_found`.
 - `asset_url` must be on the platform's own bucket (the api fetches it to read dimensions).
 - `/complete` never carries `agent_canvas`.
+- Every canvas write (update/add/remove and undo replay) holds a per-file lock `kv-canvas-write:{fileId}` (TTL 90 s, waits up to 20 s); after the wait api answers 409 `write_in_progress` and sends nothing. ai-service passes it to the model as `error_code` (no automatic retry) and its read timeout is 100 s so an applied write is never reported as failed.
 - No realtime channel exists for resize exports: web refetches `resizeExportsQueryKey(fileId)` after a live run that touched sizes and after undo (web Task 5). Other open tabs update on their next refetch.
 
 ## C6. Ledger table `kv_agent_runs` (api)
