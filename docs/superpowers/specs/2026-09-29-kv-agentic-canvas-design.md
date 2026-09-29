@@ -276,6 +276,10 @@ Behaviour:
   first write; any failure writes nothing.
 - `expected` is the subset of fields the agent read (compare-and-set). A
   mismatch → 409 `layer_changed {layer_id, expected, current}`.
+  *P1 note:* the api builds `expected` from its own fresh read of the live doc
+  just before writing (the read that also yields the ledger pre-image), so it
+  guards the api-read→collab-write window, not the whole turn; user work is
+  protected at undo time (§8.2).
 - Response: `{ applied: [...], before: { layers: {id: snapshot|null}, boards: {...} } }`
   — pre-images for the ledger.
 - After a successful write, collab materialises immediately (not only on last
