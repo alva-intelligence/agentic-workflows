@@ -194,6 +194,25 @@ which is Extra-Credit-aware and already backs the `check.credits` middleware.
 The existing middleware itself is **not** reusable here: it takes a *static*
 route argument (`check.credits:1`) and both new costs are dynamic.
 
+**Gate with `hasSpendableCredits()`, but fund with `deductCreditsWithDebt()` —
+not `deductCredits()`.** This pairing is deliberate and the two halves are not
+interchangeable:
+
+- `hasSpendableCredits()` counts the workspace pool **plus eligible Extra
+  Credit**. `deductCredits()` does not draw Extra Credit at all — it refuses
+  whenever the pool alone is short. Pairing them would let a workspace pass the
+  gate on its Extra Credit and then be thrown out by the deduction, refusing a
+  user who can in fact pay. That is a wrong refusal, not merely an inelegant one.
+- `deductCreditsWithDebt()` funds from pool then Extra Credit exactly as every
+  other KV charge does, and returns `extra_credit_drawn` so the `CostHistory`
+  row can carry `is_from_extra_credit` with the same meaning it has everywhere
+  else.
+
+The refusal therefore comes from the **pre-check**, not from the deduction. The
+deduction stays debt-tolerant, so the only way to reach debt on this path is a
+concurrent spend landing between the check and the deduction — the same
+narrow race every other charge in the system already accepts.
+
 ### 4.4 Endpoints
 
 | Method | Route | Auth | Purpose |
@@ -283,6 +302,13 @@ charges use `deductCredits` (refuse on shortfall) rather than
 
 `chat_features` stays `'KV Generator'`, matching every other KV row.
 
+`amount` (the platform's USD cost) is `0.0`. Every other KV row derives it from
+a vendor invoice, but these two actions make no vendor call at all — that is
+precisely why they were free. Recording 0 is accurate, and admin margin analysis
+will correctly show them as pure margin rather than inventing a cost.
+`prompt_tokens` / `completion_tokens` / `total_tokens` are 0 for the same
+reason, matching the flat-rate camera-angle path.
+
 ### 4.6 Web
 
 | Piece | Location |
@@ -339,6 +365,11 @@ User exports the Motion, now or next month
 - A price of `0` lets the action through for a user with zero credits, and
   writes no `CostHistory` row.
 - Charging the same export row twice writes one `CostHistory` row, not two.
+- A workspace whose pool is short but whose Extra Credit covers the cost is
+  **allowed through and funded from Extra Credit**, with
+  `is_from_extra_credit` true on the `CostHistory` row. This is the pairing
+  in §4.3 and the single most likely thing to regress.
+- `amount` on the `CostHistory` row is `0.0`.
 - Motion `store()` with `size_count: 3` deducts `3 × price`, and with an
   insufficient balance returns 400 and writes no `KvMotionProject` row.
 - `size_count` that disagrees with `snapshot.tiles` is rejected.
