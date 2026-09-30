@@ -27,7 +27,7 @@
 
 - **Repo + shell:** every command runs from the api repo root. Agent shells reset cwd, so prefix every shell call with `cd /Users/alva.e202511001/Desktop/work/frndos-agentic/api && `. All paths below are relative to that root unless absolute.
 - **Branch:** all work on `feature/daffa/vc-client-lane-multi-item` (created in Task 0 from latest `develop`). Never commit on `develop`.
-- **api/AGENTS.md rule 1:** "DO NOT MAKE OR RUN ANY TESTS WITHOUT USER PERMISSION." Before Task 1 Step 1, ask Daffa (AskUserQuestion) for one explicit approval covering "write and run the Pest files named in this plan against the scratch Postgres DB". Do not write or run a test before that yes.
+- **api/AGENTS.md rule 1:** "DO NOT MAKE OR RUN ANY TESTS WITHOUT USER PERMISSION." **GRANTED by Daffa 2026-09-30** for exactly the Pest files named in this plan, run only against the scratch DB (`frnd_testing`) with the isolation checks below — do not ask again; anything beyond that still needs asking. Original instruction: Before Task 1 Step 1, ask Daffa (AskUserQuestion) for one explicit approval covering "write and run the Pest files named in this plan against the scratch Postgres DB". Do not write or run a test before that yes.
 - **api/AGENTS.md rule 2:** commit messages carry NO `Co-Authored-By` / "Generated with Claude Code" trailer. Format `<type>(api): <description>`.
 - **Test DB isolation (never the dev DB `frnd`):** before every test run:
   1. `ls bootstrap/cache/config.php 2>/dev/null` must print nothing; if it prints a path run `php artisan config:clear`.
@@ -54,7 +54,7 @@ Input classes / failure modes most likely to bite real users that the happy-path
 4. **jsonb round-trip of snapshots.** Postgres reorders jsonb object keys and the array cast turns `{}` into `[]`; the frozen document must still equal, by value, what the client saw at request time (including nested overlay payloads). → Task 6 test *"the KV document is frozen…"* (asserts `toEqual` against the pre-request `itemsFor()` output with an overlay present).
 5. **Advisory decisions under `required`.** A forwarded-link guest who is not a named approver must never settle an item (Phase 2 would otherwise let anyone approve items one by one). → Task 4 test *"an advisory decision never settles an item"*.
 
-Also noted (no test; flag to the reviewer): resize item `version_id` is the resize ROW id, which is stable across regenerations — a pin placed on a tile in round 1 matches the same tile in round 2 and is listed there too. That is the spec's "rendered id" rule working as designed for resize, but it means round-1 tile pins carry forward.
+Resolved (Daffa, 2026-09-30): resize item `version_id` is the resize ROW id, stable across regenerations, so version membership alone would carry round-1 tile pins into round 2. Pins therefore belong to their round: `comments()` and `validatePins()` also require the root pin's `created_at >= approval.created_at` — Task 5 test *"a pin from an earlier round does not carry into the next round, even on an unchanged tile"*.
 
 ---
 
@@ -2553,6 +2553,35 @@ test('after a new round, a pin on the superseded board version is refused', func
     ])->assertCreated();
 });
 
+// Decision 2026-09-30 (Daffa): pins belong to the round they were placed in.
+// A resize tile keeps its row id across rounds, so without this a round-1 pin
+// would reappear on the regenerated tile in round 2.
+test('a pin from an earlier round does not carry into the next round, even on an unchanged tile', function () {
+    $old = $this->postJson("/api/public/share-links/{$this->token}/comments", [
+        'body' => 'Crop the head less',
+        'anchor' => ['kind' => 'pin', 'id' => $this->tileAnchor, 'x' => 0.5, 'y' => 0.1],
+        ...$this->guest,
+    ])->assertCreated()->json('data.id');
+
+    // Timestamps are second-precision: move past round 1 before round 2 opens.
+    $this->travel(1)->minutes();
+    ClientLaneFixtures::requestKv($this->file, $this->user, ['craft', 'resize']); // round 2, same tile row id
+    $this->travel(1)->minutes();
+
+    $new = $this->postJson("/api/public/share-links/{$this->token}/comments", [
+        'body' => 'Better, nudge it up',
+        'anchor' => ['kind' => 'pin', 'id' => $this->tileAnchor, 'x' => 0.5, 'y' => 0.2],
+        ...$this->guest,
+    ])->assertCreated()->json('data.id');
+
+    expect($this->getJson("/api/public/share-links/{$this->token}/comments")->assertOk()->json('data.*.id'))
+        ->toBe([$new]);
+
+    $this->postJson("/api/public/share-links/{$this->token}/decision", [
+        'outcome' => 'changes_required', 'note' => 'See pins', 'pins' => [$old], ...$this->guest,
+    ])->assertStatus(422)->assertJsonValidationErrors('pins');
+});
+
 // Review Focus 3
 test('a round with no item rows (pre-backfill) still pins against its subject version', function () {
     $fx = ClientLaneFixtures::kvFile();
@@ -2608,6 +2637,12 @@ and replace lines 789-793 with:
             if (count($segments) < 2 || ! in_array($segments[1], $versionIds, true)) {
                 continue;
             }
+            // Pins belong to the round they were placed in (decision
+            // 2026-09-30): a resize tile keeps its row id across rounds, so
+            // version membership alone would let a round-1 pin back in.
+            if ($comment->created_at !== null && $comment->created_at->lt($approval->created_at)) {
+                continue;
+            }
 ```
 
 Change the error message on line 800 to `'One or more pins are not yours or not in this round.'`.
@@ -2629,21 +2664,28 @@ Change the error message on line 800 to `'One or more pins are not yours or not 
         // non-member.
         //
         // Anchors whose `{stage}:{version}:{part}` version segment is one of
-        // THIS round's item versions, plus un-anchored replies to those roots.
+        // THIS round's item versions AND that were placed during this round
+        // (pins belong to their round — decision 2026-09-30; a resize tile
+        // keeps its row id across rounds), plus replies to those roots.
+        $roundStart = $approval->created_at;
         $rows = Comment::query()
             ->where('commentable_type', $subject->type)
             ->where('commentable_id', (string) $subject->model->getKey())
             ->visibleTo(null, $subject->model)
-            ->where(function ($q) use ($versionIds, $in) {
-                $q->whereRaw("split_part(anchor->>'id', ':', 2) IN ({$in})", $versionIds)
-                    ->orWhere(function ($reply) use ($versionIds, $in) {
+            ->where(function ($q) use ($versionIds, $in, $roundStart) {
+                $q->where(function ($root) use ($versionIds, $in, $roundStart) {
+                    $root->whereRaw("split_part(anchor->>'id', ':', 2) IN ({$in})", $versionIds)
+                        ->where('created_at', '>=', $roundStart);
+                })
+                    ->orWhere(function ($reply) use ($versionIds, $in, $roundStart) {
                         $reply->whereNotNull('parent_id')
-                            ->whereExists(function ($sub) use ($versionIds, $in) {
+                            ->whereExists(function ($sub) use ($versionIds, $in, $roundStart) {
                                 $sub->selectRaw('1')
                                     ->from('comments as roots')
                                     ->whereColumn('roots.id', 'comments.parent_id')
                                     ->whereNull('roots.deleted_at')
-                                    ->whereRaw("split_part(roots.anchor->>'id', ':', 2) IN ({$in})", $versionIds);
+                                    ->whereRaw("split_part(roots.anchor->>'id', ':', 2) IN ({$in})", $versionIds)
+                                    ->where('roots.created_at', '>=', $roundStart);
                             });
                     });
             })
@@ -2673,7 +2715,7 @@ Change the error message on line 800 to `'One or more pins are not yours or not 
         }
 ```
 
-- [ ] **Step 4: Run — expect PASS (5 passed)**, then Task 4's file as regression (its HTTP test uses the decision route).
+- [ ] **Step 4: Run — expect PASS (6 passed)**, then Task 4's file as regression (its HTTP test uses the decision route).
 
 ```bash
 cd /Users/alva.e202511001/Desktop/work/frndos-agentic/api && DB_CONNECTION=pgsql DB_HOST=localhost DB_PORT=5432 DB_DATABASE=frnd_testing TELESCOPE_ENABLED=false vendor/bin/pest tests/Feature/Approval/ApprovalPinsMembershipTest.php --compact
@@ -2685,6 +2727,7 @@ cd /Users/alva.e202511001/Desktop/work/frndos-agentic/api && DB_CONNECTION=pgsql
 2. In `comments()` drop the reply `orWhere` branch → *"comments list roots… plus their replies"* must FAIL. Restore.
 3. In `validatePins()` replace `$versionIds` with `[$approval->subject_version_id]` → *"decision pins may sit on any item…"* must FAIL (valid tile pin rejected). Restore.
 4. In `Approval::itemVersionIds()` drop the fallback (return `$ids`) → *"a round with no item rows…"* must FAIL (SQL error on `IN ()` or 422). Restore.
+5. In `comments()` drop the root `->where('created_at', '>=', $roundStart)` → *"a pin from an earlier round does not carry…"* must FAIL (the list contains `$old`). Restore. Then drop the `created_at->lt(...)` guard in `validatePins()` → the same test must FAIL on the decision (201 instead of 422). Restore.
 
 - [ ] **Step 6: Lint + commit**
 

@@ -151,6 +151,11 @@ Nullable ulid FK → `approval_items`, null on delete.
   `version_id`s, else `422 invalid_anchor` (message: "That element is not in this
   round.").
 - `ApprovalService::validatePins()`: same membership rule.
+- **Pins belong to their round** (decision 2026-09-30): both `comments()` and
+  `validatePins()` also require the root pin's `created_at >= approvals.created_at`.
+  A resize tile keeps its row id across rounds, so version membership alone would
+  carry round-1 pins onto the regenerated tile in round 2. Earlier-round pins stay
+  visible to the agency in the editor.
 - Anchor format unchanged: `{phase}:{item.version_id}:{part}`. Resize part = the
   tile **row id** (`tile.{row_id}`), matching the editor's tile keying (fixes the
   existing `platform_id` vs row-id mismatch for approval pins).
