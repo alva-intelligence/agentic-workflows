@@ -163,7 +163,7 @@ Nullable ulid FK → `approval_items`, null on delete.
 
 ### 5.5 Agency list — `GET v1/approvals` (C-9, additive)
 
-- Each round gains `items: [{id, phase, label, status, thumbnail_url}]`
+- Each round gains `items: [{id, phase, label, version_id, status, thumbnail_url}]`
   (`thumbnail_url` from the snapshot's image; null for deck/plan).
 - `decisions[]` gain `item_id` (null in Phase 1).
 
