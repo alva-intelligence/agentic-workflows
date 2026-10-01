@@ -38,6 +38,8 @@ The work is one spec in four parts. Each part has its own implementation plan, a
 
 **KV only.** Decks and campaign plans keep the P0a round model unchanged. Their approvals have `approval_request_id = null` and `subject_key = null`.
 
+**All web work follows §11** (frndOS components first, FRND rules otherwise).
+
 **Out of scope:**
 
 - decks and plans moving to requests, and per-slide deck approval;
@@ -553,3 +555,72 @@ Every rule gets a mutation check (break it and watch the test fail). The tsc bas
 - `kv_phases` on `POST v1/approvals` (moves to `v1/approval-requests`);
 - the KV round hero's one-decision bar;
 - the New-link Request-approval toggle.
+
+## 11. UI constraints (web, all parts) — frndOS components first
+
+Daffa's rule (2026-10-01): every web adjustment uses **frndOS components where possible**. Where none fits, the UI must follow the FRND rules and proportions. The binding sources are the web skills `frndos-ui`, which routes to `frndos-components-v2`, `frndos-components`, `frndos-design-foundations` and `frndos-rules`. Each plan task that touches UI loads `frndos-ui` first.
+
+### 11.1 Rules every task follows
+
+- **Component priority:**
+  1. `@/components/frndos/v2`
+  2. `@/components/frndos` (v1)
+  3. `@/components/base`
+  4. a **new v2 component** on a Base UI primitive
+
+  A new component is never added to v1. One file never mixes the v1 and v2 architectures.
+- **Every new v2 component:**
+  - lives in `src/components/frndos/v2/<Name>.tsx` and is exported from `v2/index.ts`;
+  - has a Storybook story at `stories/<Name>V2.stories.tsx` (`title: "FrndOS v2/<Name>"`);
+  - gets a row in the `frndos-components-v2` skill's component list;
+  - follows that skill's Visual Consistency checklist: Tailwind radius scale, `white/N` glass, `font-geist`, state through CSS pseudo-classes with a `focus-visible` ring and `disabled:` handling, `transition-all duration-200 ease-out`.
+- **Tokens only:**
+  - text colours `text-text-inverse-*` / `text-text-default-*`;
+  - font sizes `text-textXs`, `text-textSmMedium` and so on;
+  - radius `rounded-full`, `-2xl`, `-xl`, `-lg`, `-md`;
+  - surfaces `bg-white/5`, `/10`, `/15`, borders `border-white/10`, hairlines `border-white/5`.
+
+  Never use `text-[Npx]`, `rounded-[Npx]`, `px-[Npx]`, a new dark hex, `text-white` or `text-gray-*`.
+- **Fix our branch's arbitrary values as they are replaced:**
+  - the status pill (`text-[9px]`, `px-[7px]`) moves to frndOS `Label`;
+  - the client-lane `text-[12px]` / `text-white/45` style copy is replaced by tokens wherever this spec rewrites the markup.
+- **Appearance:**
+  - Agency UI must be correct in **Midnight, Aurora and Daylight**: theme-aware surfaces and no inline dark backgrounds.
+  - The public `/s/` page is dark-scoped (`data-theme-scope="dark"`, plus the `[data-client-lane-page]` token reset already on the branch), so it is designed for dark only.
+- **Toasts** use `useToastStore` (`@/store/useToast`), with positional arguments. **Numbers** that need formatting use `formatValue` (`@/lib/formatNumber`).
+- **Analytics** goes through typed helpers in `src/lib/analytics/client-lane-events.ts`. There is never an inline `posthog.capture`.
+
+### 11.2 Component map
+
+| Surface | Use | Notes |
+|---|---|---|
+| Buttons everywhere (agency and client page) | v2 `Button` (primary / secondary / text / icon; tiny / small / medium) | Replaces new uses of the client-lane `BTN_*` class strings. The existing `BTN_*` are migrated where this spec rewrites the markup. |
+| Status pills (request, artboard verdict in the dialog and popover) | v1 `Label` (`variant` neutral / success / alert / error, `size="small"`, `dark`) | Replaces the arbitrary `PILL` in `ApprovalStatusBlock`. A status→variant map lives in one module (`lib/client-lane/statusTone.ts`). |
+| Person faces | v1 `Avatar` + `getInitials` / `getAvatarColor` | As today |
+| Request rows in the Share dialog and the status popover | v2 `ItemRow` (row) + v2 `ActionMenu` ("•••": Copy link, Resend, Withdraw) | Expand / collapse uses a native disclosure button styled per v2 rules |
+| Status popover (top-bar chip) | v2 `Popover` (`Popover.Trigger` / `Popover.Content`) | Portalled to body |
+| Hover hints (compact icon button, disabled reasons) | v2 `Tooltip` | |
+| Request form: approvers | v2 `Chip` (already built) | |
+| Request form: message | v2 `AutoGrowTextarea` | |
+| Request form: phase pills with counts | v2 `FilterChips` (`aria-pressed` chips) | If its API cannot show a count, extend `FilterChips` with an optional `count`, not a local pill |
+| Request form: Decide by | v1 `DatePicker` | |
+| Section labels in the Share dialog | the dialog's existing `SectionLabel` | |
+| Ready-for-client tray | v1 `FloatingSelectionBar` shell if its positioning can sit above `KvCanvasBottomNav` (it falls back to viewport centring outside the SidebarShell) | Otherwise a **new v2 `FloatingActionBar`** with the same glass recipe, a story and an export, so the bar is shared and not a KV one-off |
+| Top-bar "Ready for client" button and compact icon | v2 `Button` (primary small; icon variant with a count badge) | The badge is a small v2 piece if no badge exists (`v2/CountBadge`) |
+| Verdict chips on artboards (canvas chrome) | the existing in-canvas chip recipe (`BoardChrome` ready chip, motion tile chip) with token text and status colours from `statusTone.ts` | Canvas chrome is not a frndOS component today; the chips reuse the same recipe and replace the `bg-[rgba(26,26,26,0.85)]` hex with a theme-aware surface |
+| Comments dock: Client / Team only labels | v1 `Label` (as "Artboard deleted" already does) | |
+| Comments dock: Client pill | the dock's existing `PillTabs` | |
+| Comments dock: Visibility filter group | the dock's existing `Dropdown` + `FilterCheckbox` | |
+| Reply visibility toggle ("Client sees this" / "Team only") | v2 `Button` (text, tiny, `leftIcon` eye or lock) in `CommentComposer`'s `hintText` slot | |
+| Client page sheets ("What should change?", code sheet) | the client-lane `Sheet` (the phone bottom-sheet the page already uses; v2 `Sheet` is a wide or side dialog, not a bottom sheet) with v2 `Button` inside | |
+| Client page: progress `2 of 8 decided` | v1 `ProgressBar` | |
+| Client page: note field | v2 `AutoGrowTextarea` | |
+| Code entry, six boxes (part D) | **new v2 `CodeInput`** on `@base-ui/react/input` (paste-aware, `aria-label` per box, error state) | Story + export + skill row |
+| Toasts (sent, copied, withdrawn, failures) | `useToastStore` | |
+
+### 11.3 Review gate
+
+Every web task's self-review checks the §11.1 list. Every new v2 component gets its story and skill row in the same task. The final branch review checks for:
+
+- arbitrary values on touched lines (`grep` for `-[0-9]+px]` and `text-white`);
+- any v1/v2 mix inside one file.
