@@ -295,4 +295,4 @@ The api PR merges before the web PR. Both target `develop`.
 
 1. **Jeff's handoff artifact** could not be read from this account. If it lists items beyond the three in the ticket, they belong in Spec 2.
 2. **frndos.com fired KV request events since 2026-10-05**, although web#858 is not on `origin/production`. Before Spec 2, confirm which branch frndos.com deploys from.
-3. **Plan lifecycle "Mark approved".** Does a manual agency approval while a request is open close that request's approval, or only set the plan status? Proposal: it closes the pending approval as `not_relevant` and sets the status, so the client page shows the request as closed rather than still asking.
+3. ~~Plan lifecycle "Mark approved".~~ **Decided (Daffa, 2026-10-06):** a manual agency status change (`applyPlanStatus`) while a request is open closes that request's pending plan approval as `not_relevant`, recalculates the roll-up, then sets the status. The client page then shows the request as closed rather than still asking.
