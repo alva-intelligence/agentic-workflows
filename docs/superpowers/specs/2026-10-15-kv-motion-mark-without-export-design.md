@@ -65,11 +65,14 @@ false alarms. The first export after launch fills the hash in.
 
 ### 3.2 Exported files popover
 
-`KvMotionProjectExports` rows (rendered in the editor's "Exported files"
-popover and the projects panel) show the same **Outdated** badge and **Update**
-button on a marked size whose newest export is outdated, and the same
-"Preparing… NN%" while that size renders. Both surfaces read the same state as
-the chip (§4.3), so they cannot disagree.
+The "Exported files" popover was folded into the Export dialog on 2026-09-22,
+so the surface is the dialog's stored-export rows: a marked size whose newest
+export is outdated shows the same **Outdated** badge and an **Update** button
+(re-renders that one size through the dialog's own run). While a background
+render is running, the dialog's Export and Update are disabled with a one-line
+explanation, and the background queue waits while the dialog renders — never
+two encoders at once. The projects panel (`KvMotionProjectExports`, another
+route) is unchanged.
 
 The Share panel / create-link form is **out of scope** (no outdated warning
 there).
