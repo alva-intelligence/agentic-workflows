@@ -43,7 +43,7 @@ Read the existing agentic-workflows repo to understand the framework structure:
 2. Read `agents/fragments/` to understand fragment structure
 3. Read `workflow/phases.json`, `workflow/gates.json`, `workflow/state-schema.json`
 4. Read `skills/onboard/SKILL.md` as a reference for how skills are structured
-5. Read `agents/tools/claude-code/frndos-orchestra.md` as a reference for agent structure
+5. Read `agents/fragments/workflow-rules.core.md` — the orchestrator + subagent delegation model
 
 This gives you the full template to adapt from.
 
@@ -123,41 +123,31 @@ If user picks **Custom**, ask them to list:
 - Phases to **remove** from the default 8
 - Phases to **add** (describe what they do and where they fit)
 
-## Step 3: Agents — **STOP, ask**
+## Step 3: Agents — none by default — **STOP, ask**
 
-> "Which agents do you need? Based on your phases, here's what I recommend:"
+**No agent roster.** The modern framework has a single orchestrator — the running agent itself —
+which delegates implementation to parallel subagents (right model + effort per task, intercom when
+the harness supports it, see `workflow-rules.core.md`).
 
-Present a table based on their phase selection:
+> "Any custom agents needed beyond the orchestrator + subagent model? (Default: none)"
 
-| Agent | Purpose | Recommended | Why |
-|-------|---------|-------------|-----|
-| `<project>-orchestra` | Router — delegates to phase agents | Always | Core routing |
-| `<project>-brainstorm` | Multi-choice questioning before PRD | If `brainstorming` phase | Sharpens scope |
-| `<project>-prd` | Creates PRDs from brainstorming summary + user input | If `prd_creation` phase | PRD authoring |
-| `<project>-splitter` | Creates feature branch + splits PRD into service PRDs | If `prd_splitting` phase | Multi-service |
-| `<project>-implement` | Implements features (sequential) | If `implementation` phase | Code generation |
-| `<project>-pr` | Self code-reviews + security audits, then opens PR | If `pr_submission` phase | PR lifecycle |
-| `<project>-pr-review` | Resolves PR review threads / bot findings | If `pr_review` phase | Review handling |
-| `<project>-track` | Manages track files | If `completion` phase | Audit trail |
-| `<project>-engineer` | Per-service engineer (Agent Teams) | Optional | Parallel impl |
-| `<project>-architect` | Cross-service reviewer (Agent Teams) | Optional | Integration review |
+### 3.1 Models
 
-> "Any agents to add or remove? Any custom agents?"
-
-### 3.1 Agent models
-
-> "What models for each agent?"
-> - **Opus 5** — Deep reasoning, code generation, multi-file work
-> - **Sonnet 5** — Lighter tasks, PR management, status tracking
+> "Any model preferences for subagent delegation?"
+> - **Opus 5** — planning, review, complex code work
+> - **Sonnet 5** — lighter mechanical tasks, status tracking
 >
-> "Default recommendation: Opus for creative/implementation agents, Sonnet for mechanical/PR agents. Want to customize?"
+> "Default: per-task choice in the delegation batch — heavy reasoning for planning/review, cheap
+> models for mechanical edits. Want to pin anything?"
 
 ### 3.2 Editor support
 
-> "Which editors/CLIs do you want agent definitions for?"
-> - Claude Code (`.md` agents)
-> - Cursor (`.mdc` agents)
-> - OpenCode (`.md` agents)
+> "Which editors/CLIs should the install target?" (skills are shared; no per-editor agent files
+> exist anymore)
+> - Claude Code
+> - Cursor
+> - OpenCode
+> - Amp
 
 ## Step 4: Skills & MCPs — **STOP, ask**
 
@@ -170,7 +160,7 @@ Present a table based on their phase selection:
 > - `/prd` — PRD creation helper
 > - `/prd-split` — PRD splitter (also creates the feature branch)
 > - `/pr-feedback` — address + resolve PR review threads
-> - `/jj-workflow` — JJ parallel workspaces
+> - `/visual-testing` — browser-use visual validation for UI work
 > - Custom: describe any additional skills
 
 ### 4.2 Community skills
@@ -191,7 +181,7 @@ Present a table based on their phase selection:
 > |-----|---------|-------------|-------------------|
 > | Context7 | `@upstash/context7-mcp` | Library docs lookup | No |
 > | GitHub | `@modelcontextprotocol/server-github` | PR/issue management | Yes (PAT) |
-> | Lark | `@larksuite/lark-mcp` | Read PRDs from Lark doc URLs | Yes (App ID/Secret) |
+> | Lark CLI | official Lark CLI | Read pasted Lark doc links (read-only) | Yes (account auth — CLI only, never an MCP) |
 > | Figma | `@anthropics/figma-mcp` | Design specs from Figma | Yes (PAT) |
 >
 > "List the ones you need. You can also add custom MCPs."
@@ -212,7 +202,7 @@ These become the install/verify tables in the generated `onboard/SKILL.md` Step 
 ### 5.2 Branch conventions
 
 > "What branch naming conventions do you use?"
-> - Feature branches: (e.g., `feature/<worker>/vc-<slug>`, `feat/<name>`)
+> - Feature branches: (e.g., `feature/vc-<slug>`, `feat/<name>`)
 > - PR target branch: (e.g., `develop`, `main`)
 > - Commit format: (e.g., `<type>(<scope>): <description>`)
 
@@ -256,15 +246,12 @@ Update files in `workflow/`:
 2. **`gates.json`** — Define gate conditions for each phase transition. Remove gates for dropped phases. Add gates for custom phases.
 3. **`state-schema.json`** — Adapt feature schema to match the phases and service structure. Remove unused fields. Always include `phase_status` (`inprogress` | `completed`).
 
-## Step 9: Generate Agent Definitions
+## Step 9: (was Agent Definitions — no agent files anymore)
 
-For each agent the user selected, create files in `agents/tools/<editor>/`:
-
-1. **`<project>-orchestra.md`** — Router with the user's routing table, tool detection, idle state, delegation templates
-2. **Per-phase agents** — Adapt from `frndos-*` templates, replacing service references, branch conventions, and paths
-3. Set correct `model:` frontmatter for each agent
-4. If Cursor selected: create `.mdc` variants in `agents/tools/cursor/`
-5. If OpenCode selected: create `.md` variants in `agents/tools/opencode/`
+The orchestrator model needs **no agent files**: the running agent drives all phases, delegation
+happens via the harness's subagent capability, and per-task models/effort are chosen at delegation
+time (see `workflow-rules.core.md`). Record any custom pinned-model preferences in the
+registration notes; skip to Step 10.
 
 ## Step 10: Generate Skills
 

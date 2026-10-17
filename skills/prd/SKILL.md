@@ -5,7 +5,7 @@ description: Create a formal PRD from Lark notes or user description
 
 # PRD Creator
 
-Creates a formal Product Requirements Document from user input (pasted notes, verbal description, or a Lark doc URL read via Lark MCP).
+Creates a formal Product Requirements Document from user input (pasted notes, verbal description, or a Lark doc URL read via the Lark CLI — read-only).
 
 **Before drafting, read `references/conventions.md`** for the required frontmatter, required sections, naming rules, and the split between main PRD and service PRDs.
 
@@ -30,9 +30,9 @@ Create a new PRD for a feature.
 
 4. Ask user for additional input if needed (use your ask tool — Claude Code: `AskUserQuestion`; Cursor: ask tool; OpenCode: question tool; Amp: ask as plain text and wait):
    - "Anything to add beyond the brainstorming summary? (e.g., Lark notes, doc URL, extra constraints)"
-   - If Lark MCP is enabled: "Or provide a Lark doc URL"
+   - If Lark CLI is connected: "Or provide a Lark doc URL"
 
-5. If Lark URL provided and Lark MCP available, fetch content via MCP.
+5. If a Lark URL provided and the Lark CLI is connected, fetch the doc through the CLI (read-only).
 
 6. **Estimate PRD size. If > ~8000 tokens, propose split (MANDATORY).** Rough token count ≈ char_count / 3.5. If the source material is large enough that the drafted PRD would exceed ~8000 tokens, use your ask tool to propose splitting into priority-ordered sub-PRDs:
    - **P0** — must-have, first release

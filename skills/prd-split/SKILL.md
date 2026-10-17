@@ -34,9 +34,9 @@ Split the active feature's main PRD into service PRDs.
      - `bug` → `fix/`
      - `improvement` → `improvement/`
      - If `type` missing/unknown: ask user which prefix (feature/fix/improvement) and persist via `/workflow start` intake.
-   - Branch name: `<prefix><worker>/vc-<slug>`.
-   - Ask the user: "Create branch `<prefix><worker>/vc-<slug>` from `<base>`?"
-   - On confirm: `git checkout -b <prefix><worker>/vc-<slug> && git push -u origin <prefix><worker>/vc-<slug>`.
+   - Branch name: `<prefix>vc-<slug>`.
+   - Confirm: "Create branch `<prefix>vc-<slug>` from `<base>`?"
+   - On confirm: `git checkout -b <prefix>vc-<slug> && git push -u origin <prefix>vc-<slug>`.
    - Update `.workflow-state.json`: set `features[<slug>].branch`.
 
 5. Read the main PRD from `.workflow-state.json` `prd_path`. Parse the "Service Breakdown" section.

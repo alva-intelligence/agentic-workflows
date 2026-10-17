@@ -19,14 +19,18 @@ Welcome to frndOS Agentic Workflows!
 
 frndOS is a multi-service platform built by Alva Intelligence. This system sets up
 your development workspace and guides you through a structured feature development
-workflow — from brainstorming to PRD creation, implementation, and PR submission.
+workflow — from brainstorming to implementation, PR submission, and review handling.
 
 What gets installed:
-  - 10 phase-scoped AI agents (orchestra, brainstorm, prd, splitter, implement, engineer, architect, pr, pr-review, track)
-  - 9 skills (/onboard, /workflow, /workflow-update, /brainstorm, /prd, /prd-split, /pr-feedback, /jj-workflow, /setup-workspace)
-   - An 8-phase workflow state machine with gate enforcement (with `phase_status` per phase — `idle` / `inprogress` / `completed`, no auto-advance)
-  - Agent Teams support — parallel per-service engineers + architect (Claude Code)
-  - JJ workspace support — parallel features in isolated directories (Claude Code, Amp)
+  - An orchestrator-model instruction set: the running agent drives all phases.
+    No agent roster — implementation is delegated to parallel subagents
+    (right model + reasoning effort per task; inter-harness intercom when supported)
+  - 9 skills (/onboard, /workflow, /workflow-update, /brainstorm, /prd, /prd-split,
+    /pr-feedback, /visual-testing, /setup-workspace)
+  - A phase workflow state machine with gate enforcement (with `phase_status` per
+    phase — `idle` / `inprogress` / `completed`, no auto-advance; bugs/improvements
+    skip the PRD phases and go straight to implementation)
+  - browser-use visual testing — the agent verifies UI work itself, headless-first
   - Auto-updating instruction system (stays in sync with team changes)
   - Templates for PRDs, service PRDs, track files, and PRs
 
@@ -52,7 +56,7 @@ curl -sL "https://raw.githubusercontent.com/alva-intelligence/agentic-workflows/
   -o /tmp/aw-update-check.sh && bash /tmp/aw-update-check.sh --bootstrap
 ```
 
-This downloads agents, skills, fragments, templates, and workflow configs into `.agentic-workflows/`, `.agents/`, and generates `AGENTS.md`. The workspace directory stays a plain folder — NOT a git repo.
+This downloads skills, fragments, templates, and workflow configs into `.agentic-workflows/`, `.agents/`, and generates `AGENTS.md`. The workspace directory stays a plain folder — NOT a git repo.
 
 ### Step 4: After bootstrap — start onboarding
 
@@ -82,173 +86,124 @@ This repo is the single source of truth for frndOS AI agent instructions. It is 
 
 ### See it work
 
-A complete feature lifecycle — from idea to merged PRs. The agent handles everything; you steer.
+A complete feature lifecycle — from idea to merged PRs. The agent orchestrates; subagents do the work; the orchestrator verifies everything.
 
 ```
 You:    /workflow start brand-health-dashboard
 Agent:  [asks for type (feature) and initial request]
         Feature "brand-health-dashboard" started. Phase: brainstorming.
-        [delegates to frndos-brainstorm]
+        [(orchestrator) loads service snapshots from the code itself; resolves
+         ambiguity from evidence; decides the obvious answers itself and records
+         them as decisions; asks you only what genuinely needs you — zero
 
-Agent:  [loads service-state snapshots via code-graph MCP]
-        [asks 4 multi-choice questions, each with one (Recommended) option]
-        [records summary]
+         questions is a normal outcome]
         Brainstorming complete. → phase_status: completed.
 
 You:    /workflow next
-Agent:  → Phase: prd_creation. [delegates to frndos-prd]
+Agent:  → Phase: prd_creation.
         [drafts PRD using brainstorming summary + your context, includes a
          Brainstorming Outcome section]
         PRD created. → phase_status: completed.
 
 You:    /workflow next
-Agent:  → Phase: prd_splitting. [delegates to frndos-splitter]
-        [creates feature/claude/vc-brand-health-dashboard branch from develop]
+Agent:  → Phase: prd_splitting.
+        [creates feature/vc-brand-health-dashboard branch from develop]
         [splits main PRD into api + web service PRDs, generates track files]
         Service PRDs created. → phase_status: completed.
 
 You:    /workflow next
 Agent:  → Phase: implementation.
-```
+        [dispatches ONE parallel subagent batch: api task + web task, with
+         dependency edges; each subagent uses the right model/effort for its
+         work and self-verifies (lint, tests) + visual-tests its own UI]
+        [steers via intercom when a subagent needs course-correction mid-run]
+        [subagents report done — claims, not facts]
+        [re-verifies: re-runs checks, reviews diffs, visual-tests the UI paths
+         itself via browser-use]
+        Implementation verified. → Phase: pr_submission.
 
-**From here, the path splits based on your session mode:**
-
-```
-━━━ Agent Session (sequential) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Agent:  [delegates to frndos-implement]
-        [reads both service PRDs, presents implementation plan]
-You:    Approved.
-Agent:  [implements API: migrations, models, controllers, tests]
-        [implements Web: wires UI to real API, state management, error handling]
-        [self-reviews, commits per task]
-        Implementation complete. → Phase: pr_submission.
-
-Agent:  [delegates to frndos-pr]
-        [runs self code-review on its diff — lint, typecheck, conventions]
-        [runs the security-reviewer skill audit on its diff]
+Agent:  [self code-review on the whole diff — can delegate a fresh-eyes
+         reviewer subagent, still owns the result]
+        [runs the security-reviewer skill audit]
         [opens PR with both summaries appended to the body]
         API PR: github.com/.../pull/201
         Web PR: github.com/.../pull/88
 
 You:    API reviewer requested changes on the pagination endpoint.
-Agent:  → Phase: pr_review. [delegates to frndos-pr-review]
-        [reads threads + bot findings, classifies must-fix / nit / question]
-        [applies fixes, pushes, replies on each thread, marks resolved]
+Agent:  → Phase: pr_review.
+        [loads the pr-feedback skill: reads threads + bot findings, classifies
+         must-fix / nit / question, applies fixes, pushes, replies on each
+         thread, marks resolved via GraphQL]
         Threads resolved. → phase_status: completed.
 
 You:    /workflow next
 Agent:  → Phase: completion.
+        [updates track file, marks feature complete]
 
 Note: if the PR had merged with zero feedback, the workflow would have
 advanced from pr_submission directly to completion (skipping pr_review).
 
-━━━ Team Session (parallel, experimental) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Agent:  [creates agent team: architect + api-engineer + web-engineer]
-        [creates shared task list with per-service chains]
-        [engineers present plans in read-only mode → you approve each]
-
-        api-engineer:  [implements API service, self-reviews]
-                       → messages lead: "Done. Ready for architect review."
-        web-engineer:  [implements Web service, self-reviews]
-                       → messages lead: "Done. Ready for architect review."
-
-Agent:  [messages architect to review api-engineer's work]
-Architect: [reviews cross-service integration]
-           → "API contracts match frontend calls. Approved."
-Agent:  [messages api-engineer: "Create your PR."]
-        api-engineer: PR: github.com/.../pull/201
-
-Agent:  [messages architect to review web-engineer's work]
-Architect: → "Response shape mismatch on /api/brands/{id}/mentions"
-Agent:  [relays to web-engineer, who fixes and re-requests review]
-Architect: → "Fixed. Approved."
-        web-engineer: PR: github.com/.../pull/88
-
-Agent:  [all PRs merged → shuts down teammates → cleans up team]
-        → Phase: completion.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Bug or improvement? /workflow start same steps, type = fix/improvement →
+brainstorming (light) → implementation directly — no PRD phases. The branch
+is created at implementation entry.
 ```
 
-```
-Agent:  [delegates to frndos-track]
-        [updates track file: all tasks complete, PRs merged]
-        [marks feature complete in .workflow-state.json]
-        Feature "brand-health-dashboard" complete!
-
-You:    /workflow start next-feature...
-```
-
-You described a dashboard. The agent wrote the PRD, built a polished static frontend,
-split the work into service PRDs, implemented across services, handled code review,
-and shipped merged PRs. You approved plans and steered — the agents did the rest.
+You described a dashboard. The agent wrote the PRD, ran parallel implementation
+subagents, verified their work itself, handled code review, and shipped merged
+PRs. You steered; the orchestrator did the rest — and didn't trust its
+subagents' claims without re-checking.
 
 ### Workflow State Machine
 
-8 phases with gate enforcement — each phase has a dedicated agent. `pr_review` is conditional (skipped on a clean merge). Every phase carries a `phase_status` (`idle` / `inprogress` / `completed`); `completed` does NOT auto-advance.
+Phases with gate enforcement. `pr_review` is conditional (skipped on a clean merge). Features path through the PRD phases; bugs/improvements skip them and go straight to implementation. Every phase carries a `phase_status` (`idle` / `inprogress` / `completed`); `completed` does NOT auto-advance.
 
 ```
-idle → brainstorming → prd_creation → prd_splitting →
+idle → brainstorming → [features: prd_creation → prd_splitting] →
   implementation → pr_submission → [pr_review?] → completion → idle
 ```
 
 ![Workflow State Machine](./docs/workflow-state-machine.svg)
 
-### Agent Architecture
+### Orchestrator Model
 
-Phase-scoped agents with auto-delegation — orchestra routes, sub-agents do the work.
+There is no agent roster and no pre-defined workflow agents. **The running agent
+is the orchestrator**: it verifies user claims, researches, plans, delegates
+implementation, and verifies everything it receives.
+
+- **Delegation, parallel-first.** Implementation tasks are batched in one
+  parallel subagent delegation (harness capability: pi `subagent`, Claude Code
+  Task/subagents, Amp threads…). Dependency edges only when ordering matters.
+- **Right model and effort per task.** Heavy reasoning for planning/review,
+  cheap fast models for mechanical edits — where the harness allows it.
+- **Intercom.** If the harness supports mid-run messaging with running
+  subagents (pi's `steer_subagent` / `reply_subagent`, team mailboxes…), the
+  orchestrator steers drifting work and answers subagent questions without
+  killing runs — and lets siblings coordinate interface details directly when
+  sibling-to-sibling messaging exists. Otherwise all coordination routes
+  through the orchestrator.
+- **Subagent scope.** Each implementation subagent covers a service end-to-end:
+  implement, verify its own work, visual-test its UI. Subagents never ask the
+  user and never open PRs or advance phases.
+- **Never trust claims.** Subagent "done" is a claim. Re-run checks, review
+  diffs, visual-test via browser-use yourself.
 
 ![Agent Architecture](./docs/agent-architecture.svg)
 
-### Agent Teams (Parallel Implementation)
+### Parallel features (git worktrees)
 
-When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set (configured via `.claude/settings.json` during onboarding), the `implementation` phase uses Claude Code's Agent Teams API instead of a single sequential agent:
-
-| Role | Agent | Count | Description |
-|------|-------|-------|-------------|
-| **Lead** | frndos-orchestra | 1 | Creates the team, approves plans, coordinates reviews, tracks PRs |
-| **Architect** | frndos-architect | 1 | Cross-service integration reviewer (does NOT write code) |
-| **Engineer** | frndos-engineer | 1 per service | Implements, self-reviews, and creates PR for their assigned service |
-
-**How it works:**
-- Lead creates the team via natural language (not `Agent()` tool calls)
-- Each teammate is a persistent session with its own context
-- Communication happens via **mailbox** (`message` for 1:1, `broadcast` for all)
-- Engineers are spawned with **plan approval required** — they're in read-only mode until the lead approves
-- Shared task list tracks per-service chains: `plan → implement → self-review → architect-review → pr`
-- When all PRs are merged, lead shuts down teammates and cleans up the team
-
-**Sequential fallback:** Cursor, OpenCode, Amp, or when the env var is unset — uses `frndos-implement` → `frndos-pr` (unchanged). Amp subagents have no inter-agent communication, so parallel Agent Teams is infeasible there.
-
-### JJ Workspaces (Parallel Features)
-
-Work on multiple features simultaneously in isolated directories using [JJ (Jujutsu)](https://martinvonz.github.io/jj/) colocated workspaces. Each workspace gets its own terminal-based agent session (Claude Code or Amp) and feature state machine, while sharing the same git commit graph.
+Modern models work fine across git worktrees — parallel features need no extra tooling.
 
 ```
-Terminal 1 (primary):                    Terminal 2 (workspace):
-  frndos/                                  frndos-feature-b/
-  └─ feature: image-editor                 └─ feature: feature-b
-     phase: implementation                    phase: prd_creation
-     agent session A                          agent session B
+frndos/ (workspace, feature A active)
+  └─ apis/api-worktree-b/   ← feature B's own worktree of the API repo
 ```
 
-**How it works:**
-- JJ runs in colocated mode — all git commands stay unchanged
-- JJ is only used for workspace management (`workspace add`, `workspace list`, `workspace forget`)
-- Committed changes propagate instantly between workspaces (shared repo graph)
-- Each workspace is independent — no cross-workspace phase dependencies
-
-**Commands:**
-- `/jj-workflow init` — Initialize JJ in service repos (one-time)
-- `/jj-workflow new <slug>` — Create a sibling workspace directory
-- `/jj-workflow list` — List all workspaces and their features
-- `/jj-workflow cleanup <slug>` — Remove a completed workspace
-
-**Requirements:** JJ installed (`brew install jj`). Best with terminal-based harnesses (Claude Code, Amp) — Cursor is IDE-integrated so benefits less.
-
-`/onboard` does not install JJ — it only detects whether you already have it. Parallel workspaces are worth nothing until you're running a second feature, so `/workflow start` offers the install at that point instead of front-loading it onto setup.
+- When the user wants a second concurrent feature (or starts one mid-task), the
+  agent proposes parallel work via git worktrees: one dedicated worktree per
+  affected service repo.
+- On approval: `git worktree add <path> -b <prefix>vc-<slug> <base>`, one agent
+  session in that directory, feature state keyed by slug.
+- `/workflow start` offers this whenever an active feature exists.
 
 ### Creating a New Workspace for a Different Project
 
@@ -256,68 +211,45 @@ Use `/setup-workspace` to create a brand new agentic workspace for a completely 
 
 1. Project identity (name, description, structure)
 2. Services (repos, stack, ports, health checks)
-3. Workflow phases (keep/remove/add from the default 8)
-4. Agents (which phase agents, models, editor support)
+3. Workflow phases (keep/remove/add)
+4. Model preferences for subagent delegation (no agent files exist)
 5. Skills and MCP servers
 6. Dev environment (toolchain versions, branch conventions)
 
-Then generates all configuration files — agents, fragments, skills, schemas, templates, and manifest.
+Then generates all configuration files — fragments, skills, schemas, templates, and manifest.
 
 ### Skills
 
-Skills are slash commands you invoke directly. They're the entry points for each workflow action.
-
-> **Amp note:** Amp has no slash commands — it auto-loads skills based on their `description` frontmatter when you express the intent in natural language (e.g., "start a new feature called user-profiles" loads the workflow skill). The commands below are the canonical names; use the equivalent phrasing in Amp.
+Skills are slash commands you invoke directly. They're the entry points for each workflow action. **Note:** Amp has no slash commands — it auto-loads skills based on their `description` frontmatter when you express the intent in natural language (e.g., "start a new feature called user-profiles" loads the workflow skill).
 
 | Skill | What it does |
 |-------|-------------|
-| `/onboard` | Full workspace setup — GitHub access, service cloning, dependencies, .env files, database, editor config, MCP servers. Run once after bootstrap. |
-| `/workflow start <slug>` | Start a new feature. Creates workflow state, enters PRD phase, delegates to the right agent. |
+| `/onboard` | Full workspace setup — GitHub access, service cloning, dependencies, .env files, database, editor config, MCP servers. Optional services (data-pipeline, desktop) included or skipped here. Run once after bootstrap. |
+| `/workflow start <slug>` | Start a new feature, bug, or improvement run. Creates workflow state and enters the phase machine. |
 | `/workflow status` | Show current feature phase, phase_status, branch, PRDs, PRs — everything at a glance. |
-| `/workflow next` | Advance to the next phase (checks gate conditions first). |
+| `/workflow next` | Advance to the next phase (checks gate conditions first). Bugs/improvements jump from brainstorming straight to implementation. |
 | `/workflow switch <slug>` | Context-switch between active features. Each keeps its own phase. |
 | `/workflow resume <slug>` | Pick up someone else's feature. Reconstructs phase from committed artifacts. |
 | `/workflow list` | List all local features with their phases. |
-| `/workflow list-all` | Discover ALL features across the team — scans branches, PRDs, track files. |
-| `/workflow mode` | Switch Claude Code between Agent Session (sequential) and Team Session (parallel). |
+| `/workflow list-all` | Discover ALL features across the team — scans branches, worktrees, PRDs, track files. |
+| `/workflow worktrees` | Offer/parallelize work via git worktrees. |
 | `/workflow progress` | Detailed progress: phase timeline, task completion %, session logs. |
 | `/workflow-update` | Update agentic-workflows instructions. Runs update script, summarizes changes, applies non-trivial updates (settings, schema migrations). |
 | `/workflow-update check` | Dry-run — check for available updates without applying. |
 | `/workflow-update verify` | Health check — verify symlinks, settings, AGENTS.md, version are correct. |
-| `/brainstorm` | Run the brainstorming phase — multi-choice questions grounded in latest service state. |
-| `/prd` | Create a formal PRD from the brainstorming summary + your description. |
-| `/prd-split` | Create the feature branch + split a main PRD into per-service PRDs (API, Web, AI, Data). |
-| `/pr-feedback` | Address PR review feedback — inventory every thread, classify each finding, fix or reply, then resolve via GraphQL. Loaded by `frndos-pr-review` during `pr_review`. |
-| `/jj-workflow init` | Initialize JJ colocated mode in service repos. |
-| `/jj-workflow new <slug>` | Create a parallel workspace — isolated directory for a separate terminal-based agent session (Claude Code or Amp) to work on another feature simultaneously. |
-| `/jj-workflow list` | List all JJ workspaces with their feature, phase, and worker. |
-| `/jj-workflow status` | Show current workspace type (primary/secondary) and JJ state. |
-| `/jj-workflow cleanup <slug>` | Remove a completed workspace — forget JJ workspaces, delete directory, update registry. |
+| `/brainstorm` | Run the brainstorming phase — resolve ambiguity from evidence, decide the obvious, ask only what needs the user. |
+| `/prd` | Create a formal PRD from the brainstorming summary + your description (feature path only). |
+| `/prd-split` | Create the feature branch + split a main PRD into per-service PRDs (feature path only). |
+| `/pr-feedback` | Address PR review feedback — inventory every thread, classify each finding, fix or reply, then resolve via GraphQL. |
+| `/visual-testing` | browser-use visual validation of UI claims — what to click, what to check, screenshot evidence, strict resource discipline. |
 | `/setup-workspace` | Interactive wizard to create a brand new agentic workspace for a different project using this framework as the base. |
-
-### Agents
-
-Agents are phase-scoped specialists. You never invoke them directly — the orchestra delegates based on workflow phase. Each agent has a specific model assignment optimized for its task.
-
-| Agent | Model | Phase | What it does |
-|-------|-------|-------|-------------|
-| `frndos-orchestra` | Opus 4.5 | All | **The router.** Reads workflow state, delegates to the right agent, never does work itself. Captures intake on `idle → brainstorming` and never auto-advances when `phase_status` flips to `completed`. In Team Session mode, acts as the lead — creates the team, approves plans, coordinates reviews. |
-| `frndos-brainstorm` | Opus 5 | Brainstorming | Loads latest service state via code-graph MCP, asks 3–6 multi-choice questions (each with one `(Recommended)` option), records answers + summary that feeds the PRD. |
-| `frndos-prd` | Opus 5 | PRD Creation | Authors a structured PRD from the brainstorming summary + user input. Includes a `Brainstorming Outcome` section pulling answers verbatim. |
-| `frndos-splitter` | Opus 5 | PRD Splitting | Creates `feature/<worker>/vc-<slug>` from base, then splits the main PRD into per-service PRDs. (Replaces the old separate `branch_creation` phase.) |
-| `frndos-implement` | Opus 5 | Implementation | **Sequential mode only.** Implements across all services following service PRDs. |
-| `frndos-engineer` | Opus 5 | Implementation | **Team Session only.** One per service. Implements, self-reviews, creates PR for their assigned service. Communicates via mailbox. Cannot write code outside their service directory. |
-| `frndos-architect` | Opus 5 | Implementation | **Team Session only.** Reviews cross-service integration — API contracts, shared types, data flow, auth consistency. Does NOT review code quality. Does NOT write code. |
-| `frndos-pr` | Sonnet 5 | PR Submission | Runs full self code-review on the diff (correctness, lint, conventions) plus a `security-reviewer` skill audit BEFORE opening the PR. Body includes both summaries. |
-| `frndos-pr-review` | Sonnet 5 | PR Review | Resolves PR threads / bot findings (CodeRabbit, CI, reviewer comments). Classifies must-fix / nit / question, applies fixes, pushes, marks threads resolved. |
-| `frndos-track` | Sonnet 5 | Completion | Updates track files with task completion, session logs, PR URLs. Marks features complete in workflow state. |
 
 ### How auto-update works
 
 1. Edit files in this repo → push to `main`
 2. GitHub Action computes SHA-256 hashes, bumps VERSION, updates `manifest.json`
 3. On next agent session, `update-check.sh` compares local hashes vs manifest
-4. Only changed files are downloaded — fragments, agents, skills, etc.
+4. Only changed files are downloaded — fragments, skills, etc.
 5. If fragments changed, `AGENTS.md` is regenerated automatically
 6. For non-trivial changes (settings, schema migrations), use `/workflow-update`
 
@@ -327,21 +259,7 @@ Agents are phase-scoped specialists. You never invoke them directly — the orch
 agentic-workflows/
   agents/
     fragments/            # Markdown fragments assembled into AGENTS.md
-    tools/
-      claude-code/        # Agent definitions (.md) for Claude Code
-        frndos-orchestra  #   Router + lead (delegates, never implements)
-        frndos-brainstorm #   Brainstorming (multi-choice questioning)
-        frndos-prd        #   PRD creation
-        frndos-splitter   #   Branch creation + splits PRD into service PRDs
-        frndos-implement  #   Sequential implementation (fallback)
-        frndos-engineer   #   Per-service engineer (Agent Teams)
-        frndos-architect  #   Integration reviewer (Agent Teams)
-        frndos-pr         #   PR submission + self review + security audit
-        frndos-pr-review  #   PR review thread resolver
-        frndos-track      #   Track file management
-      cursor/             # Agent definitions (.mdc) for Cursor
-      opencode/           # Agent definitions (.md) for OpenCode
-      amp/                # Agent definitions (.md) for Amp (ampcode.com)
+                          #   (orchestrator model, session protocol, conventions)
     AGENTS.md.template    # Template with {{FRAGMENT:...}} markers
   scripts/
     update-check.sh       # Downloads updates from this repo
@@ -350,18 +268,18 @@ agentic-workflows/
     onboard/              # /onboard — full workspace setup
     workflow/             # /workflow — state machine management
     workflow-update/      # /workflow-update — update + apply non-trivial changes
-    brainstorm/           # /brainstorm — multi-choice questioning before PRD
-    prd/                  # /prd — PRD creation
-    prd-split/            # /prd-split — branch creation + split PRD into service PRDs
+    brainstorm/           # /brainstorm — evidence-first ambiguity resolution
+    prd/                  # /prd — PRD creation (feature path)
+    prd-split/            # /prd-split — branch creation + split PRD (feature path)
     pr-feedback/          # /pr-feedback — address + resolve PR review threads
-    jj-workflow/          # /jj-workflow — JJ workspace management for parallel features
+    visual-testing/       # /visual-testing — browser-use visual validation
     setup-workspace/      # /setup-workspace — wizard to create new agentic workspaces
   templates/
     prd/                  # PRD document templates
     pr/                   # PR body templates
     tracks/               # Track file templates
   workflow/
-    phases.json           # 8-phase state machine definitions
+    phases.json           # Phase state machine definitions (with skip paths)
     gates.json            # Gate conditions per phase transition
     state-schema.json     # JSON schema for .workflow-state.json
   manifest.json           # File registry with SHA-256 hashes
@@ -370,7 +288,7 @@ agentic-workflows/
 
 ### Making changes
 
-1. Edit the file (agents, fragments, skills, templates, etc.)
+1. Edit the file (fragments, skills, templates, etc.)
 2. Push to `main`
 3. GitHub Action auto-updates `manifest.json` and `VERSION`
 4. Everyone's agent picks up changes on next session
@@ -383,4 +301,4 @@ To add a new distributable file, add an entry to `manifest.json` with:
 - Commit messages with `[skip ci]` or `[manifest]` skip the update Action
 - All distributable files must be registered in `manifest.json`
 - Skills use the universal `.agents/skills/` path (symlinked to `.claude/`, `.cursor/`, `.opencode/`)
-- Agents live in `.agentic-workflows/agents/<tool>/` (symlinked to `.claude/`, `.cursor/`, `.opencode/`)
+- AGENTS.md (generated from fragments) is the single instruction surface — no per-tool agent files

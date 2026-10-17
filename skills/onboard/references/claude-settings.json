@@ -22,10 +22,6 @@
       "Bash(gh repo:*)",
       "Bash(gh issue:*)",
       "Bash(gh auth status:*)",
-      "Bash(jj workspace:*)",
-      "Bash(jj git init:*)",
-      "Bash(jj log:*)",
-      "Bash(jj status:*)",
       "Bash(jq:*)",
       "Bash(python3 -c:*)",
       "Bash(bash -n:*)",
@@ -49,14 +45,11 @@
       "Write(./docs/**)",
       "Write(./.workflow-state.json)",
       "Write(./.onboard-state.json)",
-      "mcp__lark__*",
-      "mcp__claude_ai_Lark__*",
       "mcp__claude_ai_Figma__*",
       "mcp__claude_ai_Excalidraw__*",
       "mcp__claude_ai_Gmail__*",
       "mcp__claude_ai_Google_Calendar__*",
       "mcp__claude_ai_Google_Drive__*",
-      "mcp__code-review-graph__*",
       "mcp__plugin_context7_context7__*",
       "mcp__posthog__*",
       "Bash(brew install:*)",
@@ -110,13 +103,12 @@
   "autoMode": {
     "environment": [
       "$defaults",
-      "Authorized destinations for the agentic workflow (read access + scoped writes only): Lark/Feishu docs (open.larksuite.com / open.feishu.cn) for READING a PRD brief the user pointed at, Figma (api.figma.com) for design-context reads, code-review-graph for local repo graph queries, context7 for library docs, PostHog for analytics queries, Excalidraw / Gmail / Calendar / Drive accessed via mcp__claude_ai_*. These are trusted *destinations*, not blanket-trusted *actions*: reads and user-directed scoped writes are routine; broad-audience messaging, mass mutations, feature-flag changes, public-share toggles, and uploads of repo source / secrets to any of them remain governed by the External System Writes / Content Integrity / Real-World Transactions / Data Exfiltration defaults.",
-      "JJ secondary workspaces symlink docs/, .agentic-workflows/, .agents/, .mcp.json, .cursor/, .opencode/ to a sibling primary workspace by design. Ordinary writes and edits through these symlinks are in-scope; irreversible deletion of pre-existing files through them remains governed by Irreversible Local Destruction."
+      "Authorized destinations for the agentic workflow (read access + scoped writes only): Figma (api.figma.com) for design-context reads, context7 for library docs, PostHog for analytics queries, Excalidraw / Gmail / Calendar / Drive accessed via mcp__claude_ai_*. Lark is read exclusively through the Lark CLI the user connected (never an MCP, never any write). These are trusted *destinations*, not blanket-trusted *actions*: reads and user-directed scoped writes are routine; broad-audience messaging, mass mutations, feature-flag changes, public-share toggles, and uploads of repo source / secrets to any of them remain governed by the External System Writes / Content Integrity / Real-World Transactions / Data Exfiltration defaults."
     ],
     "allow": [
       "$defaults",
-      "Read-style MCP calls against the listed destinations are allowed: fetching a PRD doc the user pointed at from Lark, fetching Figma design context / metadata / screenshots, querying code-review-graph for nodes / impact / flows, querying context7 docs, querying PostHog events / insights / persons, listing Drive / Calendar / Gmail items the user owns.",
-      "Scoped writes that the user has explicitly directed in this session are allowed: creating a single Figma diagram the user requested, writing a code-review-graph refactor the user approved. Lark is READ-ONLY in this workflow — no doc, wiki, or task writes.",
+      "Read-style calls against the listed destinations are allowed: fetching a PRD doc the user pointed at via the Lark CLI, fetching Figma design context / metadata / screenshots via MCP, querying context7 docs, querying PostHog events / insights / persons, listing Drive / Calendar / Gmail items the user owns.",
+      "Scoped writes that the user has explicitly directed in this session are allowed: creating a single Figma diagram the user requested. Lark is READ-ONLY in this workflow — no doc, wiki, or task writes, and always via the CLI, never an MCP.",
       "Still BLOCK (defaults remain in force): any write to Lark (docs, wiki, tasks, messages), broadcast/mass messaging on Gmail, sending email to recipients outside the org without explicit user direction, modifying or deleting Drive/PostHog items the agent did not create this session, toggling PostHog feature flags or cohorts, making Drive files public, uploading repo source or secrets to any of these destinations."
     ]
   }

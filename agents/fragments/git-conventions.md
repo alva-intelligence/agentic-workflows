@@ -2,7 +2,7 @@
 
 ### Branch Naming
 
-- Agent/vibe-coder branches: `<prefix><worker>/vc-<feature-slug>` (the `vc-` infix distinguishes agent-created branches from human-created ones)
+- Agent/vibe-coder branches: `<prefix>vc-<feature-slug>` (the `vc-` infix distinguishes agent-created branches from human-created ones)
 - `<prefix>` is derived from `features[<slug>].type`:
   - `feature` → `feature/`
   - `bug` → `fix/`
@@ -19,12 +19,12 @@
    ```
 2. Resolve `<prefix>` from feature type (feature/ | fix/ | improvement/), then create the branch:
    ```bash
-   git checkout -b <prefix><worker>/vc-<feature-slug>
+   git checkout -b <prefix>vc-<feature-slug>
    ```
 3. Make commits on the branch
 4. Push to remote:
    ```bash
-   git push -u origin <prefix><worker>/vc-<feature-slug>
+   git push -u origin <prefix>vc-<feature-slug>
    ```
 
 ### Commit Messages
@@ -49,8 +49,8 @@ Examples:
 ### PR Conventions
 
 - **Title:** `feat(<service>): <feature> — <brief description>`
-- **Body:** Must include links to:
-  - PRD (main + service)
+- **Body:** Include links to:
+  - PRD (main + service) — only when a PRD exists (features); bugs/improvements skip PRDs
   - Track file
   - Self-review summary
   - Security audit summary

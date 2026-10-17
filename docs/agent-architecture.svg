@@ -14,79 +14,68 @@
     </filter>
   </defs>
 
-  <text x="550" y="28" text-anchor="middle" font-size="20" font-weight="700" fill="#1e1e1e">frndOS Agent Architecture</text>
-  <text x="550" y="48" text-anchor="middle" font-size="12" fill="#757575">10 agents · 9 skills · jj workspaces · Agent Teams</text>
+  <text x="550" y="28" text-anchor="middle" font-size="20" font-weight="700" fill="#1e1e1e">frndOS Orchestrator Architecture</text>
+  <text x="550" y="48" text-anchor="middle" font-size="12" fill="#757575">one orchestrator · parallel subagents · intercom · visual verification</text>
 
   <!-- Orchestration zone -->
-  <rect x="230" y="60" width="490" height="80" rx="12" fill="#e5dbff" stroke="#9c36b5" stroke-width="1" opacity="0.35"/>
-  <text x="242" y="74" font-size="10" fill="#7048a0" font-weight="600">ORCHESTRATION LAYER</text>
+  <rect x="180" y="60" width="590" height="90" rx="12" fill="#e5dbff" stroke="#9c36b5" stroke-width="1" opacity="0.35"/>
+  <text x="192" y="74" font-size="10" fill="#7048a0" font-weight="600">ORCHESTRATOR (the running agent — no agent files)</text>
 
   <!-- Developer -->
-  <rect x="25" y="78" width="140" height="44" rx="10" fill="#fff3bf" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
-  <text x="95" y="105" text-anchor="middle" font-size="14" font-weight="600" fill="#1e1e1e">Developer</text>
-  <line x1="165" y1="100" x2="255" y2="100" stroke="#f08c00" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="210" y="93" text-anchor="middle" font-size="10" fill="#946100">command</text>
+  <rect x="25" y="80" width="140" height="44" rx="10" fill="#fff3bf" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
+  <text x="95" y="107" text-anchor="middle" font-size="14" font-weight="600" fill="#1e1e1e">Developer</text>
+  <line x1="165" y1="100" x2="215" y2="100" stroke="#f08c00" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="190" y="93" text-anchor="middle" font-size="10" fill="#946100">command</text>
 
-  <!-- Orchestra -->
-  <rect x="260" y="80" width="250" height="44" rx="10" fill="#d0bfff" stroke="#9c36b5" stroke-width="2" filter="url(#shadow)"/>
-  <text x="385" y="107" text-anchor="middle" font-size="16" font-weight="700" fill="#1e1e1e">frndos-orchestra</text>
+  <!-- Orchestrator -->
+  <rect x="220" y="82" width="530" height="56" rx="10" fill="#d0bfff" stroke="#9c36b5" stroke-width="2" filter="url(#shadow)"/>
+  <text x="485" y="104" text-anchor="middle" font-size="16" font-weight="700" fill="#1e1e1e">Orchestrator</text>
+  <text x="485" y="124" text-anchor="middle" font-size="11" fill="#3b3b3b">verify user claims · research · plan · delegate · verify everything</text>
 
-  <!-- Lark (read-only PRD source) -->
-  <rect x="790" y="68" width="150" height="60" rx="10" fill="#c3fae8" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
-  <text x="865" y="93" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">Lark MCP</text>
-  <text x="865" y="110" text-anchor="middle" font-size="10" fill="#15803d">read PRD doc (input)</text>
-  <line x1="790" y1="98" x2="740" y2="98" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-green)"/>
+  <!-- Lark CLI (read-only) -->
+  <rect x="815" y="68" width="160" height="60" rx="10" fill="#c3fae8" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
+  <text x="895" y="93" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">Lark CLI</text>
+  <text x="895" y="110" text-anchor="middle" font-size="10" fill="#15803d">read pasted links · read-only</text>
+  <line x1="815" y1="98" x2="755" y2="98" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-green)"/>
 
   <!-- Delegation arrows -->
-  <line x1="300" y1="124" x2="75" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="320" y1="124" x2="192" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="340" y1="124" x2="309" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="360" y1="124" x2="426" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="385" y1="124" x2="543" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="405" y1="124" x2="660" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="425" y1="124" x2="777" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="450" y1="124" x2="894" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="470" y1="124" x2="1011" y2="175" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="290" y1="138" x2="130" y2="195" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="350" y1="138" x2="345" y2="195" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="420" y1="138" x2="560" y2="195" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="500" y1="138" x2="775" y2="195" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <line x1="560" y1="138" x2="990" y2="195" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
 
   <!-- Sub-Agent zone -->
   <rect x="15" y="165" width="1075" height="110" rx="12" fill="#d3f9d8" stroke="#2f9e44" stroke-width="1" opacity="0.3"/>
-  <text x="27" y="178" font-size="10" fill="#15803d" font-weight="600">SUB-AGENT LAYER (phase-scoped, 9 agents)</text>
+  <text x="27" y="178" font-size="10" fill="#15803d" font-weight="600">SUBAGENT LAYER (spawned per batch — batched in ONE call, dependency edges only when needed)</text>
 
-  <rect x="22" y="192" width="107" height="40" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
-  <text x="75" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-brainstorm</text>
-  <text x="75" y="244" text-anchor="middle" font-size="9" fill="#757575">Brainstorming</text>
+  <rect x="22" y="192" width="150" height="40" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
+  <text x="97" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">subagent: api</text>
+  <text x="97" y="244" text-anchor="middle" font-size="9" fill="#757575">implement + verify</text>
 
-  <rect x="139" y="192" width="107" height="40" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
-  <text x="192" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-prd</text>
-  <text x="192" y="244" text-anchor="middle" font-size="9" fill="#757575">PRD Creation</text>
+  <rect x="185" y="192" width="150" height="40" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
+  <text x="260" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">subagent: web</text>
+  <text x="260" y="244" text-anchor="middle" font-size="9" fill="#757575">implement + self-test UI</text>
 
-  <rect x="256" y="192" width="107" height="40" rx="8" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
-  <text x="309" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-splitter</text>
-  <text x="309" y="244" text-anchor="middle" font-size="9" fill="#757575">PRD Splitting</text>
+  <rect x="348" y="192" width="150" height="40" rx="8" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
+  <text x="423" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">subagent: data-service</text>
+  <text x="423" y="244" text-anchor="middle" font-size="9" fill="#757575">implement + verify</text>
 
-  <rect x="373" y="192" width="107" height="40" rx="8" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
-  <text x="426" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-implement</text>
-  <text x="426" y="244" text-anchor="middle" font-size="9" fill="#757575">Sequential impl</text>
+  <rect x="511" y="192" width="150" height="40" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="2" filter="url(#shadow)"/>
+  <text x="586" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">subagent: reviewer</text>
+  <text x="586" y="244" text-anchor="middle" font-size="9" fill="#757575">fresh-eyes diff review</text>
 
-  <rect x="490" y="192" width="107" height="40" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="2" filter="url(#shadow)"/>
-  <text x="543" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-engineer</text>
-  <text x="543" y="244" text-anchor="middle" font-size="9" fill="#757575">Team: per-service</text>
+  <rect x="674" y="192" width="150" height="40" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="2" filter="url(#shadow)"/>
+  <text x="749" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">subagent: research</text>
+  <text x="749" y="244" text-anchor="middle" font-size="9" fill="#757575">external SDK/API facts</text>
 
-  <rect x="607" y="192" width="107" height="40" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="2" filter="url(#shadow)"/>
-  <text x="660" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-architect</text>
-  <text x="660" y="244" text-anchor="middle" font-size="9" fill="#757575">Team: reviewer</text>
+  <rect x="837" y="192" width="150" height="40" rx="8" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
+  <text x="912" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">right model + effort</text>
+  <text x="912" y="244" text-anchor="middle" font-size="9" fill="#757575">per task, if harness allows</text>
 
-  <rect x="724" y="192" width="107" height="40" rx="8" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
-  <text x="777" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-pr</text>
-  <text x="777" y="244" text-anchor="middle" font-size="9" fill="#757575">PR Submission</text>
-
-  <rect x="841" y="192" width="107" height="40" rx="8" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
-  <text x="894" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-pr-review</text>
-  <text x="894" y="244" text-anchor="middle" font-size="9" fill="#757575">PR Review</text>
-
-  <rect x="958" y="192" width="107" height="40" rx="8" fill="#ffc9c9" stroke="#e03131" stroke-width="2" filter="url(#shadow)"/>
-  <text x="1011" y="216" text-anchor="middle" font-size="10" font-weight="600" fill="#1e1e1e">frndos-track</text>
-  <text x="1011" y="244" text-anchor="middle" font-size="9" fill="#757575">Completion</text>
+  <text x="1063" y="216" font-size="10" fill="#15803d">⇄ intercom:</text>
+  <text x="1063" y="230" font-size="9" fill="#15803d">steer / answer</text>
+  <text x="1063" y="242" font-size="9" fill="#15803d">+ sibling links</text>
 
   <!-- Skills zone -->
   <rect x="15" y="295" width="1075" height="68" rx="12" fill="#dbe4ff" stroke="#1971c2" stroke-width="1" opacity="0.3"/>
@@ -103,7 +92,7 @@
   <rect x="389" y="318" width="95" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
   <text x="436" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/brainstorm</text>
   <rect x="492" y="318" width="105" height="28" rx="6" fill="#c3fae8" stroke="#2f9e44" stroke-width="1"/>
-  <text x="544" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">/jj-workflow</text>
+  <text x="544" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">/visual-testing</text>
   <rect x="605" y="318" width="130" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
   <text x="670" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/setup-workspace</text>
   <rect x="743" y="318" width="130" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>

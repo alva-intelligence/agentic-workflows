@@ -23,13 +23,13 @@
 
 ### Self-review Summary
 
-_Recorded by `frndos-pr` during `pr_submission`. Lists items checked plus any must-fix items found and how they were resolved._
+_Recorded by the orchestrator during `pr_submission`. Lists items checked plus any must-fix items found and how they were resolved._
 
 {{SELF_REVIEW_SUMMARY}}
 
 ### Security Audit Summary
 
-_Recorded by `frndos-pr` via the `security-reviewer` skill during `pr_submission`. Lists findings by severity. PRs only open when there are no unresolved high/critical findings._
+_Recorded by the orchestrator via the `security-reviewer` skill during `pr_submission`. Lists findings by severity. PRs only open when there are no unresolved high/critical findings._
 
 {{SECURITY_AUDIT_SUMMARY}}
 

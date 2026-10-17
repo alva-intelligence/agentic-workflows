@@ -18,7 +18,7 @@
   </defs>
 
   <text x="500" y="28" text-anchor="middle" font-size="20" font-weight="700" fill="#1e1e1e">frndOS Workflow State Machine</text>
-  <text x="500" y="48" text-anchor="middle" font-size="12" fill="#757575">8 phases · gate enforcement · Agent Teams shortcut</text>
+  <text x="500" y="48" text-anchor="middle" font-size="12" fill="#757575">orchestrator-driven · gate enforcement · feature vs bug/improvement paths</text>
 
   <!-- Row 1 (left to right) -->
   <rect x="10" y="72" width="90" height="44" rx="10" fill="#e9ecef" stroke="#868e96" stroke-width="2" filter="url(#shadow)"/>
@@ -27,44 +27,44 @@
 
   <rect x="125" y="72" width="160" height="44" rx="10" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
   <text x="205" y="99" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">1. Brainstorming</text>
-  <text x="205" y="130" text-anchor="middle" font-size="10" fill="#757575">frndos-brainstorm</text>
+  <text x="205" y="130" text-anchor="middle" font-size="10" fill="#757575">evidence-first · zero asks OK</text>
   <line x1="285" y1="94" x2="305" y2="94" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
 
   <rect x="310" y="72" width="150" height="44" rx="10" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
   <text x="385" y="99" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">2. PRD Creation</text>
-  <text x="385" y="130" text-anchor="middle" font-size="10" fill="#757575">frndos-prd</text>
+  <text x="385" y="130" text-anchor="middle" font-size="10" fill="#757575">features only</text>
   <line x1="460" y1="94" x2="480" y2="94" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
 
   <rect x="485" y="72" width="150" height="44" rx="10" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
   <text x="560" y="99" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">3. PRD Splitting</text>
-  <text x="560" y="130" text-anchor="middle" font-size="10" fill="#757575">frndos-splitter</text>
+  <text x="560" y="130" text-anchor="middle" font-size="10" fill="#757575">features only · branch made</text>
   <line x1="635" y1="94" x2="655" y2="94" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
 
   <rect x="660" y="72" width="180" height="44" rx="10" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
   <text x="750" y="99" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">4. Implementation</text>
-  <text x="750" y="130" text-anchor="middle" font-size="10" fill="#757575">frndos-implement / teams</text>
+  <text x="750" y="130" text-anchor="middle" font-size="10" fill="#757575">parallel subagents (+branch for bugs)</text>
 
   <!-- Implementation -> PR Submission -->
   <line x1="820" y1="116" x2="820" y2="195" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- Agent Teams shortcut (dashed green: implementation -> completion) -->
-  <path d="M 690 116 L 690 150 Q 690 160 680 160 L 372 160 Q 362 160 362 170 L 362 195" fill="none" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-green)"/>
-  <text x="525" y="154" text-anchor="middle" font-size="10" fill="#2f9e44" font-style="italic">Agent Teams</text>
+  <!-- Bug/improvement shortcut (dashed green: brainstorming -> implementation) -->
+  <path d="M 170 116 L 170 150 Q 170 160 180 160 L 648 160 Q 658 160 658 170 L 658 195" fill="none" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-green)"/>
+  <text x="415" y="154" text-anchor="middle" font-size="10" fill="#2f9e44" font-style="italic">bug / improvement — no PRD phases</text>
 
   <!-- Row 2 (right to left) -->
   <rect x="660" y="200" width="180" height="44" rx="10" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
   <text x="750" y="227" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">5. PR Submission</text>
-  <text x="750" y="258" text-anchor="middle" font-size="10" fill="#757575">frndos-pr</text>
+  <text x="750" y="258" text-anchor="middle" font-size="10" fill="#757575">self review + security audit first</text>
   <line x1="660" y1="222" x2="640" y2="222" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
 
   <rect x="475" y="200" width="165" height="44" rx="10" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
   <text x="557" y="227" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">6. PR Review</text>
-  <text x="557" y="258" text-anchor="middle" font-size="10" fill="#757575">frndos-pr-review</text>
+  <text x="557" y="258" text-anchor="middle" font-size="10" fill="#757575">pr-feedback skill</text>
   <line x1="475" y1="222" x2="455" y2="222" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
 
   <rect x="285" y="200" width="165" height="44" rx="10" fill="#ffc9c9" stroke="#e03131" stroke-width="2" filter="url(#shadow)"/>
   <text x="367" y="227" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">7. Completion</text>
-  <text x="367" y="258" text-anchor="middle" font-size="10" fill="#757575">frndos-track</text>
+  <text x="367" y="258" text-anchor="middle" font-size="10" fill="#757575">track file · cleanup</text>
 
   <!-- Skip PR review (dashed orange: pr_submission -> completion) -->
   <path d="M 780 244 L 780 285 Q 780 295 770 295 L 420 295 Q 410 295 410 285 L 410 246" fill="none" stroke="#f08c00" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-orange)"/>
@@ -90,5 +90,5 @@
   <line x1="390" y1="350" x2="440" y2="350" stroke="#f08c00" stroke-width="1.5" stroke-dasharray="6 3"/>
   <text x="446" y="355" font-size="11" fill="#f08c00">skip PR review (submission → completion)</text>
   <line x1="700" y1="350" x2="750" y2="350" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3"/>
-  <text x="756" y="355" font-size="11" fill="#2f9e44">Agent Teams (impl → completion)</text>
+  <text x="756" y="355" font-size="11" fill="#2f9e44">bug / improvement (brainstorm → impl)</text>
 </svg>

@@ -2,7 +2,7 @@
   "status_semantics": {
     "phase_status": {
       "values": ["idle", "inprogress", "completed"],
-      "rule": "Phase is set to idle when entered. Set to inprogress when the agent begins work. Set to completed once the phase's work is done and the gate to the next phase is satisfied. completed does NOT auto-advance — the workflow stays on the phase until the user (or orchestra at user direction) explicitly triggers transition to the next phase."
+      "rule": "Phase is set to idle when entered. Set to inprogress when the orchestrator begins work. Set to completed once the phase's work is done and the gate to the next phase is satisfied. completed does NOT auto-advance — the workflow stays on the phase until the user (or the orchestrator at explicit user direction) triggers transition to the next phase."
     }
   },
   "phases": {
@@ -15,60 +15,60 @@
     },
     "brainstorming": {
       "name": "Brainstorming",
-      "description": "Agent loads the latest state of every relevant service, then interrogates the user with multi-choice questions to sharpen scope before a PRD is written. Each question must offer 2–4 distinct options with one option marked as the recommendation. Outcome (questions, answers, summary) is recorded on the feature's brainstorming object and feeds the next phase.",
-      "agent": "frndos-brainstorm",
-      "next": ["prd_creation"],
-      "allowed_actions": ["load_service_state", "ask_user", "record_answer", "summarize"]
+      "description": "The orchestrator loads real service state, resolves ambiguity by exploring the codebase and the web first, and decides obvious answers itself (recorded as facts with rationale, never asked). Only genuinely ambiguous, taste, or expensive-to-reverse calls go to the user in one structured batch — zero questions is a valid outcome. 'No' is an acceptable answer; a user-requested skip is honored (recorded as user_skipped). For bug/improvement work the next phase is implementation directly; for features it is prd_creation.",
+      "agent": null,
+      "next": ["prd_creation", "implementation"],
+      "next_strategy": {
+        "type_feature": "prd_creation",
+        "type_bug_or_improvement": "implementation"
+      },
+      "allowed_actions": ["load_service_state", "decide_obvious", "ask_user", "record_answer", "record_decision", "summarize"]
     },
     "prd_creation": {
       "name": "PRD Creation",
-      "description": "Creating the main PRD from the brainstorming summary plus any user-supplied context (Lark notes, prior PRDs). The PRD pulls the brainstorming outcome into a dedicated section.",
-      "agent": "frndos-prd",
+      "description": "Feature-only. Creating the main PRD from the brainstorming summary plus any user-supplied context. The PRD pulls the brainstorming outcome into a dedicated section. Comprehensive PRDs are for features — bugs/improvements never enter this phase.",
+      "agent": null,
       "next": ["prd_splitting"],
       "allowed_actions": ["create_prd", "edit_prd"]
     },
     "prd_splitting": {
       "name": "PRD Splitting",
-      "description": "Single combined phase: agent (a) checks out the base branch, pulls latest, creates <prefix><worker>/vc-<slug> (prefix = feature/ | fix/ | improvement/ per features[active_feature].type), then (b) splits the main PRD into per-service PRDs on that branch.",
-      "agent": "frndos-splitter",
+      "description": "Feature-only. Check out the base branch, pull latest, create <prefix>vc-<slug> (prefix = feature/ per type), then split the main PRD into per-service PRDs on that branch.",
+      "agent": null,
       "next": ["implementation"],
       "allowed_actions": ["create_branch", "split_prd", "edit_service_prd"]
     },
     "implementation": {
       "name": "Implementation",
-      "description": "Implementing the feature across services, straight from the split service PRDs. Sequential strategy: frndos-implement handles all services. Agent Teams (Claude Code, experimental): per-service engineers run in parallel and each opens their own PR.",
-      "agent": "frndos-implement",
-      "next": ["pr_submission", "completion"],
-      "next_strategy": {
-        "sequential": "pr_submission",
-        "agent_teams": "completion"
-      },
-      "allowed_actions": ["implement", "update_track"]
+      "description": "Implementing the work by delegation: the orchestrator dispatches parallel per-service subagents (batched in one call, dependency edges only when ordering matters, right model + reasoning effort per task, mid-run steering / intercom when the harness supports it). Bug/improvement path: create <prefix>vc-<slug> from the latest base at entry (no PRD phases ran). Subagents implement, verify their own work, and visual-test UI when possible; the orchestrator re-verifies every claim — re-running checks, reviewing diffs, and visual-testing UI paths itself.",
+      "agent": null,
+      "next": ["pr_submission"],
+      "allowed_actions": ["create_branch", "delegate_subagents", "steer_subagents", "verify_work", "visual_testing", "update_track"]
     },
     "pr_submission": {
       "name": "PR Submission",
-      "description": "Agent runs full self code-review on its own diff (correctness, lint, tests, conventions), then runs the security-reviewer skill audit. Only after both pass does it open the PR. PR body includes the review notes and security audit summary.",
-      "agent": "frndos-pr",
+      "description": "The orchestrator runs a self code-review over the whole diff (a fresh-eyes reviewer subagent is allowed; the orchestrator owns the result), then the security-reviewer skill audit. Only after both pass does it open the PR. PR body includes the review notes and security audit summary; PRD links only when a PRD exists.",
+      "agent": null,
       "next": ["pr_review", "completion"],
       "next_strategy": {
         "has_feedback": "pr_review",
         "merged_clean": "completion"
       },
-      "allowed_actions": ["self_review", "security_audit", "create_pr", "update_pr"]
+      "allowed_actions": ["self_review", "delegate_review", "security_audit", "create_pr", "update_pr"]
     },
     "pr_review": {
       "name": "PR Review",
-      "description": "PR has reviewer / bot feedback. Agent classifies each thread (must-fix / nit / question), drafts a fix or reply, applies, pushes, and resolves the thread. Loops until zero open threads remain.",
-      "agent": "frndos-pr-review",
+      "description": "PR has reviewer / bot feedback. The orchestrator loads the pr-feedback skill: classifies each thread (must-fix / nit / question), drafts a fix or reply, applies, pushes, and resolves the thread. Loops until zero open threads remain. No re-request of review unless the user says so.",
+      "agent": null,
       "next": ["completion"],
       "allowed_actions": ["read_review_threads", "address_feedback", "push_fix", "resolve_thread"]
     },
     "completion": {
       "name": "Completed",
       "description": "Feature merged. Cleaning up and marking complete.",
-      "agent": "frndos-track",
+      "agent": null,
       "next": ["idle"],
-      "allowed_actions": ["mark_complete"]
+      "allowed_actions": ["mark_complete", "cleanup_worktrees"]
     }
   }
 }

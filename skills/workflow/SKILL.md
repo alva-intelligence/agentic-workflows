@@ -12,7 +12,6 @@ Manages the feature development workflow state machine.
 - `references/track-conventions.md` — Track-file location, frontmatter, required sections, session-log rules. Read when entering `implementation`, updating progress, or creating a new track file.
 - `references/testing-policy.md` — STRICT opt-in testing rules. Read before writing or running tests.
 - `references/session-checks.md` — Session-time procedures (feature branch recency check, service health checks, update-check + sync + conflict handling). Read when the session-start protocol in `AGENTS.md` delegates here.
-- `references/agent-teams.md` — Parallel-engineer protocol for the `implementation` phase when `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. Read before spawning or managing a team.
 
 ## Commands
 
@@ -65,22 +64,13 @@ Start a new feature workflow.
    - If `status` is `"completed"` → proceed
 2. Read `.workflow-state.json` (create if doesn't exist).
 3. Check that `<slug>` doesn't already exist in features.
-4. **If an active feature already exists**, offer parallel work. This is the point where JJ earns its install — `/onboard` deliberately skips it, so JJ may not be present yet.
+4. **If an active feature already exists**, offer parallel work via **git worktrees** (no extra tooling — modern agents handle worktrees fine):
 
-   **If JJ is available** (`command -v jj`):
    > "You have an active feature (`<active-slug>` in `<phase>`). You can:"
-   > - **Continue here** with context-switching (`/workflow switch` between features)
-   > - **Create a parallel workspace** with `/jj-workflow new <slug>` to work on `<slug>` in a separate directory
+   > - **Continue here** with context-switching (`/workflow switch` between features) — recommended for related work
+   > - **Work in parallel** — the new feature gets its own git worktree per affected service repo (`git worktree add <path> -b <prefix>vc-<slug> <base>`), one agent session there
 
-   **If JJ is NOT available**, offer the install alongside the same choice:
-   > "You have an active feature (`<active-slug>` in `<phase>`). You can:"
-   > - **Continue here** with context-switching (`/workflow switch` between features) — recommended
-   > - **Install JJ and create a parallel workspace** (`brew install jj`) — separate directory per feature, one agent session each
-
-   If the user picks install: run `brew install jj`, verify with `command -v jj`, set `jj_available: true` in `.onboard-state.json`, then run `/jj-workflow init` before `/jj-workflow new <slug>`. If the install fails, say so and fall through to continuing here.
-
-   - If user chooses a parallel workspace → tell them to run `/jj-workflow new <slug>` and stop.
-   - If user chooses to continue here → proceed.
+   If the user picks parallel: create the worktrees, key `.workflow-state.json` features by slug, and proceed in the separate directory. Cleanup (`git worktree remove`) at completion.
 5. Capture intake via the ask tool:
    - **Type:** feature | bug | improvement
    - **Initial request:** the user's raw description (free text)
@@ -101,7 +91,7 @@ Start a new feature workflow.
    ```
 7. Set `active_feature` to `<slug>`. Ask the user for worker name if not set.
 8. Save state.
-9. Ask: "Advance to brainstorming?" — on yes, transition (`phase: "brainstorming"`, `phase_status: "idle"`) and delegate to `frndos-brainstorm`.
+9. Ask: "Advance to brainstorming?" — on yes, transition (`phase: "brainstorming"`, `phase_status: "idle"`); the orchestrator then runs the brainstorming phase itself (skill: `brainstorm`).
 
 ### `/workflow next`
 Transition to the next phase (if gate conditions are met).
@@ -112,8 +102,7 @@ Transition to the next phase (if gate conditions are met).
 3. **Require `phase_status === "completed"`.** If `idle` or `inprogress`, refuse: "Phase `<phase>` is still pending (`idle`) or in progress (`inprogress`). Let the agent finish (or wait for it to flip phase_status to completed) before advancing."
 4. Look up gate conditions from `.agentic-workflows/workflow/gates.json`.
 5. **If the current phase has multiple possible next phases**, check `next_strategy` on the phase in `phases.json`:
-   - `implementation → pr_submission` for `sequential` strategy.
-   - `implementation → completion` for `agent_teams` strategy.
+   - `brainstorming → prd_creation` when the feature type is `feature`; `brainstorming → implementation` for `bug|improvement` (`type_bug_or_improvement`).
    - `pr_submission → pr_review` when the PR has reviewer/bot feedback (`has_feedback`).
    - `pr_submission → completion` when the PR merged with zero feedback (`merged_clean`).
 6. Check EACH gate condition for the resolved transition:
@@ -135,15 +124,15 @@ Switch active feature context.
 7. Save state
 
 ### `/workflow list-all`
-Discover ALL features across the team — not just local ones. Scans committed artifacts, git branches, and JJ workspaces.
+Discover ALL features across the team — not just local ones. Scans committed artifacts and git branches.
 
 **Steps:**
 1. Fetch latest from all remotes: `git fetch --all` in each service dir
 2. Scan for features from multiple sources:
    - **PRDs:** `ls docs/prd/*.md` → extract slugs
-   - **Feature branches:** `git branch -r | grep -E '^(feature|fix|improvement)/.*/vc-'` in each service → extract slugs
+   - **Feature branches:** `git branch -r | grep -E '^(feature|fix|improvement)/vc-'` in each service → extract slugs
+   - **Worktrees:** `git worktree list` in each service dir plus sibling worktree dirs outside the workspace root
    - **Track files:** `find . -name '*.track.md'` across all services → extract slugs
-   - **JJ workspaces:** if `workspaces` map exists in `.workflow-state.json`, read each workspace's `.workflow-state.json` to discover features tracked in secondary workspaces
 3. For each unique slug found, reconstruct the phase (same logic as resume):
    - Brainstorming summary recorded? PRD exists? Branch exists? Service PRDs? Track progress? PR?
 4. Also check local `.workflow-state.json` for any features only tracked locally
@@ -171,7 +160,7 @@ Resume a feature started by another team member.
 2. Scan committed artifacts to reconstruct phase:
    - Brainstorming summary recorded in `.workflow-state.json`? → past brainstorming
    - PRD exists at `docs/prd/<slug>.md`? → past prd_creation
-   - Branch matching `(feature|fix|improvement)/<worker>/vc-<slug>` exists AND service PRDs exist? → past prd_splitting
+   - Branch matching `(feature|fix|improvement)/vc-<slug>` exists AND service PRDs exist? → past prd_splitting
    - Track files show progress? → in implementation
    - PR URL in track file with no review threads? → in pr_submission (clean) or pr_review (has feedback)
    - PR merged? → in completion
@@ -198,32 +187,7 @@ Show detailed progress for the active feature.
    - Session log summary
    - PR self-review and security audit summaries
 
-### `/workflow mode`
-Switch Claude Code between Agent Session and Team Session mode.
-
-**Steps:**
-1. Check if Claude Code is the active tool (`.claude/settings.json` exists or `.claude/` dir exists)
-   - If not Claude Code: "This command is only available for Claude Code. Cursor, OpenCode, and Amp all use the sequential flow (Amp subagents have no inter-agent communication, so parallel Agent Teams is infeasible there)."
-2. Read `.claude/settings.json` to determine current mode:
-   - If `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is `"1"`: current mode is **Team Session**
-   - Otherwise: current mode is **Agent Session**
-3. Show current mode and ask to switch:
-
-   > "Current mode: **Agent Session**"
-   > - Switch to Team Session (EXPERIMENTAL — parallel engineers + architect, more tokens)
-   > - Keep current mode
-
-   Or:
-
-   > "Current mode: **Team Session** (EXPERIMENTAL)"
-   > - Switch to Agent Session (sequential, single agent, recommended)
-   > - Keep current mode
-
-4. If user chooses to switch:
-   - Read current `.claude/settings.json`
-   - **To Team Session:** set `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` to `"1"`
-   - **To Agent Session:** remove `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` from `env` (or set to `"0"`)
-   - Write updated `.claude/settings.json` (preserve other settings)
-   - Update `.onboard-state.json`: set `claude_session_mode` to `"team"` or `"agent"`
-   - Inform user: "Switched to [mode]. Restart your agent session for changes to take effect."
-5. If user keeps current mode: "Keeping [current mode]. No changes made."
+### `/workflow worktrees`
+Offer/parallelize work with git worktrees (see `/workflow start` step 4). One worktree per affected
+service repo, per feature; keyed by slug in `.workflow-state.json`; cleaned up at completion.
+No extra tooling — plain git.

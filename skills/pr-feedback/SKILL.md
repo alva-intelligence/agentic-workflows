@@ -9,7 +9,7 @@ Playbook for the `pr_review` phase (and any post-PR-creation feedback loop). Cov
 
 ## When to use
 
-- Owner/bot posted review comments on an open PR (frndos-pr-review agent: poll, classify, fix, resolve, loop).
+- Owner/bot posted review comments on an open PR (`pr_review` phase: poll, classify, fix, resolve, loop).
 - User says "address PR feedback", "resolve all threads", or PR shows `CHANGES_REQUESTED`.
 
 ## Workflow
@@ -97,6 +97,6 @@ Reply to PR-level comments too: `gh api repos/<owner/repo>/issues/<n>/comments -
 
 ## References
 
-- Phase machine: `.agents/skills/workflow/SKILL.md` — `pr_review` is owned by the `frndos-pr-review` agent, which loads this skill for the mechanics below
+- Phase machine: `.agents/skills/workflow/SKILL.md` — `pr_review` is run by the orchestrator, which loads this skill for the mechanics
 - Security audit before opening PRs: the external `security-reviewer` skill (`npx skills add https://github.com/jeffallan/claude-skills --skill security-reviewer`), run during `pr_submission`, not here
 - Commit conventions: `AGENTS.md` → "Commit Messages"

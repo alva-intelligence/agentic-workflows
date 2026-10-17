@@ -356,59 +356,16 @@ Package: `@sentry/mcp-server`
 
 ---
 
-## Lark MCP (Optional — read PRDs from Lark docs)
+## Lark (Optional — read pasted Lark links via the Lark CLI)
 
-**Read-only integration.** The workflow reads a PRD out of a Lark doc URL so the user can point `/prd` at an existing brief instead of pasting it. Nothing is written back to Lark — there is no task, wiki, or doc sync.
+**Read-only, through the Lark CLI — never an MCP.** When the user pastes a Lark doc link (PRD brief, wiki page), the agent reads it through the Lark CLI the user connected once. **No MCP config exists for Lark in this workflow** and the workflow never writes to Lark — no doc, wiki, or task sync.
 
-**Package:** `@larksuiteoapi/lark-mcp` (official, Node 18+)
+Connect once (done during onboarding 1.4 / re-doable anytime):
+1. Install the official Lark CLI per its docs and authenticate with the account that owns the docs.
+2. Verify: user pastes any Lark doc URL → CLI doc-fetch returns the content.
+3. Record `lark_cli: "connected"` in `.onboard-state.json` (or `"skipped"` — until connected, Lark links are handled by the user pasting text).
 
-### Claude Code
-
-Add to `.mcp.json`:
-```json
-{
-  "mcpServers": {
-    "lark": {
-      "command": "npx",
-      "args": ["-y", "@larksuiteoapi/lark-mcp", "mcp", "-a", "<LARK_APP_ID>", "-s", "<LARK_APP_SECRET>"]
-    }
-  }
-}
-```
-
-### Cursor
-
-Same shape in `.cursor/mcp.json` under `mcpServers.lark`.
-
-### OpenCode
-
-`opencode.json` under `mcp.lark`:
-```json
-{
-  "mcp": {
-    "lark": {
-      "type": "local",
-      "command": ["npx", "-y", "@larksuiteoapi/lark-mcp", "mcp", "-a", "<LARK_APP_ID>", "-s", "<LARK_APP_SECRET>"],
-      "enabled": true
-    }
-  }
-}
-```
-
-### Amp
-
-`.amp/settings.json` under `amp.mcpServers.lark`, same command/args shape as Claude Code.
-
-**Credentials:** Contact arhen for the Lark App ID and Secret. Never write placeholder values into a config file — either substitute the real credentials or skip this MCP entirely.
-
-**Migrating from the old `lark-cli` setup:** the `/lark-sync` skill and `@larksuite/cli` are no longer part of this workflow. Remove them if present:
-
-```bash
-npm uninstall -g @larksuite/cli
-rm -f .lark-sync.json
-```
-
-`lark-cli` stored credentials in `~/.lark-cli/config.json` — treat that file as a credential and delete it if you no longer use `lark-cli` for anything else.
+**Removing a legacy Lark MCP** (older workspace installs): delete the `lark` entry from `.mcp.json` / `.cursor/mcp.json` / `opencode.json` / `.amp/settings.json`, remove the App ID/Secret from wherever it was stored, and treat the credential as revoked. The CLI never needs an App ID/Secret pair for the read-only link fetches this workflow does.
 
 ---
 

@@ -1,29 +1,29 @@
 {
-  "version": "3.0.22",
-  "updated": "2026-09-08",
+  "version": "4.0.0",
+  "updated": "2026-10-18",
   "files": {
     "agents/fragments/git-conventions.md": {
-      "sha256": "2013afacf40acf63a01b6b4efc5a1eca53db4375212f3f23f16d361d4cb46697",
+      "sha256": "2448af45ceefef6268821442a9d65e87372be03ba061acb6aec34747498dea26",
       "install_to": ".agentic-workflows/fragments/git-conventions.md",
       "type": "fragment"
     },
     "agents/fragments/session-protocol.core.md": {
-      "sha256": "85228c3471b4cc3127241f1d05ed4c6281e0bd9be116c3e97a4d8f04b3f95927",
+      "sha256": "a03635f870924cbf340be2bac946225c78b9f4dabcbc39532ffcbf6b989498f2",
       "install_to": ".agentic-workflows/fragments/session-protocol.core.md",
       "type": "fragment"
     },
     "agents/fragments/workflow-rules.core.md": {
-      "sha256": "de282bb7f208f03fd1c5c062f1acffcafd7225bcbd9e43ebee4c37ff7a26de5e",
+      "sha256": "e6d67d2493bbc6d523e1dc9fe343c34f83344e419cc1a5d827c02176dafc20d9",
       "install_to": ".agentic-workflows/fragments/workflow-rules.core.md",
       "type": "fragment"
     },
     "agents/fragments/service-registry.core.md": {
-      "sha256": "e10761546d3a834b4ab75d65378610d4949f0539ae76e33c3548ddc4c06a1e3c",
+      "sha256": "e8459c26faebed1cd37e1f63f18ced6027965c5026c2538b7f6703e55435e360",
       "install_to": ".agentic-workflows/fragments/service-registry.core.md",
       "type": "fragment"
     },
     "agents/AGENTS.md.template": {
-      "sha256": "72ef8d0359dd6c005c6ef8bc3fd911d1802c56e128aaef4ac7fea64a37b43e2e",
+      "sha256": "3be9ab7696cb3ca6d80daa74c822dcb9384492deba27f9c7a4600933ab8d3568",
       "install_to": ".agentic-workflows/AGENTS.md.template",
       "type": "template"
     },
@@ -38,17 +38,17 @@
       "type": "script"
     },
     "workflow/phases.json": {
-      "sha256": "94bfa63a3943b4f04d2c768d8248f204cc186c3e80ee932758bb16c5f9941dad",
+      "sha256": "81534e39079cdc4984b3a706687e8877c87f323b2b00bb75a242b9346eae9912",
       "install_to": ".agentic-workflows/workflow/phases.json",
       "type": "workflow"
     },
     "workflow/gates.json": {
-      "sha256": "aff8355004fa4295fad5c67787073848250188a596ce6374b78ebe3c6a5a630c",
+      "sha256": "3019880591462ad2a6bc88df80ecfcab106ac59298e521d4ac21e74ceb5bfb99",
       "install_to": ".agentic-workflows/workflow/gates.json",
       "type": "workflow"
     },
     "workflow/state-schema.json": {
-      "sha256": "3c580e39dbd3bbb8cb56f0128785807afa70404ded3135505ace33bea22ee9be",
+      "sha256": "214a3fea7baccf88190a90acd21fd28a2c6e126457892d93b3a694e726b7c789",
       "install_to": ".agentic-workflows/workflow/state-schema.json",
       "type": "workflow"
     },
@@ -68,52 +68,47 @@
       "type": "template"
     },
     "templates/pr/feature-pr.template.md": {
-      "sha256": "4d8ef23c213419776e5a1effd5469f5856584a9d4eca2017cfd005162cde6ca5",
+      "sha256": "380050a30bc537be580fccd79e298fd73f88417d49838307a2f6695a9be5d0cb",
       "install_to": ".agentic-workflows/templates/pr/feature-pr.template.md",
       "type": "template"
     },
     "skills/setup-workspace/SKILL.md": {
-      "sha256": "99fcfb40a98a6b284d16541845b4af565648f326f4d4d0f4bba12b5396c02374",
+      "sha256": "e8ad77ce2eed4166d1d714fd541191e036ae954e69c0b24d456c3dd0c6420445",
       "install_to": ".agents/skills/setup-workspace/SKILL.md",
       "type": "skill"
     },
-    "skills/jj-workflow/SKILL.md": {
-      "sha256": "fb922e645dd77c1165baa0c8e25da10aaace4b258756b2aeb60fcef122e78295",
-      "install_to": ".agents/skills/jj-workflow/SKILL.md",
-      "type": "skill"
-    },
     "skills/onboard/SKILL.md": {
-      "sha256": "3126b96b4ea7598f6c0e7cad48d975b5b4a72330e6f95aa57fffc0193e721c96",
+      "sha256": "5d85e34fad950a676a81b5560dc50022a968ea66c148f4b238993a0286730818",
       "install_to": ".agents/skills/onboard/SKILL.md",
       "type": "skill"
     },
     "skills/workflow/SKILL.md": {
-      "sha256": "8151cc5ba27843039634cf50004498e35d729f5733e30d39b90f1afb36266ed9",
+      "sha256": "c3cea5809df03ab0403036295bc03a31ab9693500ef5dd7e73e5bd1c2cdfbbd8",
       "install_to": ".agents/skills/workflow/SKILL.md",
       "type": "skill"
     },
     "skills/workflow-update/SKILL.md": {
-      "sha256": "a69adb2fb742179c80704159fa96788870e35da83343d1090d7583d92d461937",
+      "sha256": "8d9fbd4936e217a97e59e90a0941481e1aa752c73787238130a64601868a4b05",
       "install_to": ".agents/skills/workflow-update/SKILL.md",
       "type": "skill"
     },
     "skills/prd/SKILL.md": {
-      "sha256": "0fd95c46625cb94f20a5d4cbd4e747d913aa8e7f5682d932e280d3c409b0cbbb",
+      "sha256": "420c709ac35e13c00e7ddd98da1b0ebf64941c3f08f8bac85850857bd9058e24",
       "install_to": ".agents/skills/prd/SKILL.md",
       "type": "skill"
     },
     "skills/prd-split/SKILL.md": {
-      "sha256": "9560e1c4a320a15da44f0cae3dc06574ed2daf836799bc8791e75ef6e51ad724",
+      "sha256": "d55357de7361b3a0efb42054af9e66b43977974bfd0e0757a71525098b40a123",
       "install_to": ".agents/skills/prd-split/SKILL.md",
       "type": "skill"
     },
     "skills/pr-feedback/SKILL.md": {
-      "sha256": "1cb53e1350e0e530ab6d9d6b245cdc0ac13590e4bb62dc927dc74585ed6e0419",
+      "sha256": "ec535163b990872a083849dad8708b821f5350ba3441ad9595cb728cd0b1eadf",
       "install_to": ".agents/skills/pr-feedback/SKILL.md",
       "type": "skill"
     },
     "skills/brainstorm/SKILL.md": {
-      "sha256": "b5965a48bc414c933ac6dc2d495999c909f697b6e2f66749a65c2914e44b3476",
+      "sha256": "5587352a41762d45b54488de1a3ea2f44a751ed5f3e45ff3b7f512eb3983146d",
       "install_to": ".agents/skills/brainstorm/SKILL.md",
       "type": "skill"
     },
@@ -123,7 +118,7 @@
       "type": "reference"
     },
     "skills/onboard/references/mcp-configs.md": {
-      "sha256": "f26d452f337714bbaf9dd0dd15a18dd2323d526c924573005d34a86f6a65ac28",
+      "sha256": "ba4636379b264132f40c9100abc30a235df74521db30061ec3f2d1b63b4e5bde",
       "install_to": ".agents/skills/onboard/references/mcp-configs.md",
       "type": "reference"
     },
@@ -133,7 +128,7 @@
       "type": "reference"
     },
     "skills/onboard/references/claude-settings.json": {
-      "sha256": "bc1ba959812203569b077920acb175298d7742ee788822e95d18476baaf5763a",
+      "sha256": "efdbf938a1398fd319155592833b38c57b930cf56c1a659ab16a410c1e1fba4e",
       "install_to": ".agents/skills/onboard/references/claude-settings.json",
       "type": "reference"
     },
@@ -158,7 +153,7 @@
       "type": "reference"
     },
     "skills/workflow/references/track-conventions.md": {
-      "sha256": "dbd0fc31da0638162d88ca5b7afb21c7d74bc7ddf164bc4ca6937b9fe14909c1",
+      "sha256": "799e5e8e417e6c9143147dd31913520fbf28c4303f6e38d1254bc028aa5abe26",
       "install_to": ".agents/skills/workflow/references/track-conventions.md",
       "type": "reference"
     },
@@ -172,190 +167,20 @@
       "install_to": ".agents/skills/workflow/references/session-checks.md",
       "type": "reference"
     },
-    "skills/workflow/references/agent-teams.md": {
-      "sha256": "577dc35609cd5eb399884923cef5c4152928d6341ac5ede2c593820a3b1b69c9",
-      "install_to": ".agents/skills/workflow/references/agent-teams.md",
-      "type": "reference"
-    },
-    "skills/jj-workflow/references/rules.md": {
-      "sha256": "dc3a49b2e1b6e95ed75fd3a2aea19bd6372e221e03d5c08a87bf390ea3c51c83",
-      "install_to": ".agents/skills/jj-workflow/references/rules.md",
-      "type": "reference"
-    },
     "skills/brainstorm/references/question-patterns.md": {
       "sha256": "a13a2a2f231644650a2c1a4f627639fd72dfd90054b7cda305e74acf5a43d278",
       "install_to": ".agents/skills/brainstorm/references/question-patterns.md",
       "type": "reference"
     },
-    "agents/tools/claude-code/frndos-orchestra.md": {
-      "sha256": "fca76977000ad5cd7e36c497b5274f369201ab2268ace3b4b5bdd79c447ea9ed",
-      "install_to": ".agentic-workflows/agents/claude-code/frndos-orchestra.md",
-      "type": "agent"
+    "scripts/check-manifest-coverage.py": {
+      "sha256": "77077ee36b05993c26495812d220090230bd9dd4c7c58f2b734a4d6ddd49c62c",
+      "install_to": "scripts/check-manifest-coverage.py",
+      "type": "fragment"
     },
-    "agents/tools/claude-code/frndos-brainstorm.md": {
-      "sha256": "007bf1d8073b7b2f6a0ff9e845b954c60f757dcaf2b516f96bdc93b417d4b2bc",
-      "install_to": ".agentic-workflows/agents/claude-code/frndos-brainstorm.md",
-      "type": "agent"
-    },
-    "agents/tools/claude-code/frndos-prd.md": {
-      "sha256": "6edb8f586b9eafc9c1eb31042fd758b8958066f1d8cdbb1092d045105fd76cd4",
-      "install_to": ".agentic-workflows/agents/claude-code/frndos-prd.md",
-      "type": "agent"
-    },
-    "agents/tools/claude-code/frndos-splitter.md": {
-      "sha256": "01f758b36cd5709105e46f1af8b7aaf2e65e832c718e567f29569f3b1b17087e",
-      "install_to": ".agentic-workflows/agents/claude-code/frndos-splitter.md",
-      "type": "agent"
-    },
-    "agents/tools/claude-code/frndos-implement.md": {
-      "sha256": "eac8de7ae562e298d099fe431952ce6aa4c4b01d05daac73a22ae286287a3299",
-      "install_to": ".agentic-workflows/agents/claude-code/frndos-implement.md",
-      "type": "agent"
-    },
-    "agents/tools/claude-code/frndos-pr.md": {
-      "sha256": "ce67ca2cf2a95fbec62314ac9162128ba0aaa9f9b9099619d98af1859425f3c1",
-      "install_to": ".agentic-workflows/agents/claude-code/frndos-pr.md",
-      "type": "agent"
-    },
-    "agents/tools/claude-code/frndos-pr-review.md": {
-      "sha256": "5f0e416c2089bb1ad3e2836fb97fee6bc028c57e26deb3976b75afa2a9b08ea2",
-      "install_to": ".agentic-workflows/agents/claude-code/frndos-pr-review.md",
-      "type": "agent"
-    },
-    "agents/tools/claude-code/frndos-track.md": {
-      "sha256": "b3c7d6f1e687109cce0d0c4a8661b922234f3a5dbdac4e55bd46cc1b84c9d78f",
-      "install_to": ".agentic-workflows/agents/claude-code/frndos-track.md",
-      "type": "agent"
-    },
-    "agents/tools/cursor/frndos-orchestra.mdc": {
-      "sha256": "f47acb474db4d8bcc4c4f89a8ced01240ee979a5590ee7cfd2f788389886146e",
-      "install_to": ".agentic-workflows/agents/cursor/frndos-orchestra.mdc",
-      "type": "agent"
-    },
-    "agents/tools/cursor/frndos-brainstorm.mdc": {
-      "sha256": "3d533063c86cce7823157e7755e4086bf6f115bea1bb704d5b2020b207562e98",
-      "install_to": ".agentic-workflows/agents/cursor/frndos-brainstorm.mdc",
-      "type": "agent"
-    },
-    "agents/tools/cursor/frndos-prd.mdc": {
-      "sha256": "35cfc2be2344866455b7c97eb8598a04186c701f7c14061b77a5d173e129778b",
-      "install_to": ".agentic-workflows/agents/cursor/frndos-prd.mdc",
-      "type": "agent"
-    },
-    "agents/tools/cursor/frndos-splitter.mdc": {
-      "sha256": "1358db22a6e37ddc357adb1b810ec5925134c25fcd5923ac07659a8a8e8af79d",
-      "install_to": ".agentic-workflows/agents/cursor/frndos-splitter.mdc",
-      "type": "agent"
-    },
-    "agents/tools/cursor/frndos-implement.mdc": {
-      "sha256": "3da8083d9f42e8e3f3f87021b2541a39ba4434df2ca81b611cead12e42af57ee",
-      "install_to": ".agentic-workflows/agents/cursor/frndos-implement.mdc",
-      "type": "agent"
-    },
-    "agents/tools/cursor/frndos-pr.mdc": {
-      "sha256": "9a94f3e589e26e733b4f6b08d97a2102e133cc27ce06b543419e544dc9b9770f",
-      "install_to": ".agentic-workflows/agents/cursor/frndos-pr.mdc",
-      "type": "agent"
-    },
-    "agents/tools/cursor/frndos-pr-review.mdc": {
-      "sha256": "7f5054c5462a7e31fc81fd3df43d0586fec77aef5a7b2b6a459e0a58ca553d8c",
-      "install_to": ".agentic-workflows/agents/cursor/frndos-pr-review.mdc",
-      "type": "agent"
-    },
-    "agents/tools/cursor/frndos-track.mdc": {
-      "sha256": "9fd066e83a3ce223792b0517a5fafe7e942280615f14a71a42eb2e54b62fd860",
-      "install_to": ".agentic-workflows/agents/cursor/frndos-track.mdc",
-      "type": "agent"
-    },
-    "agents/tools/amp/frndos-orchestra.md": {
-      "sha256": "25622c793e6c07aa7f780d04b4dc1ffd9e4c77d85a6d62b4736ec219f6a73f24",
-      "install_to": ".agentic-workflows/agents/amp/frndos-orchestra.md",
-      "type": "agent"
-    },
-    "agents/tools/amp/frndos-brainstorm.md": {
-      "sha256": "689a6476b99fb7f32493cac9c460699d41f68b1f4aec9919401dbe66a867e487",
-      "install_to": ".agentic-workflows/agents/amp/frndos-brainstorm.md",
-      "type": "agent"
-    },
-    "agents/tools/amp/frndos-prd.md": {
-      "sha256": "fdc18b11c8d0cabe2aa9fbf5f45bc05b1946b6d4981be531166e6cb413500a26",
-      "install_to": ".agentic-workflows/agents/amp/frndos-prd.md",
-      "type": "agent"
-    },
-    "agents/tools/amp/frndos-splitter.md": {
-      "sha256": "89457cb05821f061e359f51429e5c25181c6573e41aa39d2d30d6c8a69a153dc",
-      "install_to": ".agentic-workflows/agents/amp/frndos-splitter.md",
-      "type": "agent"
-    },
-    "agents/tools/amp/frndos-implement.md": {
-      "sha256": "5164dd750a98e7611add2772b0db1dcf77d4f53f23eec4439ad5b27f44ffeebd",
-      "install_to": ".agentic-workflows/agents/amp/frndos-implement.md",
-      "type": "agent"
-    },
-    "agents/tools/amp/frndos-pr.md": {
-      "sha256": "e345745cb4ba32f2c2ec287fbc233d3abd32e58efcad95e5782c6f6b9b1492c5",
-      "install_to": ".agentic-workflows/agents/amp/frndos-pr.md",
-      "type": "agent"
-    },
-    "agents/tools/amp/frndos-pr-review.md": {
-      "sha256": "bd8a2faca5f504df58ba639add497a875cd66dc5d846284d1769f4f31d3aa75c",
-      "install_to": ".agentic-workflows/agents/amp/frndos-pr-review.md",
-      "type": "agent"
-    },
-    "agents/tools/amp/frndos-track.md": {
-      "sha256": "aefffe1facbac6e73d15c8f67c24c3cd60da5235f3749d2616fc3506767707e2",
-      "install_to": ".agentic-workflows/agents/amp/frndos-track.md",
-      "type": "agent"
-    },
-    "agents/tools/opencode/frndos-orchestra.md": {
-      "sha256": "fb2f4280f615972a8e0f2e8eda8a94730bfe7c498bee7d8b10c7005d29b52257",
-      "install_to": ".agentic-workflows/agents/opencode/frndos-orchestra.md",
-      "type": "agent"
-    },
-    "agents/tools/opencode/frndos-brainstorm.md": {
-      "sha256": "6cb3764ecacde58f5de847d40667223a95162880cd017fc801533e808a0c3ea1",
-      "install_to": ".agentic-workflows/agents/opencode/frndos-brainstorm.md",
-      "type": "agent"
-    },
-    "agents/tools/opencode/frndos-prd.md": {
-      "sha256": "46fd6625d9acbdf17790030abe194677d3d56d5815d6125bf901916820e722b4",
-      "install_to": ".agentic-workflows/agents/opencode/frndos-prd.md",
-      "type": "agent"
-    },
-    "agents/tools/opencode/frndos-splitter.md": {
-      "sha256": "3d02a47e85d77d0d1b971546607046f5df44ce5138cf89291f1731ec36185bee",
-      "install_to": ".agentic-workflows/agents/opencode/frndos-splitter.md",
-      "type": "agent"
-    },
-    "agents/tools/opencode/frndos-implement.md": {
-      "sha256": "ca8e0c08581a185b872ad8caedc06f9af203446028f319d99769c4b8be6bbaec",
-      "install_to": ".agentic-workflows/agents/opencode/frndos-implement.md",
-      "type": "agent"
-    },
-    "agents/tools/opencode/frndos-pr.md": {
-      "sha256": "0d0072b999f6de7c4c9051067292cc4f627632517eb6c259136a01ac6b198394",
-      "install_to": ".agentic-workflows/agents/opencode/frndos-pr.md",
-      "type": "agent"
-    },
-    "agents/tools/opencode/frndos-pr-review.md": {
-      "sha256": "cd37b6d15e5e6813444ddfd5fd5cb556a8db144193c60a5caeb53fe27d635b4a",
-      "install_to": ".agentic-workflows/agents/opencode/frndos-pr-review.md",
-      "type": "agent"
-    },
-    "agents/tools/opencode/frndos-track.md": {
-      "sha256": "890b08951c2fb4892faeb32a921f2309147e85335d7078354bd3215751c80ce2",
-      "install_to": ".agentic-workflows/agents/opencode/frndos-track.md",
-      "type": "agent"
-    },
-    "agents/tools/claude-code/frndos-engineer.md": {
-      "sha256": "9ac18e154cd7f3cdd160f60cda62646e95dc6a31b21e46506b7f7d828c3b3658",
-      "install_to": ".agentic-workflows/agents/claude-code/frndos-engineer.md",
-      "type": "agent"
-    },
-    "agents/tools/claude-code/frndos-architect.md": {
-      "sha256": "62d1871ff0990f053915da15211ab7ca2f4cd43604b1e89168426339c891f0ab",
-      "install_to": ".agentic-workflows/agents/claude-code/frndos-architect.md",
-      "type": "agent"
+    "skills/visual-testing/SKILL.md": {
+      "sha256": "08f299f3827bb86094629597639368827189ed9e297884e5303a2f786b5b5f0d",
+      "install_to": ".agents/skills/visual-testing/SKILL.md",
+      "type": "skill"
     }
   }
 }

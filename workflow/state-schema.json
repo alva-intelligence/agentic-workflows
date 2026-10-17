@@ -25,20 +25,6 @@
           "$ref": "#/definitions/feature"
         }
       }
-    },
-    "workspaces": {
-      "description": "Registry of JJ workspaces (primary workspace only). Maps workspace slug to its metadata.",
-      "type": "object",
-      "additionalProperties": false,
-      "patternProperties": {
-        "^[a-z0-9]+(-[a-z0-9]+)*$": {
-          "$ref": "#/definitions/workspace_entry"
-        }
-      }
-    },
-    "workspace_meta": {
-      "description": "Pointer back to primary workspace (secondary JJ workspaces only).",
-      "$ref": "#/definitions/workspace_meta"
     }
   },
   "definitions": {
@@ -83,7 +69,7 @@
           "type": "string"
         },
         "brainstorming": {
-          "description": "Brainstorming phase artifacts. Populated by frndos-brainstorm.",
+          "description": "Brainstorming phase artifacts. Populated by the orchestrator during the brainstorming phase.",
           "$ref": "#/definitions/brainstorming"
         },
         "prd_path": {
@@ -101,7 +87,7 @@
           "default": []
         },
         "branch": {
-          "description": "Git branch name for feature implementation (<prefix><worker>/vc-<slug> where <prefix> = feature/ | fix/ | improvement/ derived from features[<slug>].type), or null if not yet created. Created during the prd_splitting phase.",
+          "description": "Git branch name for feature implementation (<prefix>vc-<slug> where <prefix> = feature/ | fix/ | improvement/ derived from features[<slug>].type), or null if not yet created. Features: created during prd_splitting. Bug/improvement: created at implementation entry.",
           "type": ["string", "null"]
         },
         "service_prds": {
@@ -120,29 +106,27 @@
           }
         },
         "pr_review_summary": {
-          "description": "Summary of frndos-pr's self code-review, written into the PR body. Recorded here for gate checks.",
+          "description": "Summary of the orchestrator's self code-review, written into the PR body. Recorded here for gate checks.",
           "type": ["string", "null"]
+        },
+        "verification": {
+          "description": "Record of the orchestrator's verification for the latest implementation round — what was re-run (lint/tests), diff review notes, visual-testing summary. Subagent 'done' claims are never accepted on trust.",
+          "type": ["object", "null"],
+          "additionalProperties": { "type": "string" }
         },
         "security_audit_summary": {
           "description": "Summary of the security-reviewer skill audit, written into the PR body. Recorded here for gate checks.",
           "type": ["string", "null"]
         },
         "agent_state": {
-          "description": "Current attention state of the agent driving this feature. null = working/resuming. 'needs_approval' = a plan or destructive action awaits user approval (e.g. ExitPlanMode just fired). 'needs_answer' = a structured question was just asked (e.g. AskUserQuestion fired). 'needs_human' = stuck on something requiring free-form human judgment, no structured options. Consumed by the orchestra to decide whether to surface the feature for user attention. Always paired with agent_state_reason when non-null.",
+          "description": "Current attention state of the orchestrator driving this feature. null = working/resuming. 'needs_approval' = a plan or destructive action awaits user approval (e.g. the harness's plan mode just fired). 'needs_answer' = a structured question was just asked. 'needs_human' = stuck on something requiring free-form human judgment, no structured options. Consumed to decide whether to surface the feature for user attention. Always paired with agent_state_reason when non-null.",
           "type": ["string", "null"],
           "enum": ["needs_approval", "needs_answer", "needs_human", null],
           "default": null
         },
         "agent_state_reason": {
-          "description": "Short human-readable string describing why the agent is in its current attention state. Required to be a non-empty string when agent_state is non-null. MUST be null when agent_state is null. Example: 'Plan for splitter ready, awaiting approval', 'Asked which implementation strategy to use', 'Stuck on PR conflict resolution, need guidance'.",
+          "description": "Short human-readable string describing why the agent is in its current attention state. Required to be a non-empty string when agent_state is non-null. MUST be null when agent_state is null. Example: 'Plan ready, awaiting approval', 'Asked which implementation strategy to use', 'Stuck on PR conflict resolution, need guidance'.",
           "type": ["string", "null"]
-        },
-        "agent_teams": {
-          "description": "Agent Teams state for parallel implementation (Claude Code only). Null or absent when using sequential strategy.",
-          "oneOf": [
-            { "type": "null" },
-            { "$ref": "#/definitions/agent_teams" }
-          ]
         }
       },
       "allOf": [
@@ -156,13 +140,32 @@
     },
     "brainstorming": {
       "type": "object",
-      "description": "Brainstorming phase output. Captured by frndos-brainstorm and consumed by frndos-prd.",
+      "description": "Brainstorming phase output. Captured by the orchestrator; summary feeds PRD authoring (features) or implementation (bugs/improvements).",
       "required": ["questions", "summary"],
       "additionalProperties": false,
       "properties": {
         "questions": {
+          "description": "Only questions actually asked to the user. Obvious answers are recorded under decisions instead.",
           "type": "array",
           "items": { "$ref": "#/definitions/brainstorm_question" }
+        },
+        "decisions": {
+          "description": "Decisions the orchestrator took itself under the obvious-answer rule, so no question was asked while still recording the reasoning.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["topic", "decision", "rationale"],
+            "additionalProperties": false,
+            "properties": {
+              "topic": { "type": "string", "minLength": 1 },
+              "decision": { "type": "string", "minLength": 1 },
+              "rationale": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "user_skipped": {
+          "description": "True when the user explicitly said to skip brainstorming — the phase records the request as-is and moves on.",
+          "type": ["boolean", "null"]
         },
         "summary": {
           "description": "Final brainstorming summary written by the agent. Non-empty once the phase is completed. Feeds the PRD's Brainstorming Outcome section.",
@@ -230,95 +233,6 @@
         "recommended": {
           "description": "Exactly one option per question should have recommended === true.",
           "type": "boolean"
-        }
-      }
-    },
-    "agent_teams": {
-      "type": "object",
-      "description": "Agent Teams state for parallel implementation. Tracks per-service engineer progress.",
-      "required": ["strategy", "engineers"],
-      "additionalProperties": false,
-      "properties": {
-        "strategy": {
-          "description": "Implementation strategy: agent_teams (parallel, Claude Code) or sequential (Cursor/OpenCode).",
-          "type": "string",
-          "enum": ["agent_teams", "sequential"]
-        },
-        "engineers": {
-          "description": "Map of service names to their engineer teammate state.",
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/engineer_state"
-          }
-        }
-      }
-    },
-    "engineer_state": {
-      "type": "object",
-      "description": "State for a single per-service engineer teammate.",
-      "required": ["status", "pr_url", "tasks_completed"],
-      "additionalProperties": false,
-      "properties": {
-        "status": {
-          "description": "Current status of this engineer's work.",
-          "type": "string",
-          "enum": ["pending", "planning", "implementing", "self_reviewing", "architect_review", "creating_pr", "pr_feedback", "done"]
-        },
-        "pr_url": {
-          "description": "GitHub PR URL created by this engineer, or null.",
-          "type": ["string", "null"],
-          "format": "uri"
-        },
-        "tasks_completed": {
-          "description": "Number of tasks completed by this engineer.",
-          "type": "integer",
-          "minimum": 0
-        }
-      }
-    },
-    "workspace_entry": {
-      "type": "object",
-      "description": "Registry entry for a JJ workspace (stored in primary workspace only).",
-      "required": ["path", "created", "worker"],
-      "additionalProperties": false,
-      "properties": {
-        "path": {
-          "description": "Relative path to the workspace directory (e.g., '../frndos-feature-b').",
-          "type": "string",
-          "minLength": 1
-        },
-        "created": {
-          "description": "ISO 8601 timestamp of when the workspace was created.",
-          "type": "string",
-          "format": "date-time"
-        },
-        "worker": {
-          "description": "Identifier of the worker who created this workspace.",
-          "type": "string",
-          "minLength": 1
-        }
-      }
-    },
-    "workspace_meta": {
-      "type": "object",
-      "description": "Metadata for a secondary JJ workspace — points back to the primary workspace.",
-      "required": ["primary_workspace", "feature_slug", "is_jj_workspace"],
-      "additionalProperties": false,
-      "properties": {
-        "primary_workspace": {
-          "description": "Relative path to the primary workspace (e.g., '../frndos').",
-          "type": "string",
-          "minLength": 1
-        },
-        "feature_slug": {
-          "description": "The feature slug this workspace was created for.",
-          "type": "string",
-          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
-        },
-        "is_jj_workspace": {
-          "description": "Always true for JJ workspaces. Used for quick detection.",
-          "type": "boolean",
-          "const": true
         }
       }
     }

@@ -1,6 +1,6 @@
 {
   "phase_status_rule": {
-    "description": "Every gate carries an implicit phase_status condition: features[active_feature].phase_status === 'completed'. Phases enter as 'inprogress', flip to 'completed' once their gate's other conditions pass, but the workflow does NOT auto-transition. The user (via orchestra) must trigger advancement explicitly. The condition is repeated in every gate's `conditions` array under type `phase_status_completed` for clarity."
+    "description": "Every gate carries an implicit phase_status condition: features[active_feature].phase_status === 'completed'. Phases enter as 'inprogress', flip to 'completed' once their gate's other conditions pass, but the workflow does NOT auto-transition. The user (or the orchestrator at explicit user direction) must trigger advancement explicitly. The condition is repeated in every gate's `conditions` array under type `phase_status_completed` for clarity."
   },
   "gates": {
     "idle_to_brainstorming": {
@@ -23,11 +23,11 @@
     "brainstorming_to_prd_creation": {
       "from": "brainstorming",
       "to": "prd_creation",
-      "description": "All brainstorming questions answered, summary written, user has signed off on direction.",
+      "description": "Feature path only: all asked questions answered, summary written, user has signed off on direction. Zero-question brainstorms pass trivially.",
       "conditions": [
         {
           "type": "questions_answered",
-          "description": "Every question in brainstorming.questions has an `answer` field set.",
+          "description": "Every question that was actually asked has an `answer` field set. Obvious-answer decisions are recorded as decisions, not as questions.",
           "check": "All entries in features[active_feature].brainstorming.questions[*] have answer !== null"
         },
         {
@@ -37,7 +37,29 @@
         },
         {
           "type": "phase_status_completed",
-          "description": "Phase marked completed by agent after summary + user sign-off.",
+          "description": "Phase marked completed after summary + user sign-off.",
+          "check": "features[active_feature].phase_status === 'completed'"
+        }
+      ]
+    },
+    "brainstorming_to_implementation": {
+      "from": "brainstorming",
+      "to": "implementation",
+      "strategy": "bug_or_improvement",
+      "description": "Bug/improvement path only: skips prd_creation and prd_splitting — comprehensive PRDs are for features. Summary written; the branch is created at implementation entry.",
+      "conditions": [
+        {
+          "type": "type_check",
+          "description": "Work type must be bug or improvement (feature path uses brainstorming_to_prd_creation).",
+          "check": "features[active_feature].type in ['bug', 'improvement']"
+        },
+        {
+          "type": "summary_present",
+          "description": "Brainstorming summary captures direction and feeds implementation (and the eventual PR body context).",
+          "check": "features[active_feature].brainstorming.summary is a non-empty string"
+        },
+        {
+          "type": "phase_status_completed",
           "check": "features[active_feature].phase_status === 'completed'"
         }
       ]
@@ -75,8 +97,8 @@
       "conditions": [
         {
           "type": "git_branch",
-          "description": "Agent has: (1) checked out base (develop for api/web, development for ai-service/data-service/data-pipeline), (2) pulled latest, (3) created <prefix><worker>/vc-<slug> from base where <prefix> is feature/ | fix/ | improvement/ per features[active_feature].type, (4) is currently on the feature branch.",
-          "check": "Current branch matches (feature|fix|improvement)/<worker>/vc-<slug> AND equals features[active_feature].branch"
+          "description": "Agent has: (1) checked out base (develop for api/web/desktop, development for ai-service/data-service/data-pipeline), (2) pulled latest, (3) created <prefix>vc-<slug> from base where <prefix> is feature/ | fix/ | improvement/ per features[active_feature].type, (4) is currently on the feature branch.",
+          "check": "Current branch matches (feature|fix|improvement)/vc-<slug> AND equals features[active_feature].branch"
         },
         {
           "type": "file_exists",
@@ -92,8 +114,7 @@
     "implementation_to_pr_submission": {
       "from": "implementation",
       "to": "pr_submission",
-      "strategy": "sequential",
-      "description": "Sequential flow only (Cursor/OpenCode and the default Claude Code flow). Agent Teams skips pr_submission/pr_review.",
+      "description": "The single implementation path: orchestrator-verified parallel subagents then the PR pipeline.",
       "conditions": [
         {
           "type": "track_progress",
@@ -103,39 +124,12 @@
         {
           "type": "git_branch",
           "description": "Must be on feature branch.",
-          "check": "Current branch matches (feature|fix|improvement)/<worker>/vc-<slug> AND equals features[active_feature].branch"
+          "check": "Current branch matches (feature|fix|improvement)/vc-<slug> AND equals features[active_feature].branch"
         },
         {
-          "type": "strategy_check",
-          "description": "Must be using sequential strategy.",
-          "check": "agent_teams is null OR agent_teams.strategy === 'sequential'"
-        },
-        {
-          "type": "phase_status_completed",
-          "check": "features[active_feature].phase_status === 'completed'"
-        }
-      ]
-    },
-    "implementation_to_completion": {
-      "from": "implementation",
-      "to": "completion",
-      "strategy": "agent_teams",
-      "description": "Agent Teams flow only (Claude Code). Engineers handle their own PRs — skip pr_submission/pr_review.",
-      "conditions": [
-        {
-          "type": "strategy_check",
-          "description": "Must be using agent_teams strategy.",
-          "check": "agent_teams.strategy === 'agent_teams'"
-        },
-        {
-          "type": "all_engineers_done",
-          "description": "All engineers must report done.",
-          "check": "Every entry in agent_teams.engineers has status === 'done'"
-        },
-        {
-          "type": "all_prs_exist",
-          "description": "All service PRs must exist and be merged.",
-          "check": "Every service in pr_urls has a URL and `gh pr view` returns 'MERGED'"
+          "type": "work_verified",
+          "description": "Orchestrator verification recorded (re-run checks, diff review, visual testing for UI work) — subagent 'done' claims are not accepted on trust.",
+          "check": "features[active_feature].verification is set for the current implementation round"
         },
         {
           "type": "phase_status_completed",
@@ -151,7 +145,7 @@
       "conditions": [
         {
           "type": "self_review_passed",
-          "description": "frndos-pr's self code-review must be recorded as passed in the PR body.",
+          "description": "The orchestrator's self code-review must be recorded as passed in the PR body.",
           "check": "PR body contains a self-review section with no must-fix items"
         },
         {

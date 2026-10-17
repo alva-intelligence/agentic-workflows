@@ -57,8 +57,11 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
   "status": "in_progress|completed",
   "services": ["api", "web", "ai-service", "data-service"],
   "tools": ["claude-code", "cursor"],
-  "claude_session_mode": "agent|team",
-  "jj_available": true,
+  "optional_services": {
+    "data-pipeline": "included|skipped",
+    "desktop": "included|skipped"
+  },
+  "lark_cli": "connected|skipped",
   "steps": {
     "github_access": "completed|skipped|pending",
     "questionnaire": "completed|pending",
@@ -84,11 +87,15 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
     "web": "completed|pending",
     "ai-service": "completed|pending",
     "data-service": "completed|pending",
-    "data-pipeline": "n/a"
+    "data-pipeline": "n/a",
+    "desktop": "n/a"
   },
   "skipped_reasons": {}
 }
 ```
+
+> **`env_status` covers included services only** — entries for skipped optional services
+> (`data-pipeline`, `desktop`) are omitted entirely: they don't exist in this workspace.
 
 The workflow engine reads this file. **`/workflow start` will block** if any of these are not resolved:
 - `env_files` is not `"completed"` for ALL selected services
@@ -118,7 +125,7 @@ The agent must remind the user what's missing and how to fix it.
 > `.workflow-state.json` only), so nothing rejects a bad value here and nothing enforces the rule
 > above. It holds only because this file and `skills/workflow/SKILL.md` both say so. Any new
 > `env_status` value must be handled at every reader, and the readers are:
-> `skills/workflow/SKILL.md`, `agents/fragments/session-protocol.core.md`, `skills/jj-workflow/SKILL.md`.
+> `skills/workflow/SKILL.md`, `agents/fragments/session-protocol.core.md`.
 >
 > **Two of the four new steps are required parts of onboarding; two are not.** None of them adds a
 > `/workflow start` gate — the blocking list above is unchanged — but "does not block the gate" is
@@ -175,6 +182,7 @@ Present ALL questions in a single message:
 | 3 | AI Service | `ai-service/` | FastAPI, Python, Agno, OpenAI/Anthropic/Google | **:8000** · pg `:5432`, redis `:6379` |
 | 4 | Data Service | `data-service/` | FastAPI, Python, pandas | **:9999** · ch `:8123`, prefect `:4200` |
 | 5 | Data Pipeline | `data-pipeline/` | Prefect 3, Python 3.12, ClickHouse, AWS S3 | prefect `:4200` · ch `:8123` |
+| 6 | Desktop *(optional)* | `desktop/` | Swift, SwiftUI, macOS 26+, Xcode, Metal | — (native app) |
 
 > **Bold = the port that service serves on; the rest are backing services it connects to.** Only the
 > bold ones are started, health-checked or stopped by `run-all.sh` — Postgres `:5432`, Redis `:6379`,
@@ -237,15 +245,16 @@ Use the ask tool with these EXACT options (multi-select):
 
 (Can select multiple — this determines agent, skill, and MCP configuration)
 
-### 1.4 Claude Code session mode (only ask if Claude Code was selected in 1.3)
+### 1.4 Optional services (ask always)
 
-> "Which session mode do you want for Claude Code?"
-> 1. **Agent Session** (recommended) — Single agent handles implementation sequentially. Reliable and predictable.
-> 2. **Team Session** (EXPERIMENTAL) — Spawns parallel engineer agents per service + an architect reviewer. Faster for multi-service features but consumes more tokens and hits context window limits sooner. Use with caution.
+> "Two services are optional — include them now or skip until a task needs them?"
+> 1. **Data Pipeline** `data-pipeline/` (frnd-orchestration) — Prefect transform layer. Needed for data-flow work.
+> 2. **Desktop** `desktop/` (frnd-desktop) — native SwiftUI macOS app. Needed for desktop-app work.
+> 3. **Lark CLI (read-only)** — lets the agent read any pasted Lark doc link. Uses the **Lark CLI, not an MCP** — no sync, nothing is ever written back to Lark.
 
-Record the choice in `.onboard-state.json` as `"claude_session_mode": "agent"` or `"claude_session_mode": "team"`.
+Record the choices in `.onboard-state.json`: `optional_services: {"data-pipeline": "included|skipped", "desktop": "included|skipped"}` and `lark_cli: "connected|skipped"`. Recommendation: include Data Pipeline alongside Data Service (one data path, two repos); everything else can be skipped without loss.
 
-If user did NOT select Claude Code in 1.3, skip this question entirely.
+Skipping only defers — `/workflow` and the Session Start Protocol will recommend onboarding a skipped optional service the first time a task actually touches its domain.
 
 ### 1.5 Which AI provider subscriptions?
 
@@ -254,8 +263,8 @@ If user did NOT select Claude Code in 1.3, skip this question entirely.
 
 ### 1.6 Optional integrations
 
-- **Lark MCP** — Read PRDs directly from Lark doc URLs (skip copy-paste)
-- **Figma MCP** — Read designs from Figma, extract component specs
+- **Lark CLI (read-only)** — already asked in 1.4; covered there. Never an MCP; reads pasted Lark doc links only.
+- **Figma MCP** — Read designs from Figma, extract component specs.
 
 Neither is required. Workflow works without them.
 
@@ -431,43 +440,7 @@ All tools must be available. If any are missing, troubleshoot before continuing.
 
 ### Record and continue
 
-Mark `steps.prerequisites` as `"completed"` in `.onboard-state.json` and proceed to Step 2.5.
-
-## Step 2.5: JJ (Jujutsu) Setup — Terminal-based harnesses only
-
-**Skip this step entirely unless Amp or Claude Code was selected in Step 1.3.**
-
-Rationale: JJ workspaces are the parallel-feature story for terminal harnesses (Claude Code, Amp). Cursor and OpenCode alone don't need JJ (IDE-integrated / per-session), so they don't trigger this step.
-
-JJ enables parallel feature development via isolated workspaces — useful when you run one agent session per directory. It runs in colocated mode alongside git — all git commands remain unchanged.
-
-**Do not push JJ during setup.** Parallel workspaces only pay off once the user is actually running more than one feature at a time, which never happens on day one. Onboarding detects JJ and moves on; installing it is deferred to the moment `/workflow` first offers a parallel workspace. Recommending an extra tool here costs setup time and buys nothing until then.
-
-1. **Check if JJ is available:**
-   ```bash
-   command -v jj &>/dev/null && echo "✓ jj available: $(jj --version)" || echo "✗ jj not found"
-   ```
-
-2. **If JJ is found** (already on the machine):
-   - Record `jj_available: true` in `.onboard-state.json`
-   - Tell user: "JJ detected — parallel workspaces are available if you want them later via `/jj-workflow init` then `/jj-workflow new <slug>`. Nothing to do now."
-   - **Do NOT run `jj git init --colocate` yet** — repos haven't been cloned. The user will run `/jj-workflow init` after clone, if and when they want parallel features.
-
-3. **If JJ is NOT found:** record `jj_available: false` and continue — **no ask, no install prompt.** Tell the user once, as a single line:
-   > "JJ (Jujutsu) isn't installed. It's only needed for working on several features in parallel — skipping it for now. `/workflow` will offer to set it up the first time that comes up."
-
-   Do not present install/skip options and do not run `brew install jj` at this stage.
-
-4. **After clone (Step 4)**, if `jj_available` is `true`:
-   - Automatically run the equivalent of `/jj-workflow init`:
-     ```bash
-     for service in api web ai-service data-service data-pipeline; do
-       if [ -d "$service/.git" ] && [ ! -d "$service/.jj" ]; then
-         cd "$service" && jj git init --colocate && cd ..
-       fi
-     done
-     ```
-   - Report which repos were initialized
+Mark `steps.prerequisites` as `"completed"` in `.onboard-state.json` and proceed to Step 3.
 
 ## Step 3: Verify Model Access
 
@@ -494,7 +467,7 @@ Report which models work and suggest fallbacks for any that fail.
 
 ## Step 4: Clone Repositories
 
-Only clone services the user selected. Skip if directory already exists.
+Only clone services the user selected. Skip if directory already exists. **Optional services** (`data-pipeline`, `desktop`) are cloned only when the user included them in the Step 1.4 ask — set the `OPTIONAL_*` flags accordingly before running the block.
 
 ```bash
 # API
@@ -509,10 +482,13 @@ Only clone services the user selected. Skip if directory already exists.
 # Data Service
 [ -d "data-service" ] || (git clone git@github.com:alva-intelligence/frnd-clickhouse-api.git data-service && cd data-service && git checkout development)
 
-# Data Pipeline — the transform layer (raw -> staging -> frnd_agg_marts).
-# Standard branch shape: `development` is the working base. See the warning
-# below — what differs is that there is no deploy step.
-[ -d "data-pipeline" ] || (git clone https://github.com/alva-intelligence/frnd-orchestration.git data-pipeline && cd data-pipeline && git checkout development)
+# Data Pipeline — OPTIONAL (frnd-orchestration, the transform layer:
+# raw -> staging -> frnd_agg_marts). Standard branch shape: `development` is the
+# working base; there is no deploy step — see the warning below.
+[ -d "data-pipeline" ] || [ "$OPTIONAL_DATA_PIPELINE" != "1" ] || (git clone https://github.com/alva-intelligence/frnd-orchestration.git data-pipeline && cd data-pipeline && git checkout development)
+
+# Desktop — OPTIONAL (frnd-desktop, native SwiftUI macOS app, Xcode-driven).
+[ -d "desktop" ] || [ "$OPTIONAL_DESKTOP" != "1" ] || (git clone https://github.com/alva-intelligence/frnd-desktop.git desktop && cd desktop && git checkout develop)
 ```
 
 > **Why data-pipeline is worth cloning even if you never edit it.** The marts every dashboard reads
@@ -1559,55 +1535,37 @@ done
 
 ## Step 9: Configure Editor Tooling
 
-The bootstrap installed frndOS agents to `.agentic-workflows/agents/<tool>/` and skills to `.agents/skills/`. Each tool symlinks to its platform-specific agents.
+The bootstrap installed skills to `.agents/skills/`. There are no platform-specific agent files — AGENTS.md (generated from fragments) and the skills are the whole install.
 
 **Additional per-tool setup:**
 
-**Claude Code:** Verify `CLAUDE.md` symlink exists → `AGENTS.md`. Agents symlinked from `.agentic-workflows/agents/claude-code/`:
+**Claude Code:** Verify `CLAUDE.md` symlink exists → `AGENTS.md`:
 ```bash
 mkdir -p .claude
-ln -sf ../.agentic-workflows/agents/claude-code .claude/agents
+ln -sf ../AGENTS.md .claude/CLAUDE.md 2>/dev/null || true
 ```
 
-Configure project settings — copy the base template, then modify based on session mode:
+Configure project settings — copy the base template:
 
 ```bash
 cp .agents/skills/onboard/references/claude-settings.json .claude/settings.json
 ```
 
-> **Auto-mode coverage:** the base template ships with `permissions.allow` covering every command the workflow needs (git, gh, jj, jq, scoped Edit/Write to `docs/` + state files), a `permissions.deny` blocklist for destructive commands, and `autoMode.environment` hints that mark Lark docs as a read-only source and JJ secondary-workspace symlinks as in-scope. This means the workflow runs hands-off under Claude Code's auto mode (`https://code.claude.com/docs/en/permission-modes#eliminate-prompts-with-auto-mode`) without sandbox prompts breaking sub-agents. Users who want to TIGHTEN beyond the defaults should edit `.claude/settings.json` after install; users who want personal additions should put them in `.claude/settings.local.json` (gitignored).
+> **Auto-mode coverage:** the base template ships with `permissions.allow` covering every command the workflow needs (git, gh, jq, scoped Edit/Write to `docs/` + state files), a `permissions.deny` blocklist for destructive commands, and `autoMode.environment` hints that mark Lark docs as a read-only source. This means the workflow runs hands-off under Claude Code's auto mode (`https://code.claude.com/docs/en/permission-modes#eliminate-prompts-with-auto-mode`) without sandbox prompts breaking sub-agents. Users who want to TIGHTEN beyond the defaults should edit `.claude/settings.json` after install; users who want personal additions should put them in `.claude/settings.local.json` (gitignored).
 
-**If user chose "Team Session" (`claude_session_mode: "team"`) in Step 1.4:**
-- Read `.claude/settings.json`
-- Set `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` to `"1"`
-- Write the updated file back
-- Warn user: "Team Session mode is experimental. It consumes more tokens and may hit context window limits faster."
-
-**If user chose "Agent Session" (`claude_session_mode: "agent"`) or skipped the question:**
-- No modification needed — the base template already has an empty `env`.
-
-**Switching modes later:** The user can switch between Agent Session and Team Session at any time by running `/workflow mode`. See the workflow skill for details.
-
-**Cursor:** If user selected Cursor, check `.cursor/agents/` symlink exists pointing to Cursor-specific `.mdc` agents. If not:
+**Cursor:** If user selected Cursor, ensure the skills symlink exists:
 ```bash
 mkdir -p .cursor
-ln -sf ../.agentic-workflows/agents/cursor .cursor/agents
 ln -sf ../.agents/skills .cursor/skills
 ```
 
-**OpenCode:** If user selected OpenCode, check `.opencode/agents/` symlink exists pointing to OpenCode-specific agents. If not:
+**OpenCode:** If user selected OpenCode, ensure the skills symlink exists:
 ```bash
 mkdir -p .opencode
-ln -sf ../.agentic-workflows/agents/opencode .opencode/agents
 ln -sf ../.agents/skills .opencode/skills
 ```
 
-**Amp:** If user selected Amp, check `.amp/agents/` symlink exists pointing to Amp-specific agents. If not:
-```bash
-mkdir -p .amp
-ln -sf ../.agentic-workflows/agents/amp .amp/agents
-```
-> **Note:** Amp reads skills from `.agents/skills/` natively — no `.amp/skills/` symlink is needed. AGENTS.md at the workspace root is also read automatically.
+**Amp:** If user selected Amp — reads skills from `.agents/skills/` natively; AGENTS.md at the workspace root is read automatically. No symlink needed.
 
 ### Dev Server Configuration (launch.json)
 
@@ -1897,22 +1855,12 @@ If **"No"**:
 
 Only configure MCPs the user selected in Step 1.5. For each one that needs credentials, **STOP and WAIT** for the token.
 
-**Lark MCP** (if selected) — read-only: lets `/prd` pull a PRD straight out of a Lark doc URL. Config shape in `references/mcp-configs.md`.
+**Lark CLI** (if selected in 1.4) — **read-only, via the Lark CLI — never an MCP**: lets the agent read any pasted Lark doc link (PRD briefs, wiki pages) straight from the source. The workflow never writes to Lark — no doc, wiki, or task sync, ever.
 
-Use the ask tool:
-> "Lark MCP needs App ID and App Secret. Do you have them?"
-> - Yes, I have them ready
-> - No, I need to get them from arhen
-
-If **"Yes"**:
-1. Ask user: "Please provide the Lark App ID and App Secret"
-2. **STOP AND WAIT** for user to provide both values
-3. Use the ask tool: "Have you provided the Lark credentials?"
-4. Only after confirmation, write the MCP config
-
-If **"No"**:
-1. Tell user: "Contact **arhen** for the Lark App ID and Secret"
-2. Mark as pending — skip for now, can configure later
+Guide the user to connect the CLI once (one-time):
+1. Have the user install the official Lark CLI (per its docs) and authenticate with the account the docs belong to.
+2. Verify read access: on any Lark doc URL the user pastes, run the CLI's doc-fetch command and confirm the content comes back.
+3. Record `lark_cli: "connected"` in `.onboard-state.json` (or `"skipped"` — the user can connect later; until then Lark links are handled by the user pasting text).
 
 **Figma MCP** (if selected):
 
@@ -2154,8 +2102,8 @@ Onboarding complete! All services verified and working.
 
 ⚠ RESTART YOUR AGENT SESSION NOW
 
-MCPs (Lark, Figma, GitHub, Context7) and skills (/workflow, /prd, etc.)
-are loaded at session start. Since they were configured during this session,
+MCPs (Figma, GitHub, Context7) and skills (/workflow, /prd, etc.) are
+loaded at session start. Since they were configured during this session,
 you MUST restart for them to become active.
 
 After restarting:
@@ -2165,8 +2113,9 @@ After restarting:
 Configured MCPs (available after restart):
   - Context7 — library documentation
   - GitHub — PR/issue management
-  - Lark — PRD from Lark docs (if configured)
   - Figma — design specs (if configured)
+
+Lark CLI: read-only doc reads, no restart needed (verify a pasted link fetch works)
 ```
 Set `status` to `"completed"`.
 

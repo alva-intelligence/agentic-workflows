@@ -11,7 +11,7 @@ Track files live at: `<service>/docs/tracks/<feature-slug>.track.md`
 prd: <feature-slug>
 parent_prd: docs/prd/<feature-slug>.md
 service: <api|web|ai-service|data-service>
-branch: <prefix><worker>/vc-<feature-slug>   # <prefix> = feature/ | fix/ | improvement/ (matches feature type)
+branch: <prefix>vc-<feature-slug>   # <prefix> = feature/ | fix/ | improvement/ (matches feature type)
 pr_url: <GitHub PR URL or null>
 status: in_progress | completed
 ---
@@ -41,12 +41,12 @@ Derived from the service PRD's Implementation Tasks:
 Append-only log of work done:
 
 ```
-### 2026-03-18 — fahrizky (frndos-implement)
+### 2026-03-18 — fahrizky (subagent/web)
 - Implemented TASK-1: Created API endpoint for brand health metrics
 - Implemented TASK-2: Added database migration for brand_metrics table
 - Next: TASK-3 (frontend component)
 
-### 2026-03-19 — daffa (frndos-implement)
+### 2026-03-19 — daffa (subagent/web)
 - Implemented TASK-3: Created BrandHealthDashboard component
 - All tasks complete, ready for PR
 ```

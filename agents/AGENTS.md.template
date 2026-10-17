@@ -32,12 +32,12 @@ When a command/phase is invoked, load the matching skill's `SKILL.md`. Deep refe
 |-------|---------|-----------------|
 | `onboard` | Fresh workspace setup, `/onboard`, verifying service env | `references/service-registry.md`, `references/external-steps.md`, `references/mcp-configs.md` |
 | `setup-workspace` | Bootstrapping the agentic-workflows install itself | — |
-| `workflow` | Phase transitions, `/workflow *`, implementation tracking | `references/track-conventions.md`, `references/testing-policy.md`, `references/session-checks.md`, `references/agent-teams.md` |
+| `workflow` | Phase transitions, `/workflow *`, implementation tracking | `references/track-conventions.md`, `references/testing-policy.md`, `references/session-checks.md` |
 | `prd` | `prd_creation` phase — authoring the main PRD | `references/conventions.md` |
 | `prd-split` | `prd_splitting` phase — creating the feature branch and splitting main PRD into per-service PRDs | `references/conventions.md` |
 | `brainstorm` | `brainstorming` phase — multi-choice questioning grounded in service state | `references/question-patterns.md` |
 | `pr-feedback` | `pr_review` phase — find every review thread, classify, fix or reply, resolve via GraphQL | — |
-| `jj-workflow` | Parallel features via JJ workspaces | `references/rules.md` |
+| `visual-testing` | Any UI work claiming to render — browser-use based visual validation, headless-first | — |
 | `workflow-update` | Updating the agentic-workflows instructions themselves | — |
 
 **Rules when invoking a skill:**
