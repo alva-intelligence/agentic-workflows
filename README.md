@@ -251,8 +251,12 @@ Skills are slash commands you invoke directly. They're the entry points for each
 2. GitHub Action computes SHA-256 hashes, bumps VERSION, updates `manifest.json`
 3. On next agent session, `update-check.sh` compares local hashes vs manifest
 4. Only changed files are downloaded — fragments, skills, etc.
-5. If fragments changed, `AGENTS.md` is regenerated automatically
-6. For non-trivial changes (settings, schema migrations), use `/workflow-update`
+5. Files removed upstream are pruned automatically: every update cycle persists
+   a manifest snapshot, diffs it against the next release's keys, and deletes
+   installed files whose manifest entries vanished
+6. If fragments changed, `AGENTS.md` is regenerated automatically
+7. For non-trivial changes (settings, schema migrations, one-time legacy
+   cleanup predating the snapshot), use `/workflow-update`
 
 ### Repository structure
 

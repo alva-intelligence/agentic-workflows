@@ -205,7 +205,70 @@ done <<< "$REMOTE_MANIFEST"
 TOTAL_FILES=${#FILE_REPO_PATHS[@]}
 info "Manifest contains $TOTAL_FILES files."
 
-# ── Download changed files ───────────────────────────────────────────────────
+# ── Local manifest snapshot + prune removed files ───────────────────────────
+# The local snapshot records what THIS workspace has installed. Files whose
+# manifest key vanished (upstream deletion) are deleted here — otherwise dead
+# agent files / skills linger forever and older workflows keep firing.
+LOCAL_MANIFEST="$CACHE_DIR/manifest.json"
+PRUNED_COUNT=0
+NEW_KEYSET_FILE="/tmp/aw-new-keys.$$"
+OLD_KEYS_FILE="/tmp/aw-old-keys.$$"
+trap 'rm -f "$NEW_KEYSET_FILE" "$OLD_KEYS_FILE"' EXIT
+
+collect_keys() { # $1 = manifest text, $2 = output keys file — prints key+install_to lines
+  local manifest_text="$1" out="$2" current_repo_path="" current_install_to=""
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^[[:space:]]*\"([^\"]+)\"[[:space:]]*:[[:space:]]*\{ ]]; then
+      local candidate="${BASH_REMATCH[1]}"
+      if [[ "$candidate" != "version" ]] && [[ "$candidate" != "updated" ]] && [[ "$candidate" != "files" ]]; then
+        current_repo_path="$candidate"
+        current_install_to=""
+      fi
+    fi
+    if [[ -n "$current_repo_path" ]] && [[ "$line" =~ \"install_to\"[[:space:]]*:[[:space:]]*\"([^\"]+)\" ]]; then
+      current_install_to="${BASH_REMATCH[1]}"
+    fi
+    if [[ -n "$current_repo_path" ]] && [[ -n "$current_install_to" ]]; then
+      printf '%s\t%s\n' "$current_repo_path" "$current_install_to" >> "$out"
+      current_repo_path=""
+      current_install_to=""
+    fi
+  done <<< "$manifest_text"
+}
+
+collect_keys "$REMOTE_MANIFEST" "$NEW_KEYSET_FILE"
+
+if [[ -f "$LOCAL_MANIFEST" ]]; then
+  OLD_KEYS_FILE="/tmp/aw-old-keys.$$"
+  collect_keys "$(cat "$LOCAL_MANIFEST")" "$OLD_KEYS_FILE"
+  header "Pruning files removed upstream"
+  while IFS=$'\t' read -r repo_path install_to; do
+    if ! cut -f1 "$NEW_KEYSET_FILE" | grep -Fxq -- "$repo_path"; then
+      local_target="$WORKSPACE_ROOT/$install_to"
+      if [[ -f "$local_target" && ! -L "$local_target" ]]; then
+        rm -f "$local_target"
+        PRUNED_COUNT=$(( PRUNED_COUNT + 1 ))
+        printf "  ${RED}-${RESET} %s\n" "$install_to"
+        # Clean now-empty parent dirs up to the known install roots
+        local_dirname="$(dirname "$local_target")"
+        for _ in 1 2 3; do
+          [ "$local_dirname" = "$WORKSPACE_ROOT" ] && break
+          [ "$local_dirname" = "$CACHE_DIR" ] && break
+          rmdir "$local_dirname" 2>/dev/null || break
+          local_dirname="$(dirname "$local_dirname")"
+        done
+      fi
+    fi
+  done < "$OLD_KEYS_FILE"
+  if [[ $PRUNED_COUNT -eq 0 ]]; then ok "Nothing to prune."; fi
+else
+  if [[ "$BOOTSTRAP" == false ]] && [[ -f "$VERSION_FILE" ]]; then
+    warn "No local manifest snapshot — cannot prune files removed upstream."
+    warn "Run /workflow-update after this update to clean legacy installs."
+  fi
+fi
+
+# ── Download changed files ───────────────────────────────────────────
 UPDATED_COUNT=0
 SKIPPED_COUNT=0
 FAILED_COUNT=0
@@ -287,9 +350,22 @@ if [[ "$REGEN_REQUIRED" == true ]]; then
 fi
 
 # ── Create symlinks for tool compatibility ───────────────────────────────────
-# .agentic-workflows/agents/<tool>/ is the source for each tool's agents.
-# .agents/ only contains skills/. Each tool symlinks agents from .agentic-workflows/.
+# .agentic-workflows/agents/<tool>/ is the source for each tool's agents (when
+# the release still ships agent files). .agents/ only contains skills/.
 header "Setting up tool compatibility symlinks"
+
+# Retire agent symlinks when agent files are no longer distributed (post-prune)
+teardown_agents_symlink() { # $1 = agent dir name, $2 = tool home dir
+  local src="$WORKSPACE_ROOT/.agentic-workflows/agents/$1" home="$WORKSPACE_ROOT/$2" link="$WORKSPACE_ROOT/$2/agents"
+  if [[ ! -d "$src" ]] && [[ -L "$link" ]]; then
+    rm "$link"
+    printf "  ${GREEN}-${RESET} removed stale %s/agents symlink (agent files no longer distributed)\n" "$2"
+  fi
+}
+teardown_agents_symlink claude-code .claude
+teardown_agents_symlink cursor .cursor
+teardown_agents_symlink opencode .opencode
+teardown_agents_symlink amp .amp
 
 # Claude Code: .claude/agents/ → .agentic-workflows/agents/claude-code/
 if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/claude-code" ]]; then
@@ -358,6 +434,10 @@ fi
 # Gate the .version write on successful regen — otherwise next run would see
 # matching versions and skip updating, leaving AGENTS.md stale against fragments.
 echo "$BRANCH" > "$CACHE_DIR/.branch"
+
+# Persist this cycle's manifest as the next run's prune baseline
+printf '%s\n' "$REMOTE_MANIFEST" > "$LOCAL_MANIFEST"
+
 if [[ "$REGEN_OK" == true ]] && [[ $FAILED_COUNT -eq 0 ]]; then
   echo "$REMOTE_VERSION" > "$VERSION_FILE"
 else
@@ -375,6 +455,9 @@ if [[ $UPDATED_COUNT -gt 0 ]]; then
 fi
 if [[ $SKIPPED_COUNT -gt 0 ]]; then
   info "Unchanged: $SKIPPED_COUNT file(s)"
+fi
+if [[ $PRUNED_COUNT -gt 0 ]]; then
+  info "Pruned: $PRUNED_COUNT removed file(s)"
 fi
 if [[ $FAILED_COUNT -gt 0 ]]; then
   warn "Failed: $FAILED_COUNT file(s)"

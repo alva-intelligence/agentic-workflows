@@ -101,7 +101,36 @@ If skill paths changed in the manifest:
 2. If any are missing or point to wrong targets, fix them
 3. Report what was fixed
 
-#### 3e. New skills or skill changes
+#### 3e. Legacy installs without a snapshot (one-time)
+
+Workspaces that last updated from a pre-4.0.0 install have no `manifest.json` snapshot in
+`.agentic-workflows/`, so update-check can't prune removed files. Run this cleanup once after the
+update lands (local `.version` or `.agentic-workflows/.version` < 4.0.0, or old roster files still
+present):
+
+1. **Agent files + symlinks.** If `.agentic-workflows/agents/<tool>/` contains frndos-` files or
+   exists at all, delete that directory tree. Then remove the `agents` symlinks it fed
+   (`.claude/agents`, `.cursor/agents`, `.opencode/agents`, `.amp/agents`) if they are symlinks.
+   Keep the `skills` symlinks — those are still real.
+2. **Removed skills.** Delete `.agents/skills/jj-workflow/` and
+   `.agents/skills/workflow/references/agent-teams.md` if present.
+3. **`.claude/settings.json`** (show the diff to the user, confirm first): remove the
+   `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` env entry (Team Session mode is gone), and drop these
+   permission entries: `mcp__lark__*`, `mcp__claude_ai_Lark__*`, `mcp__code-review-graph__*`,
+   `Bash(jj workspace:*)`, `Bash(jj git init:*)`, `Bash(jj log:*)`, `Bash(jj status:*)`. Lark is
+   read-only via the Lark CLI now; code-reviews no longer use the MCP.
+4. **`.workflow-state.json`** (preserve everything else): delete `workspaces` and
+   `workspace_meta` at the top level; delete `agent_teams` inside any feature entry. Leave
+   `branch` values alone — the new gates accept the legacy `<worker>/vc-` branch form.
+5. **`.onboard-state.json`**: remove `jj_available` and `claude_session_mode`; write
+   `optional_services` from the directories actually present (`data-pipeline`, `desktop` →
+   `"included"` when the dir exists, `"skipped"` otherwise) and `lark_cli: "skipped"` (user can
+   connect the Lark CLI anytime).
+
+From v4.0.0 on, every self-update carries a manifest snapshot and prunes removed files
+automatically — this step exists only for installs predating the snapshot.
+
+#### 3f. New skills or skill changes
 
 If any skill files were updated:
 

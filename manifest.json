@@ -28,7 +28,7 @@
       "type": "template"
     },
     "scripts/update-check.sh": {
-      "sha256": "4b6fd5c3028eeffb85ba6762a6c9f0f45f77608024f08101657f12771191a3a8",
+      "sha256": "f2a99ec792ae9cead35ab7819f89d0cf71c5ed9acb3f16a14368e0080e510d21",
       "install_to": ".agentic-workflows/scripts/update-check.sh",
       "type": "script"
     },
@@ -43,7 +43,7 @@
       "type": "workflow"
     },
     "workflow/gates.json": {
-      "sha256": "3019880591462ad2a6bc88df80ecfcab106ac59298e521d4ac21e74ceb5bfb99",
+      "sha256": "930226295d179577da4911ce3618ce4bca7095fc180bfd2704d2ae49a1debbf6",
       "install_to": ".agentic-workflows/workflow/gates.json",
       "type": "workflow"
     },
@@ -83,12 +83,12 @@
       "type": "skill"
     },
     "skills/workflow/SKILL.md": {
-      "sha256": "c3cea5809df03ab0403036295bc03a31ab9693500ef5dd7e73e5bd1c2cdfbbd8",
+      "sha256": "cfef6f313650d5cace4b06bdf75ffe411195a4f0e4f1adae9bd1f7834ce40070",
       "install_to": ".agents/skills/workflow/SKILL.md",
       "type": "skill"
     },
     "skills/workflow-update/SKILL.md": {
-      "sha256": "8d9fbd4936e217a97e59e90a0941481e1aa752c73787238130a64601868a4b05",
+      "sha256": "ebdef1c717439b17a28ab4c725a84b625ece91840928b4cc1ac33934b15ea00d",
       "install_to": ".agents/skills/workflow-update/SKILL.md",
       "type": "skill"
     },
