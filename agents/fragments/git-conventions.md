@@ -8,7 +8,7 @@
   - `bug` → `fix/`
   - `improvement` → `improvement/`
 - Human branches: `<prefix><description>` (no `vc-` infix)
-- Created from latest `develop` (for api, web) or `development` (for ai-service, data-service, data-pipeline)
+- Created from latest `develop` (for api, web, desktop) or `development` (for ai-service, data-service, data-pipeline)
 - NEVER work directly on develop/development
 
 ### Branch Workflow

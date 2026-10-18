@@ -19,17 +19,17 @@ verify again**:
 
 ### Subagent Orchestration
 
-Implemented via the harness's delegation capability when available: pi's `subagent` tool (batched
-tasks, `needs` dependency edges, per-task model + thinking level), Claude Code's Task/subagents, Amp
-threads, or equivalent. If the harness has no delegation capability, the orchestrator implements
-sequentially itself and says so.
+Implemented via whatever subagent/delegation capability the **current harness** exposes (batched
+parallel tasks, dependency edges, per-task model and reasoning effort, etc. — every harness names
+these differently; don't lean on any specific tool name). If the harness has no delegation
+capability, the orchestrator implements sequentially itself and says so.
 
 Rules:
 
 - **Parallel first.** Batch all independent service tasks in ONE delegation (one call with a task
   list), not many sequential calls. Use dependency edges only when ordering genuinely matters.
-- **Right model and effort.** Match each task to model + reasoning effort if the harness allows it
-  (e.g. `subagent_models` in pi): heavy reasoning for architecture/plan/review work, cheap fast
+- **Right model and effort.** Match each task to model + reasoning effort if the harness exposes
+  a per-task model/effort choice: heavy reasoning for architecture/plan/review work, cheap fast
   models for mechanical edits.
 - **Isolated writes.** Write tasks run in their own worktree/branch and report the branch — the
   orchestrator merges.
@@ -37,9 +37,9 @@ Rules:
   its own work (lint, tests, affected commands), and **visual-test UI work if possible**. Subagents
   NEVER ask the user directly and NEVER open PRs or advance phases.
 - **Intercom — main ↔ subagent.** If the harness supports mid-run messaging with a running
-  subagent (pi's `steer_subagent` / `reply_subagent`, or equivalent), use it: steer drifting work,
-  answer subagent questions without killing the run. Subagents that need a user decision return one
-  structured question in their output instead of blocking.
+  subagent (steering, answering a subagent's question without killing the run — whatever the
+  harness calls it), use it. Subagents that need a user decision return one structured question in
+  their output instead of blocking.
 - **Intercom — subagent ↔ subagent.** If the harness supports sibling-to-sibling messaging (team
   mailboxes, shared task lists), let subagents coordinate directly for interface details (shared
   types, API contracts, fixture shapes) while the orchestrator stays the single source of truth for

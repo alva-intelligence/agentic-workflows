@@ -3,7 +3,7 @@
   "updated": "2026-10-18",
   "files": {
     "agents/fragments/git-conventions.md": {
-      "sha256": "2448af45ceefef6268821442a9d65e87372be03ba061acb6aec34747498dea26",
+      "sha256": "940dd97a0b2a1c8c51102779071e398cf2c5d9913b12ee35d17b0568f4d540e6",
       "install_to": ".agentic-workflows/fragments/git-conventions.md",
       "type": "fragment"
     },
@@ -13,7 +13,7 @@
       "type": "fragment"
     },
     "agents/fragments/workflow-rules.core.md": {
-      "sha256": "e6d67d2493bbc6d523e1dc9fe343c34f83344e419cc1a5d827c02176dafc20d9",
+      "sha256": "d9571a5148e7585031ede3738eec5cd000a77033488c80f99d0c767190f3ccd7",
       "install_to": ".agentic-workflows/fragments/workflow-rules.core.md",
       "type": "fragment"
     },
@@ -38,7 +38,7 @@
       "type": "script"
     },
     "workflow/phases.json": {
-      "sha256": "81534e39079cdc4984b3a706687e8877c87f323b2b00bb75a242b9346eae9912",
+      "sha256": "4735b3df4ca1f8175c9ea3bf43b997008001e704e34b8cfd4e7afc8c5f937895",
       "install_to": ".agentic-workflows/workflow/phases.json",
       "type": "workflow"
     },

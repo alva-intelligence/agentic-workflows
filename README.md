@@ -171,16 +171,17 @@ is the orchestrator**: it verifies user claims, researches, plans, delegates
 implementation, and verifies everything it receives.
 
 - **Delegation, parallel-first.** Implementation tasks are batched in one
-  parallel subagent delegation (harness capability: pi `subagent`, Claude Code
-  Task/subagents, Amp threads…). Dependency edges only when ordering matters.
+  parallel subagent delegation, via whatever subagent/delegation capability the
+  current harness exposes — every harness names this differently. Dependency
+  edges only when ordering matters.
 - **Right model and effort per task.** Heavy reasoning for planning/review,
   cheap fast models for mechanical edits — where the harness allows it.
 - **Intercom.** If the harness supports mid-run messaging with running
-  subagents (pi's `steer_subagent` / `reply_subagent`, team mailboxes…), the
-  orchestrator steers drifting work and answers subagent questions without
-  killing runs — and lets siblings coordinate interface details directly when
-  sibling-to-sibling messaging exists. Otherwise all coordination routes
-  through the orchestrator.
+  subagents (steering, answering subagent questions, team mailboxes — the
+  mechanism differs per harness), the orchestrator steers drifting work and
+  answers subagent questions without killing runs — and lets siblings
+  coordinate interface details directly when sibling-to-sibling messaging
+  exists. Otherwise all coordination routes through the orchestrator.
 - **Subagent scope.** Each implementation subagent covers a service end-to-end:
   implement, verify its own work, visual-test its UI. Subagents never ask the
   user and never open PRs or advance phases.

@@ -40,7 +40,7 @@
     },
     "implementation": {
       "name": "Implementation",
-      "description": "Implementing the work by delegation: the orchestrator dispatches parallel per-service subagents (batched in one call, dependency edges only when ordering matters, right model + reasoning effort per task, mid-run steering / intercom when the harness supports it). Bug/improvement path: create <prefix>vc-<slug> from the latest base at entry (no PRD phases ran). Subagents implement, verify their own work, and visual-test UI when possible; the orchestrator re-verifies every claim — re-running checks, reviewing diffs, and visual-testing UI paths itself.",
+      "description": "Implementing the work by delegation: the orchestrator dispatches parallel per-service subagents (batched in one call, dependency edges, right model + reasoning effort per task, mid-run steering/intercom — the mechanism differs per harness). Bug/improvement path: create <prefix>vc-<slug> from the latest base at entry (no PRD phases ran). Subagents implement, verify their own work, and visual-test UI when possible; the orchestrator re-verifies every claim — re-running checks, reviewing diffs, and visual-testing UI paths itself.",
       "agent": null,
       "next": ["pr_submission"],
       "allowed_actions": ["create_branch", "delegate_subagents", "steer_subagents", "verify_work", "visual_testing", "update_track"]
