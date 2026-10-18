@@ -28,7 +28,7 @@
       "type": "template"
     },
     "scripts/update-check.sh": {
-      "sha256": "f2a99ec792ae9cead35ab7819f89d0cf71c5ed9acb3f16a14368e0080e510d21",
+      "sha256": "aa075b484084b95f6eb96c1d36084b6b8ddb186a771f876351b70650529a097f",
       "install_to": ".agentic-workflows/scripts/update-check.sh",
       "type": "script"
     },

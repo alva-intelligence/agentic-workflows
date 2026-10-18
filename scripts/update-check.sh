@@ -262,9 +262,44 @@ if [[ -f "$LOCAL_MANIFEST" ]]; then
   done < "$OLD_KEYS_FILE"
   if [[ $PRUNED_COUNT -eq 0 ]]; then ok "Nothing to prune."; fi
 else
+  # Older installs ran an update script that never saved a snapshot. Recover by
+  # cleaning exactly the paths the CURRENT manifest no longer distributes —
+  # idempotent, so in-flight or crashed upgrades converge on the next run.
+  legacy_cleaned=0
+  clean_legacy_dir() { # $1 = marker grep for NEW_KEYSET_FILE install_to, $2 = dir
+    if cut -f2 "$NEW_KEYSET_FILE" | grep -q -- "$1"; then return 0; fi
+    if [[ -d "$2" ]]; then
+      rm -rf "$2"
+      legacy_cleaned=$(( legacy_cleaned + 1 ))
+      printf "  ${RED}-${RESET} %s\n" "$2"
+      local parent; parent="$(dirname "$2")"
+      for _ in 1 2 3; do
+        [ "$parent" = "$WORKSPACE_ROOT" ] && break
+        [ "$parent" = "$CACHE_DIR" ] && break
+        rmdir "$parent" 2>/dev/null || break
+        parent="$(dirname "$parent")"
+      done
+    fi
+  }
+  clean_legacy_file() { # $1 = exact install_to, $2 = file
+    if [[ -f "$2" ]]; then
+      rm -f "$2"
+      legacy_cleaned=$(( legacy_cleaned + 1 ))
+      printf "  ${RED}-${RESET} %s\n" "$1"
+    fi
+  }
   if [[ "$BOOTSTRAP" == false ]] && [[ -f "$VERSION_FILE" ]]; then
-    warn "No local manifest snapshot — cannot prune files removed upstream."
-    warn "Run /workflow-update after this update to clean legacy installs."
+    header "Legacy install detected (no manifest snapshot) — cleaning removed files"
+    clean_legacy_dir '^\.agentic-workflows/agents/' "$WORKSPACE_ROOT/.agentic-workflows/agents"
+    clean_legacy_dir '^\.agents/skills/jj-workflow' "$WORKSPACE_ROOT/.agents/skills/jj-workflow"
+    clean_legacy_file '.agents/skills/workflow/references/agent-teams.md' "$WORKSPACE_ROOT/.agents/skills/workflow/references/agent-teams.md"
+    if [[ $legacy_cleaned -gt 0 ]]; then
+      info "Cleaned $legacy_cleaned legacy item(s)."
+      info "User state (settings permissions, .workflow-state fields) may still need the one-time"
+      info "cleanup — run /workflow-update; future updates prune themselves via the snapshot."
+    else
+      ok "No legacy leftovers found."
+    fi
   fi
 fi
 
@@ -311,7 +346,9 @@ for i in $(seq 0 $(( TOTAL_FILES - 1 ))); do
   mkdir -p "$local_dir"
 
   if file_content=$(fetch_remote "$download_url"); then
-    echo "$file_content" > "$local_path"
+    printf '%s\n' "$file_content" > "$local_path.tmp-update"
+    mv -f "$local_path.tmp-update" "$local_path"
+    rm -f "$local_path.tmp-update" 2>/dev/null || true
     UPDATED_COUNT=$(( UPDATED_COUNT + 1 ))
     UPDATED_FILES+=("$install_to")
     printf "  ${GREEN}+${RESET} %s\n" "$install_to"
@@ -368,7 +405,7 @@ teardown_agents_symlink opencode .opencode
 teardown_agents_symlink amp .amp
 
 # Claude Code: .claude/agents/ → .agentic-workflows/agents/claude-code/
-if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/claude-code" ]]; then
+if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/claude-code" && -n "$(ls -A "$WORKSPACE_ROOT/.agentic-workflows/agents/claude-code" 2>/dev/null)" ]]; then
   mkdir -p "$WORKSPACE_ROOT/.claude"
   if [[ ! -e "$WORKSPACE_ROOT/.claude/agents" ]]; then
     ln -s "../.agentic-workflows/agents/claude-code" "$WORKSPACE_ROOT/.claude/agents"
@@ -384,7 +421,7 @@ if [[ -d "$WORKSPACE_ROOT/.agents/skills" ]]; then
 fi
 
 # Cursor: .cursor/agents/ → .agentic-workflows/agents/cursor/ (Cursor-specific .mdc format)
-if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/cursor" ]]; then
+if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/cursor" && -n "$(ls -A "$WORKSPACE_ROOT/.agentic-workflows/agents/cursor" 2>/dev/null)" ]]; then
   mkdir -p "$WORKSPACE_ROOT/.cursor"
   if [[ ! -e "$WORKSPACE_ROOT/.cursor/agents" ]]; then
     ln -s "../.agentic-workflows/agents/cursor" "$WORKSPACE_ROOT/.cursor/agents"
@@ -400,7 +437,7 @@ if [[ -d "$WORKSPACE_ROOT/.agents/skills" ]]; then
 fi
 
 # OpenCode: .opencode/agents/ → .agentic-workflows/agents/opencode/ (OpenCode-specific format, no model field)
-if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/opencode" ]]; then
+if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/opencode" && -n "$(ls -A "$WORKSPACE_ROOT/.agentic-workflows/agents/opencode" 2>/dev/null)" ]]; then
   mkdir -p "$WORKSPACE_ROOT/.opencode"
   if [[ ! -e "$WORKSPACE_ROOT/.opencode/agents" ]]; then
     ln -s "../.agentic-workflows/agents/opencode" "$WORKSPACE_ROOT/.opencode/agents"
@@ -416,7 +453,7 @@ if [[ -d "$WORKSPACE_ROOT/.agents/skills" ]]; then
 fi
 
 # Amp: .amp/agents/ → .agentic-workflows/agents/amp/ (Amp reads AGENTS.md + .agents/skills/ natively, so no skills symlink needed)
-if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/amp" ]]; then
+if [[ -d "$WORKSPACE_ROOT/.agentic-workflows/agents/amp" && -n "$(ls -A "$WORKSPACE_ROOT/.agentic-workflows/agents/amp" 2>/dev/null)" ]]; then
   mkdir -p "$WORKSPACE_ROOT/.amp"
   if [[ ! -e "$WORKSPACE_ROOT/.amp/agents" ]]; then
     ln -s "../.agentic-workflows/agents/amp" "$WORKSPACE_ROOT/.amp/agents"
