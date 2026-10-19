@@ -154,6 +154,7 @@ Query: optional `active_board_id`, `active_size_id`, `selected_layer_ids[]` (the
   "truncated": { "boards": false, "sizes": false, "layers": false } }
 ```
 Caps: 30 boards, 50 sizes/board, 60 layers/surface, `text` ≤ 200 chars. `style` uses the text payload's own key names (whitelisted to the keys `UpdateStudioFileOverlaysRequest` accepts) so no mapping table exists anywhere.
+**Amendment FR-32 (2026-10-18, binding):** each layer item carries `name` (the Layers-panel name = `payload.name`, cleaned like `text`, ≤ 80 chars, `null` when empty), placed right after `type`. A board's `name` is never `null`: the user's name if set, else the label web shows under the board (`deriveVariantName(prompt_snapshot, version_number)`, `V{n}` for an empty/refusal prompt; ported as `App\Support\Studio\KvBoardLabel`, parity pinned by `KvBoardLabelTest`), plus `name_source: "user" | "derived"`. Write results' `target_label` use the same label.
 
 ### C3.3 Write result (all three layer tools)
 
@@ -277,6 +278,8 @@ Amendments from the cross-repo review (binding):
 
 - Every canvas write (update/add/remove and undo replay) holds a per-file lock `kv-canvas-write:{fileId}` (TTL 90 s, waits up to 20 s); after the wait api answers 409 `write_in_progress` and sends nothing. ai-service passes it to the model as `error_code` (no automatic retry) and its read timeout is 100 s so an applied write is never reported as failed.
 - No realtime channel exists for resize exports: web refetches `resizeExportsQueryKey(fileId)` after a live run that touched sizes and after undo (web Task 5). Other open tabs update on their next refetch.
+
+Amendment FR-34 (binding; additive, no existing C5 field changes): each `applied[]` entry also carries `layer_name` (`after.payload.name ?? before.payload.name`, cleaned like the C3.2 inventory name, ≤ 80, empty → null), `change` (`added`|`removed` for add/remove; for `set_layer` the first of `hidden`/`shown` (payload.hidden flag), `text` (payload.content), `resized` (width/height), `moved` (x/y), `rotated`, `restacked` (z), `style` (any other payload key), else `edited`; a size op with no difference, i.e. a size the run detached from its already-written board, takes its board's change for the same layer), `board_id` (the target itself for a board; a size's board, from the op's ledgered `board_id` or, on older runs, the tile's `parent_generation_id`) and `size` (`{width, height}` from the `kv_resize_exports` row, sizes only, else null). The view gains `headline: { layers: first ≤ 3 distinct non-null layer_names, change: the one shared change or null, surfaces: distinct applied targets, boards: distinct board_ids }`. `skipped[]` entries gain `layer_name` (looked up by `layer_id` in the run's applied ops, else null); `detached_sizes[]` entries gain `board_id` and `size`. Runs ledgered before this amendment (ops without `before`/`after`/`board_id`) still render: `change` = `edited`, `layer_name` = null. The api reads the run's size tiles in one query (trashed included). New C6 `ops` entries carry `board_id` (the target's board tip id).
 
 ## C6. Ledger table `kv_agent_runs` (api)
 
