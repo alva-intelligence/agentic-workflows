@@ -98,7 +98,7 @@ Web → api, on `POST v1/threads/{id}/stream` (KV thread), top-level body field:
 
 - Auth: `X-Internal-Token`.
 - Request: `{"layers":[{"layer_id":"…","asset_url":"https://…","asset_hash":"<sha256 hex>","name":"…|null"}]}` with 1..12 items.
-- Response 200: `{"data":[{"layer_id":"…","asset_hash":"…","description":"≤160 chars"}]}`. Layers that could not be described are omitted.
+- Response 200: `{"data":[{"layer_id":"…","asset_hash":"…","description":"≤160 chars"}],"model":"provider/model"}`. Layers that could not be described are omitted. `model` was added 2026-10-20: api stores it on `kv_layer_descriptions.model`.
 - `asset_url` hosts must pass the same allowlist the api uses (our S3/CDN). ai-service rejects other hosts with 422.
 
 ## Shared names
