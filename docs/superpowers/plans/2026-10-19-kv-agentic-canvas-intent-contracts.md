@@ -105,4 +105,4 @@ Web → api, on `POST v1/threads/{id}/stream` (KV thread), top-level body field:
 
 - PostHog: `agent_intent.decision` and `agent_intent.fast_undo` (api, queued), `agent_intent.clarified` (web). Each carries a `surface` property. No prompt text.
 - Tracing feature names: `agent_intent` (resolver), `kv_layer_describe` (descriptions).
-- Thresholds (ai-service only): `MIN_CONFIDENCE=0.6`, `TIE_MARGIN=0.15`, `PIXEL_LAYER_FLOOR=0.4`, `RESOLVER_TIMEOUT_S=4`, `FAST_UNDO_S=300` (api).
+- Thresholds (ai-service only): `MIN_CONFIDENCE=0.6`, `TIE_MARGIN=0.15`, `PIXEL_LAYER_FLOOR=MIN_CONFIDENCE` (0.6; was 0.4 until 2026-10-20), `RESOLVER_TIMEOUT_S=4`, `FAST_UNDO_S=300` (api).

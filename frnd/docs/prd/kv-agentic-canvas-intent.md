@@ -73,7 +73,7 @@ Card answers come back as a structured `card_answer`, so a clarification resolve
 
 - **FR-3:** Decision rules, first match wins:
   1. `action ∈ {brainstorm, other}` → **handoff** to today's agent path, unchanged.
-  2. `action = pixel_edit` and no reference has a candidate with confidence ≥ 0.4 → **handoff** (the agent may offer the re-render).
+  2. `action = pixel_edit` and no reference has a candidate with confidence ≥ 0.6 → **handoff** (the agent may offer the re-render). The floor equals the rule-5 minimum (raised from 0.4 on 2026-10-20): below it, a which-layer card could only lead to the same handoff.
   3. A `card_answer` resolves a reference → that candidate wins with confidence 1.0.
   4. A selected layer that is a candidate → it wins.
   5. Any reference whose top candidate is < 0.6, or whose top two are within 0.15 → **ask**: a which-layer card from those candidates (max 5, "<name or position> on <board>").
