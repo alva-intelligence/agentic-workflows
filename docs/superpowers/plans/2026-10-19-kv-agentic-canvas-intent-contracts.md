@@ -8,11 +8,17 @@ Branch in every repo: `feature/daffa/vc-kv-agentic-canvas-intent`. Worktree: `<r
 
 PostHog multivariate flag `kv-agentic-canvas-intent`:
 
-| Flag value | `intent_mode` |
+Resolution order (api `KvAgentCanvasIntentFlag::mode`, amended 2026-10-20):
+
+| Condition | `intent_mode` |
 |---|---|
-| `shadow` | `"shadow"` |
-| `live` | `"live"` |
-| anything else, error, or `kv-agentic-canvas` off | `"off"` |
+| `kv-agentic-canvas` is off for the user/workspace | `"off"` |
+| non-production `app.env` | config `studio.kv_agent_intent_mode` (env `KV_AGENT_INTENT_MODE`: `off` / `shadow` / `live`, **default `live`**). PostHog is not asked: `isEnabledForWorkspace` force-opens outside production, so an env value is the only real switch there. |
+| production, PostHog variant `shadow` | `"shadow"` |
+| production, PostHog variant `live` | `"live"` |
+| production, anything else or an error | `"off"` (fail-closed) |
+
+The production variant is read through a new `FeatureFlagService::variantForWorkspace(key, user, workspaceId): ?string`. It uses `PostHog::evaluateFlags`, the same L1/L2 cache (null stored as `''`), and returns null on throw.
 
 api resolves it once per turn and adds it to the `/ai/kv-generator/stream` body **only when `agent_canvas` is present**:
 
@@ -44,7 +50,7 @@ Web → api, on `POST v1/threads/{id}/stream` (KV thread), top-level body field:
   - `option_ids`: required, 1..8 strings, each ≤64;
   - `purpose` ∈ `direction|targets|layer`;
   - `surface` ∈ `kv_canvas`.
-- `card_id` must match a `question_card` row on this thread; otherwise 422 `{"message":"Unknown card"}`.
+- `card_id` must match a `question_card` row on this thread. Otherwise the stream answers with the existing SSE error frame (`streamErrorResponse('Unknown card')`, HTTP 200), the same convention as other `StreamChatRequest` validation. No user row is written and nothing is forwarded. (Amended 2026-10-20: was HTTP 422.)
 - The prompt text (`message`) is still the option label, as today.
 - api persists the answer on the user row as `message.card_answer` (the same object) and forwards the same object to ai-service as `card_answer` on `/ai/kv-generator/stream`.
 - ai-service: `KvStreamRequest.card_answer: CardAnswer | None`, a Pydantic model with the same 4 fields.
@@ -78,12 +84,15 @@ Web → api, on `POST v1/threads/{id}/stream` (KV thread), top-level body field:
 ```
 
 - `payload` for `decision`:
-  - `{"intent": <CanvasIntent JSON>, "decision": {"kind":"write|ask|handoff", "reason": "…", "tool_calls": [{"tool":"update_kv_layers","args":{…}}]?, "card": {"purpose":"layer|targets","option_ids":[…]}?}, "model": "provider/model"}`;
+  - `{"intent": <CanvasIntent JSON>, "decision": {"kind":"write|ask|handoff", "reason": "…", "tool_calls": [{"tool":"update_kv_layers","args":{…}}]?, "card": {"purpose":"layer|targets","option_ids":[…]}?}, "model": "provider/model", "canvas": <compact inventory snapshot>}`;
+  - `canvas` (amended 2026-10-20) is the inventory as the resolver saw it, trimmed so the whole payload stays ≤32 KB (layers drop `text` first, then `style`). The golden export uses it to replay the turn;
   - in shadow mode it also has `"agent": {"tools": ["update_kv_layers"], "layer_ids": [...], "asked": bool}`, i.e. what the P0 agent actually did. ai-service posts it when the turn ends.
 - `payload` for `resolver_timeout`: `{"error": "timeout|error|unparsed", "model": "…"}`.
 - `payload` for `mismatch_refused`: `{"tool": "…", "layer_ids": [...], "reference": "brand logo"}`.
 - The size limit is 32 KB per payload.
-- api itself writes `clarified` (on a `card_answer`) and `undone_fast` (on an undo ≤300 s). ai-service never sends those 2 kinds.
+- api itself writes `clarified` (on a `card_answer`) and `undone_fast` (on an undo ≤300 s). ai-service never sends those 2 kinds. The api-written rows use `mode` `shadow|live|off`: `off` when no `decision` event exists for that run or thread turn (amended 2026-10-20).
+- Path: `POST {API_INTERNAL_URL}/api/internal/agent-intent-events` (the `/api/internal` RequireInternalToken group, not `/api/v1/internal`). `thread_id` is required; `run_id` and `latency_ms` are nullable.
+- PostHog (amended 2026-10-20): after storing a `decision` or `undone_fast` row, api dispatches a queued capture of `agent_intent.decision` / `agent_intent.fast_undo` with `surface`, `kind`, `mode`, `decision_kind`, a confidence bucket, `latency_ms` and `age_s`. It never includes prompt or layer text.
 
 ## I6 — `POST /ai/kv-canvas/describe-layers` (api job → ai-service)
 
@@ -94,6 +103,6 @@ Web → api, on `POST v1/threads/{id}/stream` (KV thread), top-level body field:
 
 ## Shared names
 
-- PostHog: `agent_intent.decision`, `agent_intent.clarified`, `agent_intent.fast_undo`, each with a `surface` property. No prompt text.
+- PostHog: `agent_intent.decision` and `agent_intent.fast_undo` (api, queued), `agent_intent.clarified` (web). Each carries a `surface` property. No prompt text.
 - Tracing feature names: `agent_intent` (resolver), `kv_layer_describe` (descriptions).
 - Thresholds (ai-service only): `MIN_CONFIDENCE=0.6`, `TIE_MARGIN=0.15`, `PIXEL_LAYER_FLOOR=0.4`, `RESOLVER_TIMEOUT_S=4`, `FAST_UNDO_S=300` (api).
