@@ -97,9 +97,9 @@ Web → api, on `POST v1/threads/{id}/stream` (KV thread), top-level body field:
 ## I6 — `POST /ai/kv-canvas/describe-layers` (api job → ai-service)
 
 - Auth: `X-Internal-Token`.
-- Request: `{"layers":[{"layer_id":"…","asset_url":"https://…","asset_hash":"<sha256 hex>","name":"…|null"}]}` with 1..12 items.
-- Response 200: `{"data":[{"layer_id":"…","asset_hash":"…","description":"≤160 chars"}],"model":"provider/model"}`. Layers that could not be described are omitted. `model` was added 2026-10-20: api stores it on `kv_layer_descriptions.model`.
-- `asset_url` hosts must pass the same allowlist the api uses (our S3/CDN). ai-service rejects other hosts with 422.
+- Request: `{"layers":[{"layer_id":"…","asset_url":"https://…","asset_hash":"<sha256 hex>","name":"…|null"}],"workspace_id":"…|null","user_id":"…|null"}` with 1..12 items. `workspace_id` / `user_id` (added 2026-10-20, optional) attribute the `kv_layer_describe` trace (`set_ai_context`): api sends the studio file's workspace and the turn's user (null when unknown).
+- Response 200: `{"data":[{"layer_id":"…","asset_hash":"…","description":"≤160 chars"}],"model":"provider/model"}` (Pydantic `DescribeLayersResponse`). Layers that could not be described are omitted. `model` was added 2026-10-20: api stores it on `kv_layer_descriptions.model`.
+- `asset_url` hosts must pass the same allowlist the api uses (our S3/CDN). ai-service rejects other hosts with 422. On a bare S3/MinIO endpoint (`AWS_ENDPOINT`, `s3.<region>.amazonaws.com`) only our bucket is allowed: path-style `/<S3_BUCKET_NAME>/…` or virtual-hosted `<S3_BUCKET_NAME>.<endpoint>` (amended 2026-10-20).
 
 ## Shared names
 
