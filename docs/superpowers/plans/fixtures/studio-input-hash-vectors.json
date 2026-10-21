@@ -1,0 +1,80 @@
+[
+  {
+    "value": {
+      "b": 1,
+      "a": {
+        "d": [
+          3,
+          2,
+          1
+        ],
+        "c": "x"
+      }
+    },
+    "canonical": "{\"a\":{\"c\":\"x\",\"d\":[3,2,1]},\"b\":1}",
+    "sha256": "6a612892896f060864370ed1dd091ec7f46fb643cbb634b5a40d1822a2cb8368"
+  },
+  {
+    "value": {
+      "campaign": "Ramadan 2027 · kopi ☕",
+      "path": "a/b"
+    },
+    "canonical": "{\"campaign\":\"Ramadan 2027 · kopi ☕\",\"path\":\"a/b\"}",
+    "sha256": "b1979018ed4f413106e10039ebea6c2031fae87a6f985f89fb481f0343b4cdbb"
+  },
+  {
+    "value": {
+      "q": "she said \"hi\"\nnext\tline\\end"
+    },
+    "canonical": "{\"q\":\"she said \\\"hi\\\"\\nnext\\tline\\\\end\"}",
+    "sha256": "be50f53ce75ad0dd0f9c7d1d96bc3c973e162ece76634eb8bb3ca9c11a02befb"
+  },
+  {
+    "value": {
+      "ctl": "\u0001",
+      "ls": "line sep"
+    },
+    "canonical": "{\"ctl\":\"\\u0001\",\"ls\":\"line sep\"}",
+    "sha256": "0b611b84cefa4cf1c1dccaedf5029d3d0661d893a4bbe041560c8d188fa7030f"
+  },
+  {
+    "value": {
+      "empty_obj": {},
+      "empty_arr": [],
+      "nothing": null
+    },
+    "canonical": "{\"empty_arr\":[],\"empty_obj\":{},\"nothing\":null}",
+    "sha256": "9f5e452a4d4e68e06266e2995222320a9f6bc6ff490dda669fd15fff1ded9be7"
+  },
+  {
+    "value": {
+      "int": 2,
+      "neg": -7,
+      "float": 1.5,
+      "zero": 0
+    },
+    "canonical": "{\"float\":1.5,\"int\":2,\"neg\":-7,\"zero\":0}",
+    "sha256": "fc61246559e47d06bc17842c16170363c454e542d8cb6147de02fa12e045ead6"
+  },
+  {
+    "value": {
+      "preset": "directions",
+      "prompt": "Human ritual",
+      "output": "list",
+      "count": 6
+    },
+    "canonical": "{\"count\":6,\"output\":\"list\",\"preset\":\"directions\",\"prompt\":\"Human ritual\"}",
+    "sha256": "15b5ff7dec4bf1d3279d26f7dd266727368288b15ba6fe15b262e8a53dc38cc2"
+  },
+  {
+    "value": [
+      {
+        "title": "Sahur",
+        "body": "",
+        "prompt": "x"
+      }
+    ],
+    "canonical": "[{\"body\":\"\",\"prompt\":\"x\",\"title\":\"Sahur\"}]",
+    "sha256": "afc17cfe0b21b56c3cb3380d7caf071fcda916ef7be21685cc2c62b9a468b7b9"
+  }
+]
