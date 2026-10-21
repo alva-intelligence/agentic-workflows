@@ -7,9 +7,9 @@ Shared by the four P1 plans (`…-api.md`, `…-ai-service.md`, `…-collab.md`,
 | UI node (`DocNode.type`) | Core record type | Runner | Price key (default) |
 |---|---|---|---|
 | `textGen` | `textGen` | `text_generate` | `studio_text_generate` (2) |
-| `file` (brief) | `file` | `brief_read` | `studio_brief_read` (0) |
+| `upload` holding a brief (`briefs[id]` present, `source ≠ "none"`) | `upload` | `brief_read` | `studio_brief_read` (0) |
 
-Every other node type keeps the prototype's mock run, free, in real files.
+Every other node type keeps the prototype's mock run, free, in real files. **Naming:** the prototype's File node is node type `upload` (title "File"); wherever these plans say "File node" or `file`, the node type is `upload`. An `upload` holding an image (no brief) is not runnable.
 
 ## C1. Doc shape (Yjs `studio:<file_id>`)
 
@@ -82,11 +82,11 @@ Keys of `input_hashes` for a `textGen`:
 - `settings` → `{ preset, prompt, output, count }` (prompt = the node's own prompt text, trimmed)
 - `context:<source_node_id>` per wired Context source → the source's resolved text value (below)
 - `prompt:<source_node_id>` for a wired Prompt port → its resolved text value
-For a `file`: `source` → `{ kind: briefs.source, upload_id: briefs.uploadId, lark_url: briefs.larkUrl, text: briefs.text }` with null/empty members omitted (`text` only when `kind = typed`).
+For an `upload` brief: `source` → `{ kind: briefs.source, upload_id: briefs.uploadId, lark_url: briefs.larkUrl, text: briefs.text }` with null/empty members omitted (`text` only when `kind = typed`).
 
 Resolved text value of a source node:
 - Text node (`text`/`prompt` types): `{ kind: "text", text: texts[id] }`
-- File node: `{ kind: "brief", fields: <shown version's fields with edits>, text: <shown version text> }`; no succeeded version → the source is missing.
+- File (`upload` brief) node: `{ kind: "brief", fields: <shown version's fields with edits>, text: <shown version text> }`; no succeeded version → the source is missing.
 - textGen: `{ kind: "items", items: <shown version items with edits, each {title, body, prompt}> }`; no succeeded version → missing.
 - liveObject → blocked `live_objects_unsupported`.
 
