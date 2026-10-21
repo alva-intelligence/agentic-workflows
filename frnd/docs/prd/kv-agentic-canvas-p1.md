@@ -124,16 +124,18 @@ P1 makes the KV chat (Craft, flag) change the canvas structure.
 
 **Plan card (paid structure)**
 
-- **FR-11:** `propose_kv_variants {file_id?, board_id, variants[{direction}], copy_layers}` and `propose_kv_sizes {file_id?, board_ids, sizes[preset | {width, height}]}` store a `kv_agent_plans` row and end the turn. They use `stop_after_tool_call` + post-hook, and `plan_pending` is claimed before the await (the `propose_deck_plan` pattern). Every other write in that turn is refused.
+- **FR-11:** `propose_kv_variants {file_id?, board_id, variants[{direction, suggestions[{label, direction}] ≤ 3}], extra_directions[{label, direction}] ≤ 3, copy_layers}` and `propose_kv_sizes {file_id?, board_ids, sizes[preset | {width, height}]}` store a `kv_agent_plans` row and end the turn. They use `stop_after_tool_call` + post-hook, and `plan_pending` is claimed before the await (the `propose_deck_plan` pattern). Every other write in that turn is refused. The agent writes the suggestions in the same call (no second model call); they are grounded in the source board and the brand, distinct from the variant's own direction, and fenced like other user-editable text.
 - **FR-12:** The plan stores each step as `{id, capability, params, estimate}`. Go lands exactly the stored params: same source board, same directions, same `copy_layers`, same sizes. A newer plan on the same thread supersedes a pending one.
 - **FR-13:** The plan card shows:
   - one row per step: variant direction, editable before Go, and a checkbox;
+  - under each direction, the step's suggestion chips (short label, full direction on hover). A chip prefills the direction field; clicking the active chip restores the agent's original direction. Typing over a prefilled direction is allowed;
+  - "Add variant" while the plan has fewer than 4 variants: adds a row prefilled with the next unused `extra_directions` entry, whose chips are the remaining extras. At 4 it reads "Max 4 variants";
   - the "Copy layers" toggle for variant plans (default on);
   - per size: preset, dimensions and whether it is layer projection or AI resize;
-  - the total estimate (credits + time) and the balance;
+  - the total estimate (credits + time) for the ticked rows, and the balance;
   - Go / Cancel.
 
-  Editing a direction or untoggling copy-layers is sent on Go as `accepted_steps` + step overrides. The api validates the overrides against the stored step shape.
+  Edited directions, added rows and the copy-layers value are sent on Go as `accepted_steps` + `step_overrides` (added rows as new steps). The api validates the overrides against the stored step shape (direction ≤ 500 chars, ≤ 4 steps in total) and re-estimates before dispatch.
 - **FR-14:** Go and Cancel are a new user turn carrying `{plan_id, plan_action, accepted_steps, step_overrides}`, using the `card_answer` channel (surface `kv_canvas`, purpose `plan`). The api transitions the plan before it builds the ai-service payload (`DeckAgentPlanService::transition` pattern).
 - **FR-15:** The execution tool `run_kv_plan_step {plan_step_id}` is only mounted on a Go turn and only accepts steps of an accepted plan. A repeated `plan_step_id` returns the prior result without writing again. The in-app agent never gets a tool that spends credits without an accepted plan. For MCP, the client's own user approves `run_kv_plan_step`.
 - **FR-16:** Plans expire after 15 min in `proposed`. Go on an expired, superseded, cancelled or executed plan writes nothing, and the card shows why.
