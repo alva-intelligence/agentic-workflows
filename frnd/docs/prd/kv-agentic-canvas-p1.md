@@ -161,7 +161,7 @@ P1 makes the KV chat (Craft, flag) change the canvas structure.
 **Progress, run card, undo**
 
 - **FR-21:** Execution tools emit one generic progress event, `agent_item_progress {run_id, item_id, kind: board|size, state: queued|generating|done|failed, board_id?}`. It is relayed as SSE `tool_progress` (not persisted; `ChatService` byte cap). Renders that outlive the turn update the run card through its existing poll (`agentRunRefetchInterval`). The ledger reports them as "dispatched, not finished" (a new `KvCanvasWriteLedger` footnote rule).
-- **FR-22:** The run card gains board and size rows: placeholder → rendering → done / failed, plus a thumbnail when done. Clicking a row focuses the board. Actual credits are shown once settled (`recordCredits` pattern). A board added by the agent shows an "Added by FRND" badge on the canvas until the user edits it.
+- **FR-22:** The run card gains board and size rows: placeholder → rendering → done / failed, plus a thumbnail when done. Clicking a row focuses the board. Actual credits are shown once settled (`recordCredits` pattern). The canvas shows no agent badge: the run card is the only marker of agent-created boards. The `agent_run_id` stamp stays in board/generation metadata for undo.
 - **FR-23:** The ledger records board ops (`sink: doc`, `op: add_board | rename_board | move_board | hide_board | rekey_board_tip`) and job ops (`sink: job`, `op: render | resize`, `job_id`). Undo, newest first:
   - an added board that the user has not edited since → `hide_board` (restorable, not deleted);
   - an edited board → kept and reported as `changed_after_run`;
@@ -219,7 +219,7 @@ P1 makes the KV chat (Craft, flag) change the canvas structure.
 
 - KV card registry; `KvPlanCard` (editable directions, checkboxes, copy-layers toggle, estimate, Go/Cancel, expired/superseded states).
 - `KvAgentRunCard`: board/size rows with progress, thumbnails, focus, credits.
-- `tool_progress` reducer for `agent_item_progress`; placeholder rendering for `generating` boards from the doc; "Added by FRND" badge.
+- `tool_progress` reducer for `agent_item_progress`; placeholder rendering for `generating` boards from the doc.
 - TS fixture export script for the FR-6 ports.
 - PostHog events (FR-29).
 
@@ -348,7 +348,7 @@ Indexes: (`studio_file_id`, `status`), `thread_id`.
 
 ## Open Questions
 
-- [ ] Q-1: Estimate source for variants: `LLMHelper::estimateImageCredits` of the file's default image model × N. Is a range (min/max) needed because renders are token-metered?
-- [ ] Q-2: Should "Added by FRND" clear on the first user edit of the board, or stay until the run is older than N days?
-- [ ] Q-3: Board op cap 20 and job cap (4 variants + 20 sizes) per run: right for MCP when it opens in P2?
-- [ ] Q-4: Delivery inside the feature: one PR per service with rounds A + B, or two stacked PRs per service?
+- [x] Q-1: Estimate source for variants → a min–max range (`{credits_min, credits_max}`, same shape as the deck estimate), derived from the file's default image model pricing × accepted variants, because renders are token-metered (daffa, 2026-10-21).
+- [x] Q-2: Canvas badge for agent boards → none. The run card is the only marker; the `agent_run_id` stamp stays in metadata for undo (daffa, 2026-10-21).
+- [x] Q-3: Caps per run → 20 board ops, 4 variants + 20 sizes. Revisit when MCP opens in P2 (daffa, 2026-10-21).
+- [x] Q-4: Delivery → two stacked PRs per service: round A (registry, collab board ops, placement ports, free structure tools), then round B (plan card, variants, sizes) stacked on A (daffa, 2026-10-21).
