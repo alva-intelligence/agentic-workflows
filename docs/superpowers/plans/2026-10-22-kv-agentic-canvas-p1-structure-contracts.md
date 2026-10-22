@@ -415,3 +415,137 @@ CI step: `bun run scripts/exportBoardPlacementFixtures.ts && php artisan test --
 11. **Decisions 2026-10-22 (daffa, after Round A).** (a) The duplicate limit of 4 counts per user message / run, in total across boards: ai-service clamps across the turn's `duplicate_kv_board` calls, and api enforces it per `run_id` from the ledger's duplicate `add_board` ops, skipping the excess with `duplicate_cap_reached`. The per-call `count` max of 4 stays. (b) `add_sizes` with no named board always shows the which-board card; it has no selected/active fallback (S16). (c) Hidden boards reach the agent only through `get_kv_canvas.hidden_boards` (api, flag on); the intent fast path hands "show X" to the agent when X is hidden. Round B may add `hidden_boards` to the intent inventory.
 
 12. **Manual e2e fixes (2026-10-22).** (a) Duplicate placement uses VISIBLE boards only (excluding `removed`), matching web's `duplicateBoardMutation`; overlap on a later unhide is accepted (api 6b75d5e43). (b) Web renders server-created boards live: a generic doc observer invalidates the kv-file query when doc boards or versionIds reference unknown generation ids. Each unknown id is fetched once per file, so Round B placeholder ids never loop (web bd2049f02). Round B placeholders still need their own render path (S15).
+
+---
+
+## Round B addendum — frozen details (R1–R12, 2026-10-22)
+
+These pin the Round B shapes S11–S15 leave open. They are binding for all four services. Round B continues on the same branch `feature/daffa/vc-kv-agentic-canvas-p1`.
+
+### R1 — Plan tool route (api) [S12]
+
+`POST v1/mcp/tools/kv/canvas/{fileId}/plans` takes `{capability: "variant_boards"|"add_sizes", params, thread_id}`. ai-service sends `thread_id` from the turn. MCP callers send none.
+
+- **Variant steps:** api creates one step per `params.variants[i]`:
+  - `{id: "step_<ulid>", capability: "variant_boards", params: {board_id, direction, suggestions[]}, estimate}`;
+  - the plan row gains a jsonb `options` column (added to S11) holding the plan-level `copy_layers` and `extra_directions`.
+- **Size steps:** api creates one step per (board, size): `{id, capability: "add_sizes", params: {board_id, size: "<preset>"|{width,height}, method: "layers"|"ai", blocked_reason: string|null}, estimate}`.
+  - `method` is `layers` when the parent `isLayerComposed()`, else `ai`.
+  - `blocked_reason` comes from the same rules as `KvResizeExportController::store`: layer-only preset on an AI parent, custom size on an AI parent, or a size that already exists for the board.
+  - Blocked steps are never accepted.
+- **Response 200:** `{data: <plan view R3>}`.
+- **Errors:**
+  - 422 `invalid_params` (≤4 variants, ≤3 suggestions, ≤3 extra, direction ≤500, ≤20 sizes);
+  - 404 `board_not_found`;
+  - 422 `nothing_to_propose` (all size steps blocked).
+- **Flag gate:** `kv-agentic-canvas` + `kv-agentic-canvas-structure`.
+- **MCP twins:** `propose_kv_variants` and `propose_kv_sizes`. These are two twins on the one route; the twin fills `capability`.
+
+### R2 — Estimates (api) [Q-1]
+
+- **`variant_boards` step:** `credits_min = LLMHelper::estimateImageCredits(pricing of the file's craft image model)`, `credits_max = ceil(min × 1.6)`, `seconds = 70`. The model is the one `handleCreateVariant` would use: the thread's last `image_model`, else the registry default.
+- **`add_sizes` step:**
+  - `layers`: `credits_min = credits_max = CreditPrice kv_resize_overlay_only`, `seconds = 5`;
+  - `ai`: min = the image-model estimate, max = ×1.6, `seconds = 45`.
+- **Plan estimate:** sums credits; `seconds` = max of the steps, because renders run in parallel.
+
+### R3 — Plan view (api → web) [S12]
+
+`GET v1/studio/files/{file}/agent/plans/{plan}` returns `{data: {...}}`:
+
+```jsonc
+{ "id", "status", "goal", "capability": "variant_boards"|"add_sizes",
+  "source_board": { "board_id", "name" } | null,
+  "steps": [ { "id", "capability", "params", "estimate", "done": false } ],
+  "options": { "copy_layers": true, "extra_directions": [ {"label", "direction"} ] },
+  "estimate": { "credits_min", "credits_max", "seconds" },
+  "accepted_steps": null, "step_overrides": null,
+  "run_id": null, "expires_at", "created_at",
+  "balance": 1240 }
+```
+
+- `status` is computed: a `proposed` plan past `expires_at` reads `expired`, and the row is updated lazily.
+- `balance` = the user's spendable credits, from the same source as the KV generate button.
+
+### R4 — Plan card frame (ai-service → api → web)
+
+- After a successful proposal, ai-service emits NDJSON `{event: "kv_plan_card", plan_id, card_id}` and ends the turn (`stop_after_tool_call`).
+  - `card_id` is a ULID minted by ai-service, like question cards (I2).
+- api relays it as SSE `{type: "kv_plan_card", plan_id, card_id}` and persists it on the assistant row as `message.kv_plan_card = {plan_id, card_id}`. History hydrate returns it.
+- web renders `plan_card` from the S17 registry with `{planId, cardId}`. The card fetches R3 and polls every 5 s while `proposed`.
+
+### R5 — Go / Cancel (web → api) [S12]
+
+- On Go, web sends `message: "Go"` and `card_answer {card_id, option_ids: ["go"], purpose: "plan", surface: "kv_canvas"}` plus top-level `plan_action {plan_id, accepted_steps, step_overrides, options: {copy_layers}}`. On Cancel, it sends `message: "Cancel"` and `option_ids: ["cancel"]`, with no `plan_action` required.
+- `step_overrides` maps a step id to `{direction}`. Added rows use new ids `"new_<n>"` with `{direction}` and become new steps on transition. The total stays ≤4.
+- api, before building the ai-service payload:
+  1. validates `card_answer` (purpose `plan` added to `QuestionCardPayload::PURPOSES` and `CardAnswer`); the `card_id` must match the thread's `kv_plan_card` row;
+  2. calls `KvAgentPlanService::transition`, which applies overrides and new steps, re-estimates, and sets `accepted` or `cancelled`. A non-`proposed` plan is left as it is and the turn gets its real status;
+  3. on `accepted`: calls `assertAffordable(estimate.credits_max of accepted steps)`. If that fails, the plan stays `proposed` and the turn answers with the SSE error frame `insufficient_credits`.
+- api forwards `agent_canvas.plan = {plan_id, status, accepted_steps, capability}` to ai-service. `run_kv_plan_step` appears in `agent_canvas.tools` only when `status == "accepted"`.
+
+### R6 — Execution (api) [S12, S13, S14]
+
+`POST v1/mcp/tools/kv/canvas/plans/steps/run` takes `{plan_step_ids: [..]}`, max 24 (4 variants or 20 sizes). It is a batch so the Go turn makes one call.
+
+- api resolves `acceptedPlanForStep` for each step. Unknown or not-accepted steps are skipped as `plan_not_accepted`.
+- **Idempotency:** a step already present in `run.ops` (`plan_step_id` on the op) returns its prior result with no new write.
+- **Variant steps**, all at once:
+  1. compute centres with `KvBoardPlacement::nextFreeCenters` next to the source (visible boards only);
+  2. mint one placeholder board id per step (ULID);
+  3. one collab batch of `add_board` ops, with `name = deriveVariantName(direction, n)`;
+  4. ledger `sink: doc, op: add_board, placeholder: true, plan_step_id` plus `sink: job, op: render, plan_step_id, job_id, board_id: <placeholder>`;
+  5. dispatch `RenderKvVariantJob` per step: queue `default`, timeout 300, tries 1, `Cache::lock("kv-variant:{step}")`.
+- **Size steps:** `createBatch` per board with that board's accepted sizes. Ledger `sink: job, op: resize, plan_step_id, job_id: <export id>, board_id`. The pricing path is unchanged.
+- **Response:**
+  - `{data: {run_id, applied: [{plan_step_id, kind: "board"|"size", board_id, size_id?, state: "queued"}], skipped: [{plan_step_id, reason, detail?}]}}`;
+  - the plan's `run_id` is set, and `markExecuted` runs when the turn settles.
+
+### R7 — `RenderKvVariantJob` (api) [S13]
+
+- **Payload:** the `KvToolController::generate` body. `mode: "image"`, `canvas_mode: "craft"`, `prompt: direction`, `base_generation: source tip` (logo-free `source_image_url ?: image_url`), `aspect_ratio: source`, `chat_history: []`. It calls `/ai/kv-generator/complete`, with `parent_generation_id = source tip` on the persisted row.
+  - The shared payload builder is extracted from `KvToolController::generate`, so both paths use one code path.
+- **On success:**
+  1. `persistCompletion` (the only billing);
+  2. if `run.status == "undone"` or the placeholder is hidden: stop; the generation exists but is not placed;
+  3. else one collab batch: `rekey_board_tip {from: placeholder, to: generation}`, plus `add_layer` ops from `KvVariantOverlays::overlaysForVariant(source layers, chain, generation)` when `copy_layers`;
+  4. the generation `metadata` gains `{agent_run_id, plan_step_id, source_board_id, direction}`;
+  5. the ledger records the job op `state: done, generation_id`.
+- **On failure** (HTTP error, no `generation_ready`, timeout or `onFailure`): `hide_board` the placeholder, and the ledger records `state: failed`, with `render_failed` in `skipped`.
+
+### R8 — Item states and run view (api → web) [S15]
+
+- The run view gains `items: [{plan_step_id, kind, board_id, size_id, name, state: queued|generating|done|failed, generation_id, image_url, credits}]`. They are read from the ledger job ops plus the board/size rows.
+  - Variant: `generating` once the job started, `done` with `image_url` after rekey.
+  - Size: mapped from the `kv_resize_exports.status` row.
+- The run view also gains `summary.credits`: the summed priced usage for this run's generations and size charges, written on settle and again when the last job lands.
+- A run with any `queued`/`generating` item keeps `status: "running"` past the turn. It completes when the last item settles, or when the stale sweep (900 s) fails what is left: placeholders hidden, items `failed`.
+- web polls the run view (`agentRunRefetchInterval`) while any item is open.
+
+### R9 — Progress frames [S15]
+
+- Inside the Go turn, `run_kv_plan_step` yields the CustomEvent `agent_item_progress {run_id, item_id: plan_step_id, kind, state: "queued", board_id}` once per applied item, right after the api response.
+- Later states come from the R8 poll, not SSE: the turn ends while renders run.
+- api relays the CustomEvents as the existing `tool_progress` frame.
+- The ledger footnote "started but not finished" uses `record_progress` (Round A).
+
+### R10 — Placeholder rendering (web) [S15, FR-28]
+
+- A doc board whose id has no generation and which appears in the active run view's `items` (variant, not `done`) renders as a placeholder: dashed frame, "Generating…", same aspect as the source.
+- `failed` renders "Couldn't render · removing" until the hide lands.
+- On reload, the run view is fetched for the latest running run on the thread, so placeholders survive a reload.
+- `useRefetchKvFileOnUnknownBoards` (bd2049f02) stays as is; the placeholder path covers ids that still have no generation.
+
+### R11 — Structural undo for jobs (api) [S9]
+
+- `render` op, done: `hide_board` the generated board, unless it was edited since the run (`boardEditedSince`), which is kept and reported as `changed_after_run`.
+- `render` op, open: hide the placeholder. The job's land step sees `run.status == "undone"` and does not place the result.
+- `resize` op: open → `KvResizeExportService::cancel`; done → the existing delete path; a size edited after the run is kept.
+- The undo result gains `credits_spent` (not refunded).
+
+### R12 — Intent: "duplicate + visual change" is a variant (ai-service)
+
+"Duplikat V2 dan ganti background jadi X", "copy V2 but make it night" and similar phrases resolve to `variant` with `count = copies` and `directions = [the change]`, never `duplicate` with a plain copy.
+
+- The resolver hint and the golden cases pin this (≥3 new cases, EN + ID).
+- A plain copy, with no visual change named, stays `duplicate`.
