@@ -549,3 +549,5 @@ These pin the Round B shapes S11–S15 leave open. They are binding for all four
 
 - The resolver hint and the golden cases pin this (≥3 new cases, EN + ID).
 - A plain copy, with no visual change named, stays `duplicate`.
+
+**R9 amendment (2026-10-22, binding):** api's `ChatService` strips the CustomEvent envelope keys (`kind`, `run_id`, …) from `tool_progress` `data`, and agno's CustomEvent `kind` is the event name. The `agent_item_progress` event therefore carries `item_id`, `item_kind` (`board` | `size`), `state`, `board_id` and `agent_run_id`. Web reads `item_kind ?? kind` and `agent_run_id ?? run_id`.
