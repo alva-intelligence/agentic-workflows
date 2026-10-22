@@ -178,6 +178,8 @@ P1 makes the KV chat (Craft, flag) change the canvas structure.
 
 - **FR-25:** `CanvasIntent.Action` gains `duplicate`, `variant`, `add_sizes`, `rename_board`, `arrange`, `hide_board`, `show_board`. `params` carries `count`, `directions[]`, `sizes[]`, `names[]`. `IntentSurface` gains board-level lookups (`known_board_ids`, a board-name resolver), and `build_tool_calls` routes each action through the capability registry. Board references resolve from the labels shown under boards (P0 FR-32).
 - **FR-26:** When a variant request has no source board, the selection or active board is used if there is one; otherwise the validator asks with a which-board card. A `count` over 4 is clamped to 4, and the agent says so.
+  - *Decided 2026-10-22 (daffa):* the duplicate limit is **per user message**, at most 4 copies in total across all named boards. "Duplicate A, B, C 4×" creates 4 boards, not 12, and the agent states the clamp once. ai-service clamps across the turn's calls; api enforces it per run (`duplicate_cap_reached` skip).
+  - *Decided 2026-10-22 (daffa):* `add_sizes` with no named board **always asks** with the which-board card. It never falls back to the selected or active board, because it is a paid plan. The variant/duplicate fallback above is unchanged.
 
 **Web**
 
