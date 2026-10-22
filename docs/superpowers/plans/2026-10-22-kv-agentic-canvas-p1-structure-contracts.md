@@ -129,7 +129,7 @@ No column change; `ops` is already jsonb. `KvAgentRunRecorder::recordBoardOp` an
 
 | Op | Undo |
 |----|------|
-| `add_board` (user has not edited since) | `hide_board` (restorable, not deleted). "Edited" = `KvEditOutcome::resolve` (S6). |
+| `add_board` (user has not edited since) | `hide_board` (restorable, not deleted). "Edited" = `KvEditOutcome::boardEditedSince` (api-only; see open issue 9), not `resolve`. |
 | `add_board` (user edited) | Kept, reported as `changed_after_run`. |
 | `rename_board` / `move_board` | Restored by CAS (`expected` = current, set = `before`). |
 | `hide_board` | `unhide_board`. |
