@@ -21,9 +21,9 @@ New kinds and their payloads:
 | `add_board` | `board_id`, `x: number`, `y: number`, `name: string \| null`, `version_ids: string[]`, `agent_run_id: string \| null` | Creates a board entry in `boards` Y.Map keyed by `board_id`, with `x`, `y`, `name`, `versionIds`. Does NOT touch overlays. 409 `board_exists` if the key already exists. |
 | `rename_board` | `board_id`, `name: string`, `expected?: { name: string \| null }` | Sets the board's `name`. CAS on `expected.name` → 409 `board_changed`. 404 `board_not_found` if absent. |
 | `move_board` | `board_id`, `x: number`, `y: number`, `expected?: { x: number, y: number }` | Sets `x`, `y`. CAS on `expected`. 404 `board_not_found`. |
-| `hide_board` | `board_id` | Pushes `board_id` into the `removed` Y.Array (the existing hide mechanism). Idempotent: no-op if already present. 404 `board_not_found` if the key does not exist in `boards`. |
-| `unhide_board` | `board_id` | Removes the first occurrence of `board_id` from `removed`. Idempotent. 404 `board_not_found`. |
-| `rekey_board_tip` | `from: string`, `to: string` | Replaces the board key: deletes `boards[from]` and creates `boards[to]` with the same `x`, `y`, `name` and `versionIds` (with `to` prepended to `versionIds`). All overlays whose `boardGenerationId == from` are updated to `to`. 404 `board_not_found` if `from` absent. 409 `board_exists` if `to` already exists. |
+| `hide_board` | `board_id` | Pushes `[board_id, ...versionIds]` into the `removed` Y.Array, as web's `docRemoveBoard` does (amended in Round A — pushing only the tip let web lay older versions back out). Idempotent: no-op if already present. 404 `board_not_found` if the key does not exist in `boards`. |
+| `unhide_board` | `board_id` | Removes EVERY occurrence of `board_id` and its `versionIds` from `removed` (amended in Round A — two concurrent hides leave duplicates). Idempotent. 404 `board_not_found`. |
+| `rekey_board_tip` | `from: string`, `to: string` | Replaces the board key: deletes `boards[from]` and creates `boards[to]` with the same `x`, `y`, `name` and `versionIds` (with `to` APPENDED to `versionIds` — the chain is oldest→newest, same as web `docRekeyBoardTip`; an empty chain becomes `[from, to]`; amended in Round A). Master moves `from`→`to`. All overlays whose `boardGenerationId == from` are updated to `to` (saved overlays are seeded into the doc first if it has none, and overlay materialisation runs). `applied` = `{kind, board_id: <to>, from}`. 404 `board_not_found` names `from`. 409 `board_exists` names `to`, including `from === to`. |
 
 `before` for board ops:
 - `add_board`: `before.boards[board_id] = null`.
@@ -403,3 +403,12 @@ CI step: `bun run scripts/exportBoardPlacementFixtures.ts && php artisan test --
 6. **Collab `boards` Y.Map key naming.** The PRD says `add_board` takes `board_id` as the key. In the current doc model, the key IS the tip generation id. For placeholder boards (which get rekeyed later), the `board_id` will be a temporary ULID that is later replaced by `rekey_board_tip`. This is consistent with the existing pattern.
 
 7. **`kv_agent_runs.ops` currently only records `doc` and `tile` sinks.** Adding `job` sink is purely a jsonb content change, no schema migration needed.
+
+8. **Round A collab amendments (2026-10-22, collab 8ed5736..26e9a2a).** S1 was amended in place for `hide_board`, `unhide_board` and `rekey_board_tip`. Additional facts:
+   - The response gains `materialization: {overlays, boards}` (`null` = that one did not run). `materialized` is true only when every materialisation that ran succeeded. The worst case is about 10s, so callers must use a timeout of 15s or more.
+   - Board names are stored as `trim() || null`. `agent_run_id` is optional and only logged.
+   - In `before`, the first touch of an id within a batch wins: `add_board X` + `rename_board X` → `before.boards[X] = null`. `before.removed` appears only when the batch hides or unhides; undo uses `unhide_board`, not a wholesale array restore.
+   - A `board_changed` 409 returns `current` as `{name}` (rename) or `{x, y}` (move); `move_board.expected` needs both.
+   - Known gap: board ops on a file whose doc has no boards (never opened since live collab) return 404. Callers should report them as skipped.
+9. **`KvEditOutcome` split (api Round A).** `KvEditOutcome::resolve` ports TS `editOutcome` exactly (rekey/fork/variant), so it passes fixture parity. S9's "user has not edited since" uses a new api-only `KvEditOutcome::boardEditedSince`, not `resolve`.
+10. **`deriveVariantName` truncates on code points** (web d9f0a177c fixed the UTF-16 split of astral emoji). This matches P0's `KvBoardLabel` (`mb_substr`).
