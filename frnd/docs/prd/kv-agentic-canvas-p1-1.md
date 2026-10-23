@@ -38,7 +38,7 @@ P1.1 adds the `concept_boards` capability to the existing P1 framework. The agen
 
 ### Decisions
 
-- **Aspect ratio for new ideas (no source board)** -> Picker on the plan card; default = the ratio the user named ("IG story" -> 9:16), else 4:5.
+- **Aspect ratio for new ideas (no source board)** -> Picker on the plan card; default = the ratio the user named ("IG story" -> 9:16), else 1:1. The picker offers the existing KV ratios 16:9 / 9:16 / 1:1 (4:5 is not supported by the KV render path; decided 2026-10-23).
 - **Non-empty canvas + "generate 3 new ideas" with no board named** -> Clarifying card: "From scratch, or variants of <active board>?"
 - **Wireframe** -> No new wireframe. Reuse the P1 plan card look (`web/src/wireframes/kv-agent-structure-cards/`). Deviation from the wireframe gate recorded here.
 - **Branch strategy** -> P1 already merged (2026-10-22). Branch `feature/daffa/vc-kv-agentic-canvas-p1-1` from latest `develop`/`development`.
@@ -72,7 +72,7 @@ P1.1 adds the `concept_boards` capability to the existing P1 framework. The agen
   - Title "N new ideas".
   - One row per direction: editable direction text field, suggestion chips below, checkbox.
   - "Add idea" button while the plan has fewer than 4 directions; adds a row prefilled from the next unused `extra_directions` entry. At 4 it reads "Max 4 ideas".
-  - An **aspect-ratio picker**, one for all ideas. Default = the ratio the user named in their message (e.g. "IG story" -> 9:16), else 4:5. The picker lists the same presets as the KV generate flow.
+  - An **aspect-ratio picker**, one for all ideas. Default = the ratio the user named in their message (e.g. "IG story" -> 9:16), else 1:1. The picker lists the same presets as the KV generate flow: 16:9, 9:16, 1:1.
   - **No** "Copy layers" toggle (there is no source board).
   - Credit estimate (min-max range) vs balance, Go / Cancel.
   - Terminal states: accepted, cancelled, superseded, expired (identical to P1 variant plan card).
@@ -206,7 +206,7 @@ All in the existing KV chat panel and canvas. New states beyond P1:
    - Header "3 new ideas" (not "3 variants of V2").
    - One row per direction: editable text field, suggestion chips below, checkbox.
    - "Add idea" button (up to 4; at 4: "Max 4 ideas").
-   - Aspect-ratio picker (dropdown or inline radio group): presets matching the KV generate flow (e.g. 4:5, 1:1, 9:16, 16:9). Default = ratio from the user's message, else 4:5.
+   - Aspect-ratio picker (dropdown or inline radio group): presets matching the KV generate flow (16:9, 9:16, 1:1). Default = ratio from the user's message, else 1:1.
    - No "Copy layers" toggle.
    - Estimate line ("~N credits, about 70 s"), balance, Go / Cancel.
    - Terminal states identical to P1 variant plan card.
@@ -266,7 +266,7 @@ No new endpoints. All existing endpoints are extended, not replaced.
 ## Acceptance Criteria
 
 - [ ] AC-1: Flag off -> `propose_kv_concepts` is not mounted, no concept plan card appears, and P1 behaviour is byte-identical. P0 eval 66/66 + intent cases unchanged.
-- [ ] AC-2: On an empty Craft canvas, "generate 3 different ideas themed Indonesian independence day" shows a plan card with 3 directions, suggestion chips, an aspect-ratio picker defaulting to 4:5, no "Copy layers" toggle, and a credit estimate. No board and no credit is used before Go.
+- [ ] AC-2: On an empty Craft canvas, "generate 3 different ideas themed Indonesian independence day" shows a plan card with 3 directions, suggestion chips, an aspect-ratio picker defaulting to 1:1, no "Copy layers" toggle, and a credit estimate. No board and no credit is used before Go.
 - [ ] AC-3: Edit direction 2, add a 4th idea via "Add idea", change the aspect to 9:16, Go -> exactly 4 placeholders appear in a row starting at (0,0) within 3 s; each fills with its render in the chosen aspect; direction 2 used the edited text.
 - [ ] AC-4: One render fails -> its placeholder is removed, the run card shows it as failed in plain words, the other concepts land, and only landed renders are billed.
 - [ ] AC-5: Pressing Go twice (or retrying the turn) creates no extra boards and charges nothing twice (idempotency key per plan_step_id).
@@ -284,7 +284,7 @@ No new endpoints. All existing endpoints are extended, not replaced.
 
 ## Open Questions
 
-- [x] Q-1: Aspect ratio for new ideas -> Picker on the plan card; default from user's words, else 4:5. (daffa, 2026-10-23)
+- [x] Q-1: Aspect ratio for new ideas -> Picker on the plan card; default from user's words, else 1:1; presets 16:9/9:16/1:1 only — 4:5 dropped because the KV render path does not support it (daffa, 2026-10-23)
 - [x] Q-2: Non-empty canvas + no board named -> Clarifying card: "From scratch, or variants of <active board>?" (daffa, 2026-10-23)
 - [x] Q-3: Wireframe -> No wireframe (reuse P1 plan card look; deviation recorded). (daffa, 2026-10-23)
 - [x] Q-4: Branch strategy -> P1 merged; branch from latest develop/development. (daffa, 2026-10-23)
