@@ -278,8 +278,9 @@ All endpoints use the Members page permission (`brand.settings.read` to read, `.
 | Endpoint | Returns or does |
 |---|---|
 | `GET v1/brands/{brand}/clients` | `[{ user: {id, name, email}, access_level, added_at, added_from: "KV approval request" \| "Deck approval request" \| "Plan approval request" \| null, last_opened_at, status: "not_opened" \| "active" }]` |
-| `PATCH v1/brands/{brand}/clients/{user}` `{access_level}` | `200` with the row |
+| `PATCH v1/brands/{brand}/clients/{user}` `{access_level?, title?, whatsapp?, expires_at?}` | `200` with the row. Only the keys sent change. |
 | `POST v1/brands/{brand}/clients/{user}/portal-link` | `{ url: "/s/{ws}/{brand}?k={lane code}" }`. The existing code is reused, not rotated. |
+| `POST v1/brands/{brand}/clients/{user}/portal-link/regenerate` `{send_email?, message?}` | "Regenerate link": revokes the current code (and its sessions), mints a new one with the same access, notes and end date; `{ url }`. Optionally emails it. `422 access_ended` when the client's access has ended (extend it in Edit details first). |
 | `DELETE v1/brands/{brand}/clients/{user}` | removes the client role, which revokes the lane (§4.2) |
 
 ### 7.2 Clients tab web
@@ -292,10 +293,12 @@ Brand Settings → Members gains a third tab **"Clients (n)"** behind `show-clie
   - status ("Opened 2 hours ago" / "Not opened yet");
   - added ("Added 3 Oct · from a KV approval request").
 - **Row "…" menu:**
+  - **Edit details** — title, WhatsApp, access end date (a client named in a Request approval arrives with none of them; the email is the sign-in and is not editable);
   - **Copy portal link**;
+  - **Regenerate link** — confirms ("{name}'s current link stops working, and so does every device signed in with it…"), optionally emails the new link with a note, copies it. Unavailable while the client's access has ended (the dialog points to Edit details);
   - **Remove access**, which confirms: "{name} can no longer open frndGlow links. Decisions they made stay on record."
 - **Empty state:** "Clients appear here once you name them in a Request approval."
-- **Analytics:** `client_lane.client_access_changed {from, to}`, `client_portal_link_copied`, `client_removed`.
+- **Analytics:** `client_lane.client_access_changed {from, to}`, `client_details_updated {title_changed, whatsapp_changed, access_end_changed}`, `client_portal_link_copied`, `client_portal_link_regenerated {email_sent, has_message}`, `client_removed`.
 
 ### 7.3 Approver suggestions
 

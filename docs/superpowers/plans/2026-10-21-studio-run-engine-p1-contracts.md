@@ -29,6 +29,12 @@ type RunFact = {
   updated_at: string;           // ISO-8601
 };
 ```
+
+Cancellation returns the node to `done` when a prior succeeded version
+exists, otherwise `idle`; `error_code` stays null. A completed run has a new
+`active_version`; cancellation keeps the prior one. Clients must settle the
+starter's task and refresh credits for either transition, not infer success
+from `state === "done"` alone.
 `nodeVersions` — `Y.Map<string /*node_id*/, NodeVersionFact[]>` (append-only array, ascending `n`)
 ```ts
 type NodeVersionFact = {
