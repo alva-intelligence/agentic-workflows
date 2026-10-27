@@ -1,0 +1,1440 @@
+{
+  "active_feature": "internal-model-tiers-superadmin",
+  "worker": "daffa",
+  "features": {
+    "onboarding-newsletter": {
+      "slug": "onboarding-newsletter",
+      "phase": "implementation",
+      "phase_entered": "2026-06-29T01:00:00Z",
+      "worker": "daffa",
+      "branches": {
+        "api": "feature/daffa/vc-onboarding-newsletter",
+        "web": "feature/daffa/vc-onboarding-newsletter"
+      },
+      "pr_urls": {
+        "api": null,
+        "web": null
+      },
+      "prd_path": "frnd/docs/prd/onboarding-newsletter.md",
+      "source": "Lark wiki \u2014 https://fcn.sg.larksuite.com/wiki/FTTpw51q1i2IaukMYPhlbzIJgjg",
+      "wireframes": [],
+      "notes": "Wireframe phase skipped \u2014 backend-only feature, no in-app UI (unsubscribe confirmation page is Laravel server-rendered). Skip approved by daffa 2026-06-29; confirm Jeff sign-off if required.",
+      "service_prds": [
+        {
+          "service": "api",
+          "path": "api/docs/prd/onboarding-newsletter.md",
+          "tasks": 29
+        },
+        {
+          "service": "web",
+          "path": "web/docs/prd/onboarding-newsletter.md",
+          "tasks": 4
+        }
+      ],
+      "track_files": [
+        {
+          "service": "api",
+          "path": "api/docs/tracks/onboarding-newsletter.track.md"
+        },
+        {
+          "service": "web",
+          "path": "web/docs/tracks/onboarding-newsletter.track.md"
+        }
+      ]
+    },
+    "inbox-web-push-notification": {
+      "slug": "inbox-web-push-notification",
+      "phase": "implementation",
+      "phase_entered": "2026-04-15T13:00:00Z",
+      "worker": "daffa",
+      "branch": "feature/daffa/vc-inbox-web-push-notification",
+      "pr_url": null,
+      "prd_path": "frnd/docs/prd/inbox-web-push-notification.md",
+      "wireframes": [],
+      "service_prds": [
+        {
+          "service": "api",
+          "path": "api/docs/prd/inbox-web-push-notification.md",
+          "tasks": 19
+        },
+        {
+          "service": "web",
+          "path": "web/docs/prd/inbox-web-push-notification.md",
+          "tasks": 12
+        }
+      ]
+    },
+    "studio-projects-kv-generator": {
+      "slug": "studio-projects-kv-generator",
+      "phase": "implementation",
+      "phase_entered": "2026-04-23T00:00:00Z",
+      "worker": "daffa",
+      "design_spec": "docs/superpowers/specs/2026-04-23-studio-projects-kv-generator-design.md",
+      "branches": {
+        "api": "feature/daffa/vc-studio-projects-kv-generator",
+        "ai-service": "feature/daffa/vc-studio-projects-kv-generator",
+        "web": "feature/daffa/vc-studio-projects-kv-generator"
+      },
+      "pr_urls": {
+        "api": null,
+        "ai-service": null,
+        "web": null
+      },
+      "plans": {
+        "api": "docs/superpowers/plans/2026-04-23-studio-projects-kv-generator-api.md",
+        "ai-service": "docs/superpowers/plans/2026-04-23-studio-projects-kv-generator-ai-service.md",
+        "web": "docs/superpowers/plans/2026-04-23-studio-projects-kv-generator-web.md"
+      },
+      "wireframes": [],
+      "notes": "Jeff approved the Figma designs; wireframe phase skipped."
+    },
+    "kv-resize-unified-canvas": {
+      "slug": "kv-resize-unified-canvas",
+      "phase": "implementation",
+      "phase_entered": "2026-08-18T00:00:00Z",
+      "worker": "alva",
+      "branches": {
+        "web": "feature/alva/vc-kv-fabric-export"
+      },
+      "pr_urls": {
+        "web": null
+      },
+      "prd_path": null,
+      "wireframes": [],
+      "service_prds": [],
+      "track_files": [
+        {
+          "service": "web",
+          "path": "web/docs/tracks/kv-resize-unified-canvas.track.md"
+        }
+      ],
+      "notes": "OUT-OF-PROCESS: started as an ad-hoc Konva->Fabric migration and grew into a canvas-architecture change. No PRD, never went through /workflow start. Track file was written after the code. A PRD is owed BEFORE the interaction layer (TASK-18..27) \u2014 that phase changes selection semantics and deletes ~2000 LOC, so it needs sign-off from the web owners (fahrizky, daffa) and Jeff. Shipped so far: fase 1-2c Konva->Fabric on the export/display path, the always-on apron fix, and a READ-ONLY unified-canvas spike behind the fail-closed flag KV_RESIZE_UNIFIED_CANVAS. Branch pushed. Motion is still Konva (fase 3, TASK-6, independent)."
+    },
+    "kv-prompt-eyedropper": {
+      "slug": "kv-prompt-eyedropper",
+      "type": "feature",
+      "phase": "brainstorming",
+      "phase_status": "completed",
+      "phase_entered": "2026-09-09T15:13:57.058899Z",
+      "worker": "daffa",
+      "initial_request": "Add an eyedropper trigger to the KV Generator prompt input (KvChat's KvLexicalEditor). When activated, the user samples a color from anywhere on screen \u2014 including other KV boards/images \u2014 and the result becomes available in the currently active prompt field. Context: users want to reference an exact color from another generated image; today the only way is text description or a screenshot, both lossy. Criteria: reuse the existing EyeDropperButton (native picker, handles the S3/CORS taint issue); picked hex copied to clipboard with a toast; button hides gracefully where EyeDropper is unsupported. Open decision: direct-insert as an alternative to clipboard-copy.",
+      "brainstorming": {
+        "service_state_snapshots": {
+          "web": {
+            "EyeDropperButton": "web/src/components/frndos/v2/EyeDropperButton.tsx \u2014 native window.EyeDropper, normalizeHex, renders null when unsupported, swallows AbortError, exposes onPick/onOpenChange/className. Sole consumer today: ColorPickerPanel.tsx:233. Styling is hardcoded (size-8 rounded-md border border-white/10 bg-white/5 text-white/80) and joined with .join(' '), so a className override cannot reliably beat rounded-md/border.",
+            "KvLexicalEditor": "web/src/components/studio/kv-generator/lexical/KvLexicalEditor.tsx (304 lines) \u2014 Lexical composer, single render site KvChat.tsx:2688. No imperative insert API; only a one-shot InitialTextPlugin seeded from the initialText prop. Chip nodes: SelectionRefNode, AttachmentRefNode, ArtStyleRefNode.",
+            "serializer": "lexical/serializeToContentBlocks.ts \u2014 emits ContentBlock[]. SelectionRefNode and AttachmentRefNode serialize; ArtStyleRefNode does NOT (display-only pinned chip).",
+            "composer_tools_row": "KvChat.tsx ~2717+ \u2014 Attach (Paperclip, h-8 w-8 rounded-full hover:bg-white/10 text-text-inverse), ModeButton, ModelButton, KvCreativityButton via ComposerToolButton (KvComposerTool.tsx, Button variant=text size=small).",
+            "toast": "useToastStore from @/store/useToast; showToast(title, message, 'success'|'info'|'error'). Established copy+toast pattern in KvBoardContextMenu.tsx:196 and KvSharePanel.tsx:127.",
+            "cn": "src/lib/utils.ts cn() is a plain join, NOT twMerge \u2014 Tailwind conflicts are not resolved by argument order.",
+            "other_prompt_fields": "Region/box prompt popovers use plain autoFocus <input>: boxPromptUi.tsx:228 and KvKonvaCanvas.tsx:1768 ('Add prompt...'). Not Lexical.",
+            "analytics": "src/lib/analytics/kv-generator-events.ts \u2014 large trackKv* catalog. No color/eyedropper event exists yet.",
+            "box_prompt_popovers": "TWO implementations. Shared BoxPromptPopover in boxPromptUi.tsx:170 -> rendered by KvTileOverlayEditor.tsx:2511 (resize tiles) and KvFabricCanvas.tsx:6130 (main canvas). A PRIVATE duplicate is defined at KvKonvaCanvas.tsx:1726 and rendered at :1425. Neither closes on blur or outside-click - both stopPropagation on mousedown/click and close only via Escape/Save/Delete, so the native picker will not dismiss them.",
+            "konva_is_legacy": "KvCanvas.tsx:1294/1326 picks KvFabricCanvas vs KvKonvaCanvas off `multiBoardEnabled`, the FAIL-OPEN KV_MULTI_BOARD PostHog flag (KvGeneratorLayout.tsx:1888, `!== false`). Konva is labelled 'the legacy fallback' in-code and deliberately never received the comment tool (Fabric-only). Precedent: new features are not backported to Konva."
+          },
+          "api": {
+            "message_blocks": "api/app/Http/Requests/StreamChatRequest.php:687 \u2014 'message_blocks.*.type' => in:text,selection_ref,attachment_ref. A new block type (e.g. color_ref) would 422, and excludeUnvalidatedArrayKeys means unknown keys are stripped. Flattening lives in app/Support/KvChat/MessageBlocksFlattener.php."
+          }
+        },
+        "external_state_snapshots": {
+          "eyedropper_api": {
+            "url": "https://developer.mozilla.org/en-US/docs/Web/API/EyeDropper_API",
+            "fact": "Chromium-only (Chrome/Edge 95+). Mozilla's standards position is negative; WebKit has given no signal. Verified 2026-09-09 \u2014 the unsupported-browser gap is permanent, not a temporary lag."
+          }
+        },
+        "open_questions": [],
+        "summary": "Add an eyedropper to the KV prompt surfaces. The native-picker logic already exists in EyeDropperButton (chosen because KV board images load from S3 with no CORS headers, which taints a canvas and makes getImageData throw) and will be extracted into a useEyeDropper() hook, because EyeDropperButton's hardcoded rounded-md/border styling cannot be overridden through className - cn() in lib/utils.ts is a plain join, not twMerge. On a successful pick the normalized #RRGGBB is inserted at the caret AND copied to the clipboard, with one showToast(...,'success') confirming both; plain text was chosen over a chip node because ContentBlock is an api-validated wire format (StreamChatRequest.php:687 allows only text/selection_ref/attachment_ref, and excludeUnvalidatedArrayKeys strips unknown keys), and because ArtStyleRefNode proves a chip can render beautifully while never serializing - a color chip that does not reach the model would defeat the feature. Scope is the single KvLexicalEditor at KvChat.tsx:2688 plus the shared BoxPromptPopover in boxPromptUi.tsx, which reaches both live region-prompt surfaces; KvKonvaCanvas's private duplicate is skipped as the fail-open KV_MULTI_BOARD legacy fallback, matching how the comment tool was handled. Neither popover closes on blur or outside-click, so the native picker will not dismiss them. The composer needs a new imperative-insert Lexical plugin (only InitialTextPlugin writes in today) and onMouseDown preventDefault so the trigger does not steal the editor selection. Verified 2026-09-09 that EyeDropper is permanently Chromium-only - Mozilla's position is negative and WebKit has never signalled - so the hidden-button gap for Safari/Firefox is structural, not a lag, and no canvas-sampling fallback is possible without fixing the S3 CORS headers. A new trackKv* PostHog event is required; no color/eyedropper event exists in kv-generator-events.ts.",
+        "completed_at": "2026-09-09T15:16:21.060586Z",
+        "decisions": [
+          {
+            "topic": "delivery",
+            "answer": "Insert plain-text #RRGGBB at the caret AND copy to clipboard; single toast confirms both.",
+            "why": "Serializes through the existing 'text' ContentBlock, so it reaches the model with zero api change. Needs a new imperative-insert Lexical plugin plus onMouseDown preventDefault on the trigger so the picker does not steal the editor selection."
+          },
+          {
+            "topic": "scope",
+            "answer": "KvChat composer + the shared BoxPromptPopover. KvKonvaCanvas's private duplicate is SKIPPED.",
+            "why": "One edit to boxPromptUi.tsx covers both live region-prompt surfaces (Fabric canvas + resize tiles). Konva is the fail-open kill-switch fallback and already skips Fabric-only features like the comment tool; backporting would be the 4-renderer drift pattern again."
+          },
+          {
+            "topic": "reuse",
+            "answer": "Extract a useEyeDropper() hook; EyeDropperButton keeps its current look for ColorPickerPanel, each new call site renders its own trigger.",
+            "why": "EyeDropperButton hardcodes rounded-md/border/bg-white/5 joined with .join(' '), and cn() in lib/utils.ts is a plain join not twMerge, so className cannot override. A hook keeps the AbortError/normalizeHex/feature-detect logic in one place without a growing variant matrix."
+          }
+        ]
+      }
+    },
+    "kv-agentic-canvas": {
+      "slug": "kv-agentic-canvas",
+      "type": "feature",
+      "phase": "prd_creation",
+      "phase_status": "completed",
+      "phase_entered": "2026-10-18T07:26:33Z",
+      "worker": "daffa",
+      "initial_request": "As a user, I want to just chat with the AI about what I want changed or added, and have it actually make the change directly on the canvas itself - across every relevant board or size on its own - instead of me manually applying each edit one board at a time. User sends one instruction in chat. The AI reads the current canvas/board context, executes the change directly across every relevant board or size on its own, and reports back what it did when finished - without the user repeating the edit per board.",
+      "brainstorming": {
+        "source": "docs/superpowers/specs/2026-09-29-kv-agentic-canvas-design.md (decisions D1-D6 approved by daffa 2026-09-29)",
+        "questions": [
+          {
+            "id": "D1",
+            "prompt": "v1 edit scope",
+            "answer": "Layers + pixel edits"
+          },
+          {
+            "id": "D2",
+            "prompt": "Confirmation",
+            "answer": "Layer edits auto-execute; credit-spending actions (pixel edits, new sizes) show a plan card the user runs once"
+          },
+          {
+            "id": "D3",
+            "prompt": "Unstated targets",
+            "answer": "Agent suggests targets via question card, user confirms; stated targets execute directly"
+          },
+          {
+            "id": "D4",
+            "prompt": "Entry point",
+            "answer": "Inside existing KV chat, tools behind flag kv-agentic-canvas; no separate Agent mode"
+          },
+          {
+            "id": "D5",
+            "prompt": "Structural edits in v1",
+            "answer": "Add sizes, create variant boards, remove layers"
+          },
+          {
+            "id": "D6",
+            "prompt": "Execution architecture",
+            "answer": "Server-executed (deck pattern) through api + collab, MCP-ready"
+          }
+        ],
+        "summary": "Server-executed agentic canvas for KV chat. Agent gets canvas inventory (<kv_canvas_state>) and explicit-target tools (get_kv_canvas, update/add/remove_kv_layers, create_kv_variant_board, add_kv_sizes, plan_kv_pixel_edits, run_kv_plan, undo_kv_agent_run) via api v1/mcp/tools/kv/canvas/*. api KvCanvasEditService routes to collab live Y.Doc ops (boards) or KvResizeExportService (tiles); kv_agent_runs ledger with CAS undo. Web shows run card + plan card. Phases P1 layers, P2 structure, P3 pixel, P4 open MCP. P1 partially built, unpushed, on feature/daffa/vc-kv-agentic-canvas (ai-service 9, api 27, collab 7, web 8 commits)."
+      },
+      "prd_path": null,
+      "wireframes": [],
+      "branches": {
+        "ai-service": "feature/daffa/vc-kv-agentic-canvas",
+        "api": "feature/daffa/vc-kv-agentic-canvas",
+        "collab": "feature/daffa/vc-kv-agentic-canvas",
+        "web": "feature/daffa/vc-kv-agentic-canvas"
+      },
+      "pr_urls": {},
+      "service_prds": [],
+      "track_files": [],
+      "notes": "OUT-OF-PROCESS: spec + P1 plans written and P1 code built (2026-09-29) before workflow registration. Branches exist locally only (worktrees <repo>/.worktrees/kv-agentic-canvas), not pushed, far behind base. Registered 2026-10-18 to bring back into the phase sequence. Split 2026-10-18 into p0 (layers), p1 (structure), p2 (pixel + open MCP).",
+      "sub_features": [
+        "kv-agentic-canvas-intent",
+        "kv-agentic-canvas-p0",
+        "kv-agentic-canvas-p1",
+        "kv-agentic-canvas-p2"
+      ]
+    },
+    "kv-agentic-canvas-p0": {
+      "slug": "kv-agentic-canvas-p0",
+      "type": "feature",
+      "phase": "idle",
+      "phase_status": "completed",
+      "phase_entered": "2026-10-19T10:24:23Z",
+      "worker": "daffa",
+      "initial_request": "As a user, I want to just chat with the AI about what I want changed or added, and have it actually make the change directly on the canvas itself - across every relevant board or size on its own - instead of me manually applying each edit one board at a time. User sends one instruction in chat. The AI reads the current canvas/board context, executes the change directly across every relevant board or size on its own, and reports back what it did when finished - without the user repeating the edit per board.",
+      "brainstorming": {
+        "source": "docs/superpowers/specs/2026-09-29-kv-agentic-canvas-design.md (decisions D1-D6 approved by daffa 2026-09-29)",
+        "questions": [
+          {
+            "id": "D1",
+            "prompt": "v1 edit scope",
+            "answer": "Layers + pixel edits"
+          },
+          {
+            "id": "D2",
+            "prompt": "Confirmation",
+            "answer": "Layer edits auto-execute; credit-spending actions (pixel edits, new sizes) show a plan card the user runs once"
+          },
+          {
+            "id": "D3",
+            "prompt": "Unstated targets",
+            "answer": "Agent suggests targets via question card, user confirms; stated targets execute directly"
+          },
+          {
+            "id": "D4",
+            "prompt": "Entry point",
+            "answer": "Inside existing KV chat, tools behind flag kv-agentic-canvas; no separate Agent mode"
+          },
+          {
+            "id": "D5",
+            "prompt": "Structural edits in v1",
+            "answer": "Add sizes, create variant boards, remove layers"
+          },
+          {
+            "id": "D6",
+            "prompt": "Execution architecture",
+            "answer": "Server-executed (deck pattern) through api + collab, MCP-ready"
+          },
+          {
+            "id": "split",
+            "prompt": "PRD split",
+            "answer": "p0/p1/p2 sub-features"
+          },
+          {
+            "id": "wireframe",
+            "prompt": "Wireframe",
+            "answer": "Small card wireframe kv-agent-cards"
+          },
+          {
+            "id": "branch",
+            "prompt": "Branch strategy",
+            "answer": "Push legacy branch as backup, cut -p0 from latest base, rebase P0 commits, show conflicts before resolving"
+          },
+          {
+            "id": "model",
+            "prompt": "Agent model",
+            "answer": "Decide from eval (FR-14)"
+          },
+          {
+            "id": "collab_owner",
+            "prompt": "collab review",
+            "answer": "Internal team only (daffa + Claude)"
+          },
+          {
+            "id": "Q-1",
+            "prompt": "Eval threshold",
+            "answer": ">=90% correct tool + exact targets, 0 writes on unstated-target prompts"
+          },
+          {
+            "id": "composability",
+            "prompt": "Composable tools (AskFRND practice)",
+            "answer": "P0: surface-agnostic tools + shared primitives (FR-25..30), mounted in KV chat only. AskFRND mount -> p2 with open MCP. Deck/proposal-step migrate to shared primitives in a separate PR coordinated with Jeff."
+          }
+        ],
+        "summary": "Server-executed agentic canvas for KV chat. Agent gets canvas inventory (<kv_canvas_state>) and explicit-target tools (get_kv_canvas, update/add/remove_kv_layers, create_kv_variant_board, add_kv_sizes, plan_kv_pixel_edits, run_kv_plan, undo_kv_agent_run) via api v1/mcp/tools/kv/canvas/*. api KvCanvasEditService routes to collab live Y.Doc ops (boards) or KvResizeExportService (tiles); kv_agent_runs ledger with CAS undo. Web shows run card + plan card. Phases P1 layers, P2 structure, P3 pixel, P4 open MCP. P1 partially built, unpushed, on feature/daffa/vc-kv-agentic-canvas (ai-service 9, api 27, collab 7, web 8 commits)."
+      },
+      "prd_path": "frnd/docs/prd/kv-agentic-canvas-p0.md",
+      "wireframes": [
+        {
+          "slug": "kv-agent-cards",
+          "owner": "daffa",
+          "approval": "approved",
+          "path": "web/src/wireframes/kv-agent-cards/",
+          "worktree": "web/.worktrees/kv-agentic-canvas-p0-wireframe",
+          "registry": "web/src/wireframes/registry.ts",
+          "commit": "b2735106d",
+          "preview": "/wireframes/kv-agent-cards?state=ask",
+          "pr_url": "https://github.com/alva-intelligence/frnd-web/pull/1022",
+          "approved_by": "Jeff",
+          "approved_at": "2026-10-18"
+        }
+      ],
+      "branches": {
+        "ai-service": "feature/daffa/vc-kv-agentic-canvas-p0",
+        "api": "feature/daffa/vc-kv-agentic-canvas-p0",
+        "collab": "feature/daffa/vc-kv-agentic-canvas-p0",
+        "web": "feature/daffa/vc-kv-agentic-canvas-p0"
+      },
+      "pr_urls": {
+        "collab": "https://github.com/alva-intelligence/frnd-hocuspocus/pull/14",
+        "api": "https://github.com/alva-intelligence/frnd-api-php/pull/723",
+        "ai-service": "https://github.com/alva-intelligence/frnd-ai-services/pull/370",
+        "web": "https://github.com/alva-intelligence/frnd-web/pull/1028"
+      },
+      "service_prds": [
+        {
+          "service": "api",
+          "path": "api/docs/prd/kv-agentic-canvas-p0.md",
+          "tasks": 15
+        },
+        {
+          "service": "web",
+          "path": "web/docs/prd/kv-agentic-canvas-p0.md",
+          "tasks": 10
+        },
+        {
+          "service": "ai-service",
+          "path": "ai-service/docs/prd/kv-agentic-canvas-p0.md",
+          "tasks": 12
+        },
+        {
+          "service": "collab",
+          "path": "collab/docs/prd/kv-agentic-canvas-p0.md",
+          "tasks": 7
+        }
+      ],
+      "track_files": [
+        {
+          "service": "api",
+          "path": "api/docs/tracks/kv-agentic-canvas-p0.track.md"
+        },
+        {
+          "service": "web",
+          "path": "web/docs/tracks/kv-agentic-canvas-p0.track.md"
+        },
+        {
+          "service": "ai-service",
+          "path": "ai-service/docs/tracks/kv-agentic-canvas-p0.track.md"
+        },
+        {
+          "service": "collab",
+          "path": "collab/docs/tracks/kv-agentic-canvas-p0.track.md"
+        }
+      ],
+      "notes": "OUT-OF-PROCESS: spec + P1 plans written and P1 code built (2026-09-29) before workflow registration. Branches exist locally only (worktrees <repo>/.worktrees/kv-agentic-canvas), not pushed, far behind base. Registered 2026-10-18 to bring back into the phase sequence. Split 2026-10-18 into p0 (layers), p1 (structure), p2 (pixel + open MCP). PRD approved by daffa 2026-10-18. Legacy branch backup push deferred to branch_creation. Wireframe uses repo convention src/wireframes/<slug> + registry.ts (AGENTS.md path is outdated). Committed b2735106d on wireframe/daffa/vc-kv-agentic-canvas-p0 (not pushed). Jeff approved wireframe 2026-10-18; 7 review findings fixed in e042771de, threads resolved. Waiting for PR #1022 merge (squash, repo owner). 2026-10-18: legacy branches pushed as backup; -p0 branches cut from latest base and pushed with ported commits (api 27/27, web 8/8+2 fixups, ai-service 9/9+1 fixup, collab 7/7). Main PRD committed in root repo b84084f. Service PRDs + tracks committed per repo. 2026-10-19 PR review round 1: all 13 threads fixed/replied + resolved (api 5, ai 4, web 4; collab none). Extra api b65463a36 forwards agent_canvas to /ai/kv-chat/suggestions behind the flag. ai-service #370 still shows CHANGES_REQUESTED until the reviewer re-reviews (not re-requested). 2026-10-19 all 4 PRs merged (pr_review \u2192 completion \u2192 idle). api/ai/web P0 tracks marked completed via the intent branches; collab track still says in_progress on main (no follow-up branch in collab).",
+      "parent_feature": "kv-agentic-canvas",
+      "legacy_branches": {
+        "ai-service": "feature/daffa/vc-kv-agentic-canvas",
+        "api": "feature/daffa/vc-kv-agentic-canvas",
+        "collab": "feature/daffa/vc-kv-agentic-canvas",
+        "web": "feature/daffa/vc-kv-agentic-canvas"
+      },
+      "wireframe_branch": {
+        "web": "wireframe/daffa/vc-kv-agentic-canvas-p0"
+      },
+      "wireframe_pr_url": "https://github.com/alva-intelligence/frnd-web/pull/1022",
+      "wireframe_pr_merged": {
+        "sha": "bafef149d1fb7af9023319d44e45caae246beed2",
+        "at": "2026-10-18T10:53:20Z"
+      },
+      "branch": "feature/daffa/vc-kv-agentic-canvas-p0",
+      "worktrees": {
+        "ai-service": "ai-service/.worktrees/kv-agentic-canvas-p0",
+        "api": "api/.worktrees/kv-agentic-canvas-p0",
+        "collab": "collab/.worktrees/kv-agentic-canvas-p0",
+        "web": "web/.worktrees/kv-agentic-canvas-p0"
+      },
+      "implementation_strategy": "parallel per-repo subagents (omp task); eval after ai-service refactor",
+      "e2e": {
+        "result": "16/16 pass",
+        "db": "frnd_kv_p0_e2e",
+        "artifacts": "/tmp/kv_e2e",
+        "date": "2026-10-18"
+      },
+      "eval": {
+        "report": "ai-service/docs/evals/kv-agentic-canvas-p0.md",
+        "gpt-6-luna": "42/42",
+        "deepseek-flash": "42/42",
+        "decision": "keep conversation tier; canvas turns forced to it (a89760e0)"
+      },
+      "completed_at": "2026-10-19T10:24:23Z",
+      "merge_commits": {
+        "collab": "1b31c5053",
+        "api": "26fbf1909",
+        "ai-service": "ee105081d",
+        "web": "b86404b77"
+      }
+    },
+    "kv-agentic-canvas-p1": {
+      "slug": "kv-agentic-canvas-p1",
+      "type": "feature",
+      "parent_feature": "kv-agentic-canvas",
+      "phase": "idle",
+      "phase_status": "completed",
+      "phase_entered": "2026-10-23T08:53:37Z",
+      "worker": "daffa",
+      "initial_request": "Chat KV agentic yang aware board bisa mengubah STRUKTUR canvas: mis. 'generate 3 variant dari V2' langsung membuat 3 board baru di canvas. Termasuk duplicate/rename/arrange/hide board (gratis), generate N variant (re-render, berbayar via plan card), add_kv_sizes (berbayar via plan card). Ambil best practice Deck agent + Studio run engine + AskFRND; composable supaya capability baru mudah ditambah. Spec asal: docs/superpowers/specs/2026-09-29-kv-agentic-canvas-design.md \u00a76 Structure.",
+      "brainstorming": {
+        "service_state_snapshots": {
+          "ai-service": "develop 5b71ae99. kv_canvas_tools.py: get_kv_canvas, update/add/remove_kv_layers, undo_kv_agent_run only; KvCanvasWriteLedger(WriteLedger) + bind_ledger. kv_generator/service.py chat turn mounts no render tool; render asks become suggest_mode_switch -> one mode_suggestion card -> 1 image per stream (GenerationReadyEvent once, KvStreamRequest has no count). canvas_intent/: IntentSurface protocol (layer-centric methods), CanvasIntent.Action has no structure actions. kv_tools.generate_key_visual = long-job pattern (KvGenerationStarted CustomEvent, waits for new version). Deck reference: deck_tools.py propose_deck_plan (stop_after_tool_call + post_hook, plan_pending claimed before await), deck_compose_fanout.py placeholders-then-fill, deck_compose_events.py CustomEvents (__str__ '').",
+          "api": "develop b2367ef10. kv_agent_runs (ops/skipped/detached_sizes/undo_result, MAX_OPS=200, per-file lock 600s) + KvAgentRunRecorder/Reverter, KvAgentCanvasTurn::forTurn gate craft+chat. No KV plan table. duplicateGeneration (KvGeneratorFileController ~L694) = free board copy primitive. KvToolController::generate = queued /complete render (202 processing). resize-exports createBatch (<=20 sizes; overlay-only kv_resize_overlay_only 5/size, AI parent token-metered). KvFixedPriceChargeService quote/assertAffordable. Deck: deck_agent_plans + deck_agent_runs (migration 2026_09_17_100300), DeckAgentPlanService (propose/supersede/transition/markExecuted, MAX_STEPS 12), plan_step_id idempotency in DeckToolController L1563-1621, ChatService relays CustomEvents as tool_progress. agent_intent_events generic by design (FR-16).",
+          "collab": "main 1b31c50. KvOp kinds only set_layer/add_layer/remove_layer (zod rejects others 422). Spec add_board/hide_board/rekey_board_tip unbuilt. Board doc layout (web lib/kv/yjsDoc.ts): boards Y.Map keyed by tip generation id {x,y,name,versionIds,productionStatus,assigneeId}; boards persisted by browser via useKvBoardMaterialization PATCH canvas-state.",
+          "web": "develop ed8830907. Board placement/naming web-only: boardLayout.ts deriveVariantName, adjacentFreeCenter/nextFreeCenter(s), canvasStateWithNewVariant; overlaysForVariant copies layers with fresh ids; editOutcome.ts fork|variant|rekey. handleCreateVariant (KvGeneratorLayout L1840) = 1 variant with pendingBoards placeholder; Concept 'Generate N' = kvFanout.ts N parallel SSE streams (client-placed). KvAgentRunCard renders layer ops only. Deck reference: DeckPlanCard (per-step checkboxes, estimate), DeckChatActionsContext, useRunProgress, useChatStore tool_progress reducer, undoAgentRun.ts stamped-only undo."
+        },
+        "external_state_snapshots": {},
+        "questions": [
+          {
+            "id": "scope",
+            "prompt": "Scope kv-agentic-canvas-p1?",
+            "answer": "Semua: free structure (duplicate/rename/arrange/hide board) + generate N variants + add_kv_sizes."
+          },
+          {
+            "id": "variant_source",
+            "prompt": "Variant dibuat dari mana?",
+            "answer": "Re-render dari board sumber (craft + base_generation, aspect ikut sumber), seperti handleCreateVariant."
+          },
+          {
+            "id": "variant_axes",
+            "prompt": "Bagaimana arahan tiap variant ditentukan?",
+            "answer": "Agent mengusulkan arahan per variant; user bisa edit/untick di plan card sebelum Go (pola DeckPlanCard)."
+          },
+          {
+            "id": "layers",
+            "prompt": "Layer board sumber ikut ke variant?",
+            "answer": "Toggle 'Salin layer' di plan card (default on)."
+          },
+          {
+            "id": "max_n",
+            "prompt": "Maksimal variant per run?",
+            "answer": "4."
+          },
+          {
+            "id": "mode",
+            "prompt": "Tool struktur tersedia di mode mana?",
+            "answer": "Craft saja (gate P0 KvAgentCanvasTurn::forTurn tetap)."
+          },
+          {
+            "id": "plan_table",
+            "prompt": "Tabel plan generik agent_plans atau per surface?",
+            "answer": "Per surface: kv_agent_plans (bentuk mengikuti deck_agent_plans) + kv_agent_runs.plan_id. Penyatuan agent_plans/agent_runs ditunda ke studio-agent-surface bersama migrasi Deck."
+          },
+          {
+            "id": "intent_events_table",
+            "prompt": "agent_intent_events di-rename jadi kv_agent_intent_events?",
+            "answer": "Tidak. Tetap generik (PRD intent FR-16): log append-only lintas surface. Aturan: state eksekusi/undo per surface, log event generik + kolom surface."
+          },
+          {
+            "id": "composability",
+            "prompt": "Bagaimana supaya capability baru mudah ditambah?",
+            "answer": "Capability registry per service (tool schema + MCP twin, cost free|plan, estimate, execute/sink, revert, card_kind); step plan generik {capability, params, estimate}; collab op handler registry; penempatan board di server dengan parity fixture dari TS; intent Action/IntentSurface diperluas; progress CustomEvent generik relayed sebagai tool_progress; web card registry; cap per kelas op (layer/board/job)."
+          }
+        ],
+        "summary": "P1 membuat chat KV (Craft, flag) bisa mengubah struktur canvas: aksi gratis (duplicate/rename/arrange/hide board) langsung jalan, sedangkan generate N variant (maks 4, re-render dari board sumber) dan add_kv_sizes lewat plan card yang mengakhiri turn dan hanya dieksekusi oleh klik Go user. Plan card menampilkan arahan per variant usulan agent yang bisa diedit/di-untick, toggle salin layer (default on), dan estimasi kredit; Go meng-create placeholder board lewat op collab baru (add_board/hide_board/rekey_board_tip), lalu render paralel mengisi tiap board dan progress mengalir sebagai tool_progress. Pola diambil dari Deck (deck_agent_plans, plan_step_id idempotent, placeholder-then-fill, stamp agentRunId untuk undo, recordCredits, failIfStale) dan aturan charge/refund/idempotency dari spec Studio run engine; ledger kv_agent_runs diperluas ke sink board dan job. Logika penempatan/penamaan board dipindah ke server dengan parity fixture dari TS. Composable lewat capability registry; tabel tetap per surface (kv_agent_plans), agent_intent_events tetap generik, penyatuan lintas surface ditunda ke studio-agent-surface.",
+        "completed_at": "2026-10-21T16:29:32Z"
+      },
+      "prd_path": "frnd/docs/prd/kv-agentic-canvas-p1.md",
+      "branch": "feature/daffa/vc-kv-agentic-canvas-p1",
+      "service_prds": {
+        "api": "api/docs/prd/kv-agentic-canvas-p1.md",
+        "web": "web/docs/prd/kv-agentic-canvas-p1.md",
+        "ai-service": "ai-service/docs/prd/kv-agentic-canvas-p1.md",
+        "collab": "collab/docs/prd/kv-agentic-canvas-p1.md"
+      },
+      "pr_urls": {
+        "api": "https://github.com/alva-intelligence/frnd-api-php/pull/791",
+        "ai-service": "https://github.com/alva-intelligence/frnd-ai-services/pull/385",
+        "web": "https://github.com/alva-intelligence/frnd-web/pull/1104",
+        "collab": "https://github.com/alva-intelligence/frnd-hocuspocus/pull/20"
+      },
+      "services": [
+        "api",
+        "web",
+        "ai-service",
+        "collab"
+      ],
+      "notes": "2026-10-21: latest-base worktrees at <repo>/.worktrees/develop-latest (detached origin/<default>). Brainstorming done with daffa in chat; research by scouts (DeckAgentPractice, StudioAskfrndPractice, KvGenerationSurface). 2026-10-21: PRD approved by daffa, committed root 1e3bb7f. Open: wireframe decision (kv-agent-structure-cards), Q-1..Q-4. 2026-10-21: Q-1..Q-4 resolved (root af56fb7). Wireframe kv-agent-structure-cards committed 2bb577134 on wireframe/daffa/vc-kv-agentic-canvas-p1 (not pushed); also adds ./src/wireframes to tailwind content (classes in wireframes were not generated, P0 wireframe affected too). 2026-10-21: wireframe PR #1072 opened (frnd-web, base develop); waiting for Jeff approval + merge before prd_splitting. 2026-10-22: Jeff approved wireframe (reported by daffa); #1072 squash-merged c6fa5e6b3. Entered prd_splitting. 2026-10-22: prd_splitting done (contracts S1-S18 a7b68f8; service PRD+track commits api c72165605, web ffd52e3f6, ai 8bcab217, collab 999bdc3; data-service no changes). Entered implementation, Round A first. 2026-10-22: Round A+B done, manual e2e passed; one PR per repo (A+B): api#791 web#1104 ai#385 collab#20. PostHog flag kv-agentic-canvas-structure created (FRnD_OS 389744, id 983461, 0%). Parent flag kv-agentic-canvas missing in PostHog. Dev DB frnd migrated (34). Lark taxonomy rows pending (Lark token expired). 2026-10-22: all 4 PRs MERGED (api#791 9ff48111b, ai#385 e31243d7e, web#1104 d15673878, collab#20 7dffd40ec). Track files still say in_progress \u2014 mark completed in the first P1.1 commit per repo (no direct develop commits). 2026-10-23: P1 tracks marked completed via P1.1 TASK-0 (merged in api#792/web#1106/ai#386). Feature closed.",
+      "prd_commit": "1e3bb7f",
+      "wireframes": [
+        {
+          "slug": "kv-agent-structure-cards",
+          "owner": "daffa",
+          "path": "web/src/wireframes/kv-agent-structure-cards",
+          "branch": "wireframe/daffa/vc-kv-agentic-canvas-p1",
+          "worktree": "web/.worktrees/kv-agentic-canvas-p1-wireframe",
+          "commit": "9a4f46e40",
+          "pushed": true,
+          "pr_url": "https://github.com/alva-intelligence/frnd-web/pull/1072",
+          "approval": "approved",
+          "approved_by": "jeff",
+          "approved_at": "2026-10-22",
+          "merged": true,
+          "merge_commit": "c6fa5e6b3"
+        }
+      ],
+      "split_decisions": {
+        "pr_shape": "two stacked PRs per service: round A (registry, collab board ops, placement ports, free structure tools), round B (plan card, variants, sizes)",
+        "caps": "20 board ops; 4 variants + 20 sizes per run",
+        "estimate": "min-max range",
+        "badge": "none; run card only"
+      },
+      "track_files": {
+        "api": "api/docs/tracks/kv-agentic-canvas-p1.track.md",
+        "web": "web/docs/tracks/kv-agentic-canvas-p1.track.md",
+        "ai-service": "ai-service/docs/tracks/kv-agentic-canvas-p1.track.md",
+        "collab": "collab/docs/tracks/kv-agentic-canvas-p1.track.md"
+      },
+      "contracts": "docs/superpowers/plans/2026-10-22-kv-agentic-canvas-p1-structure-contracts.md",
+      "worktrees": {
+        "api": "api/.worktrees/kv-agentic-canvas-p1",
+        "web": "web/.worktrees/kv-agentic-canvas-p1",
+        "ai-service": "ai-service/.worktrees/kv-agentic-canvas-p1",
+        "collab": "collab/.worktrees/kv-agentic-canvas-p1"
+      },
+      "merged": {
+        "api": "9ff48111b",
+        "ai-service": "e31243d7e",
+        "web": "d15673878",
+        "collab": "7dffd40ec"
+      }
+    },
+    "kv-agentic-canvas-p2": {
+      "slug": "kv-agentic-canvas-p2",
+      "type": "feature",
+      "parent_feature": "kv-agentic-canvas",
+      "phase": "idle",
+      "phase_status": "completed",
+      "phase_entered": "2026-10-18T07:26:33Z",
+      "worker": "daffa",
+      "initial_request": "Pixel edits (plan_kv_pixel_edits) + open MCP to external clients. See docs/superpowers/specs/2026-09-29-kv-agentic-canvas-design.md Also: mount KV canvas tools in AskFRND (AgentRunDto flag + canvas context, api settles KvAgentRun on AskFRND stream, router kv_agent_run frame, AskFRND run card, compression off for canvas turns).",
+      "brainstorming": {
+        "questions": [],
+        "summary": null
+      },
+      "prd_path": null,
+      "branch": null,
+      "service_prds": {},
+      "pr_urls": {}
+    },
+    "kv-resize-linked-image-replace": {
+      "slug": "kv-resize-linked-image-replace",
+      "type": "improvement",
+      "phase": "pr_review",
+      "phase_status": "inprogress",
+      "phase_entered": "2026-10-18T00:00:00Z",
+      "worker": "daffa",
+      "initial_request": "Heavy resizer users empty a resized board, copy all layers from master and paste them in. When a master layer gets Replace image, the pasted copies on resized boards should update too.",
+      "branches": {
+        "web": "improvement/daffa/vc-kv-resize-linked-image-replace"
+      },
+      "pr_urls": {
+        "web": "https://github.com/alva-intelligence/frnd-web/pull/1021"
+      },
+      "prd_path": null,
+      "wireframes": [],
+      "notes": "Lightweight improvement track, approved by daffa 2026-10-18. Web-only, no backend change (kv_resize_exports.overlays is a raw JSON blob). Wireframe skipped: UI delta is a link icon + Unlink action in the existing layer panel. Confirm Jeff sign-off if required.",
+      "service_prds": [
+        {
+          "service": "web",
+          "path": "web/docs/prd/kv-resize-linked-image-replace.md"
+        }
+      ],
+      "track_files": [
+        {
+          "service": "web",
+          "path": "web/docs/tracks/kv-resize-linked-image-replace.track.md"
+        }
+      ]
+    },
+    "kv-agentic-canvas-intent": {
+      "slug": "kv-agentic-canvas-intent",
+      "type": "feature",
+      "parent_feature": "kv-agentic-canvas",
+      "stacked_on": null,
+      "phase": "idle",
+      "phase_status": "completed",
+      "phase_entered": "2026-10-20T11:25:49Z",
+      "worker": "daffa",
+      "initial_request": "Replace per-case canvas backstops with a general intent layer: (1) a structured intent resolver (action, references with candidate layers + confidence, targets with source, params, needs_clarification) run before any canvas write; (2) one deterministic validator: write only with a single confident candidate per reference and stated/derivable targets, otherwise ask with a card built from the candidates, pixel_edit only when no layer candidate; (3) richer context: canvas selection (shipped in p0 FR-37a), cached per-layer visual descriptions from vision at import, a structured summary of the last runs instead of raw history; (4) learn from usage: log clarification answers and fast undos as intent-miss signals, build the golden set from those logs. Existing backstops (FR-18/33/35/37b) collapse into the validator.",
+      "brainstorming": {
+        "service_state_snapshots": {
+          "ai-service": "Canvas turn = one free agno run on conversation tier (_kv_chat_default \u2192 openai gpt-6-luna), tool_call_limit 25, crafter role adds ReasoningTools; +1 run on stale-history retry, +1 text-only retry on empty turn. No pre-write intent. 11 deterministic backstops/guards (target card FR-18 service.py L556-588; which-layer FR-35 L446-516/L589-598; history filter + stale retry FR-33 L2224-2650; card purpose FR-36 tools.py L145; reference guard FR-37 kv_canvas_tools.py L312; targets_required L274; honesty footnote; pre-p0 refusal + concept-card guarantees) driven by ~20 bilingual regexes. House structured-output pattern: one-shot Agent(output_schema=Pydantic) via internal_model(tier), e.g. kv_generator/edit_intent.py (EditIntent{mode,confidence,reason}, min confidence 0.6, fails safe). output_schema+tools on one run is an anti-pattern. Decision tier (Jev/Clef) only fits closed-label questions. Layer decompose vendor already returns per-layer description (mapping.to_layer) but it is dropped at commit; no per-layer captioning/cache exists. Eval harness is a throwaway /tmp script; golden set 22 cases, no fields for references/candidates/confidence.",
+          "api": "Layers live in overlays[].payload (Y.Doc + studio_files.overlays + tile overlays); StudioOverlayNormalizer whitelists payload keys (also StoreBrandOverlayPresetRequest); a new payload key would need several whitelists + thumbnail hash churn. kv_agent_runs ledger (ops with before/after/at, status, timestamps, index studio_file_id+created_at) and KvAgentRunView already derive change/layer_name/headline \u2192 can feed a recent-runs summary from KvAgentCanvasTurn::forTurn. No card-answer storage (StudioActivityAction::QuestionCardAnswered enum unused). Fast-undo derivable from kv_agent_runs timestamps. api emits no KV PostHog events.",
+          "web": "Card picks send only the option label (stream.send(opt.label)); no card id/option id/purpose on the answer; cards have no server id while streaming. PostHog kv_agent.* and kv_generator.assistant_card_* events exist (option_id but no card purpose/run). Selection (selected_layer_ids) already sent since p0 FR-37a. Deck chat precedent for structured answers: hidden_context.questionAnswers \u2192 message.deck_questions."
+        },
+        "questions": [
+          {
+            "id": "resolver_shape",
+            "prompt": "Where does the intent resolver run?",
+            "answer": "Separate pre-step: one-shot Agent(output_schema=CanvasIntent) before the main agent; validator then writes via tools, asks via card, or hands off to the agent (brainstorm/pixel)."
+          },
+          {
+            "id": "backstops",
+            "prompt": "Fate of existing backstops",
+            "answer": "Replace in phases; keep the stale-history filter and the FR-37b write guard as a final safety net. Eval must stay \u2265 current."
+          },
+          {
+            "id": "layer_desc",
+            "prompt": "Per-layer visual descriptions",
+            "answer": "Side table kv_layer_descriptions(studio_file_id, layer_id, asset_hash, description), generated lazily on first need (batch vision), reused while the asset is unchanged. Overlay payload untouched."
+          },
+          {
+            "id": "card_answer",
+            "prompt": "How card answers come back",
+            "answer": "Structured card_answer {card_id, option_id, purpose} alongside the label; api persists it on the user row (deck questionAnswers precedent); cards get a server id when streamed."
+          },
+          {
+            "id": "learning",
+            "prompt": "Where learning signals live",
+            "answer": "api table kv_intent_events (clarified | undone_fast | mismatch_refused, payload) + PostHog kv_agent.intent_* events; golden-set export script with anonymised prompts."
+          },
+          {
+            "id": "rollout",
+            "prompt": "Rollout",
+            "answer": "New sub-flag kv-agentic-canvas-intent; shadow mode first (resolver runs and logs next to the existing path, no effect), compare, then switch on."
+          },
+          {
+            "id": "composability_scope",
+            "prompt": "Editor Surface foundation vs intent feature",
+            "answer": "Intent first, refactor later; intent keeps new code surface-neutral (FR-14..19)."
+          },
+          {
+            "id": "kv_pipeline",
+            "prompt": "Where the KV chat pipeline ends up",
+            "answer": "Keep the KV stream (/ai/kv-generator/stream), share components later (SurfaceSpec, agent_runtime, event adapter)."
+          },
+          {
+            "id": "deck_migration",
+            "prompt": "Migrate deck onto shared contracts now?",
+            "answer": "No, KV only; deck later."
+          }
+        ],
+        "summary": "Build a structured intent layer in front of the KV canvas agent instead of growing per-case regex backstops. A one-shot resolver (house pattern Agent(output_schema), like kv_generator/edit_intent.py) turns each canvas turn into CanvasIntent: action, references with candidate layers and confidence, targets with their source, params, and needs_clarification. A deterministic validator then writes through the existing canvas tools, asks with a card built from the candidates, or hands the turn to today's agent for brainstorm and pixel edits; the target-card, which-layer and reference-guard backstops fold into it, while the stale-history filter and the FR-37b write guard stay as a final safety net. The resolver sees richer context: the canvas selection (already sent since p0), lazily generated per-layer visual descriptions cached in a side table keyed by asset hash, and a structured summary of recent runs from kv_agent_runs. Card answers return as a structured card_answer so a clarification resolves exactly. Clarifications, fast undos and refused mismatches are recorded in a kv_intent_events table and as PostHog events, and feed an exported golden set. It ships behind a new flag kv-agentic-canvas-intent, starting in shadow mode to compare resolver decisions with the current agent before switching on, and its PRs stack on the p0 branches.",
+        "completed_at": "2026-10-19T09:08:23Z"
+      },
+      "prd_path": "frnd/docs/prd/kv-agentic-canvas-intent.md",
+      "branch": "feature/daffa/vc-kv-agentic-canvas-intent",
+      "pr_strategy": "normal: intent branches rebased onto develop/development after the P0 merge (ai f6d45724, api 7ce0dbfb9, web 241d86627 + P0 track closure); PRs target develop/development",
+      "service_prds": [
+        {
+          "service": "ai-service",
+          "path": "ai-service/docs/prd/kv-agentic-canvas-intent.md",
+          "tasks": 16
+        },
+        {
+          "service": "api",
+          "path": "api/docs/prd/kv-agentic-canvas-intent.md",
+          "tasks": 16
+        },
+        {
+          "service": "web",
+          "path": "web/docs/prd/kv-agentic-canvas-intent.md",
+          "tasks": 4
+        }
+      ],
+      "pr_urls": {
+        "api": "https://github.com/alva-intelligence/frnd-api-php/pull/727",
+        "ai-service": "https://github.com/alva-intelligence/frnd-ai-services/pull/371",
+        "web": "https://github.com/alva-intelligence/frnd-web/pull/1035"
+      },
+      "services": [
+        "ai-service",
+        "api",
+        "web"
+      ],
+      "follow_ups": [
+        "studio-agent-surface",
+        "kv-agno-session-media: stop KV agent turns storing base64 images in agno_sessions (store_media=False / URL-only); 178 MB session \u2192 12-14 s save per turn on the P0 path"
+      ],
+      "notes": " Wireframe not needed (no new UI; reuses P0 cards approved in frnd-web #1022) \u2014 daffa 2026-10-19; current phases.json has no wireframe phase. 2026-10-19: branches created from p0 after P0 PR review round 1 (ai 1d626e91, api b65463a36, web 27c89896e), pushed; service PRDs + tracks committed on the intent branches. 2026-10-20: implementation complete; lead e2e smoke on local stack passed (live write/card/selection, shadow, fallback, undone_fast, descriptions, report/export). Smoke fixes 3fd22f98, ba35f5c8, f5fc5db1. Open: 3-trial eval gates not run; web branch 5 behind develop (clean merge). 2026-10-20: user chose to ship the Craft chat-mode fix (web 2a16785da) inside the web intent PR. 2026-10-20: manual testing round 2 fixes pushed to ai #371 (f0aec22b); option B (agno session media) deferred as follow-up. 2026-10-20: all 3 PRs merged (pr_review \u2192 completion \u2192 idle). Track-close docs PRs opened (api #730, ai #372, web #1036).",
+      "split_decisions": {
+        "branch": "stack on feature/daffa/vc-kv-agentic-canvas-p0 after the P0 review fixes are pushed; worktree <repo>/.worktrees/kv-agentic-canvas-intent",
+        "flag": "one multivariate PostHog flag kv-agentic-canvas-intent: variants shadow|live, absent=off; api resolves once per turn, sends intent_mode to ai-service",
+        "tests": "targeted: ai validator rules vs fake IntentSurface + resolver timeout fallback; api CardAnswer validation, fast-undo derivation, internal route scoping; web manual; plus committed eval runner"
+      },
+      "branches": {
+        "ai-service": "feature/daffa/vc-kv-agentic-canvas-intent",
+        "api": "feature/daffa/vc-kv-agentic-canvas-intent",
+        "web": "feature/daffa/vc-kv-agentic-canvas-intent"
+      },
+      "worktrees": {
+        "ai-service": "ai-service/.worktrees/kv-agentic-canvas-intent",
+        "api": "api/.worktrees/kv-agentic-canvas-intent",
+        "web": "web/.worktrees/kv-agentic-canvas-intent"
+      },
+      "track_files": [
+        {
+          "service": "ai-service",
+          "path": "ai-service/docs/tracks/kv-agentic-canvas-intent.track.md"
+        },
+        {
+          "service": "api",
+          "path": "api/docs/tracks/kv-agentic-canvas-intent.track.md"
+        },
+        {
+          "service": "web",
+          "path": "web/docs/tracks/kv-agentic-canvas-intent.track.md"
+        }
+      ],
+      "base_commits": {
+        "ai-service": "ee105081d",
+        "api": "26fbf1909",
+        "web": "b86404b77"
+      },
+      "contracts": "docs/superpowers/plans/2026-10-19-kv-agentic-canvas-intent-contracts.md",
+      "implementation_strategy": "parallel subagents per service against frozen contracts I1\u2013I6",
+      "handoff": "docs/superpowers/plans/2026-10-19-kv-agentic-canvas-intent-handoff.md",
+      "progress": {
+        "web": "TASK-1..4 done (f88722c92)",
+        "api": "TASK-1..16 done (f9b891a0e)",
+        "ai-service": "TASK-1..16 done (655b8018)"
+      },
+      "resume_decisions_2026_10_20": {
+        "unknown_card": "SSE error frame (StreamChatRequest convention), not HTTP 422",
+        "flag": "non-prod: env KV_AGENT_INTENT_MODE default live; prod: PostHog variant, fail-closed off",
+        "eval_fixtures": "runner skips cases needing base_image / crafter_role / real_runs when fixture absent",
+        "api_posthog": "api sends agent_intent.decision + agent_intent.fast_undo via queued capture"
+      },
+      "completed_at": "2026-10-20T11:25:49Z",
+      "merge_commits": {
+        "api": "a1f6592cd",
+        "ai-service": "c62acb1e4",
+        "web": "f7904080d"
+      },
+      "track_close_prs": {
+        "api": "https://github.com/alva-intelligence/frnd-api-php/pull/730",
+        "ai-service": "https://github.com/alva-intelligence/frnd-ai-services/pull/372",
+        "web": "https://github.com/alva-intelligence/frnd-web/pull/1036"
+      },
+      "rollout": {
+        "flag": "kv-agentic-canvas-intent",
+        "production_start": "shadow",
+        "gate": "agent-intent:report \u2265200 compared turns, \u226590% agreement, \u22651 week",
+        "status": "not started"
+      }
+    },
+    "chat-attachment-mentions": {
+      "slug": "chat-attachment-mentions",
+      "worker": "daffa",
+      "phase": "implementation",
+      "phase_status": "completed",
+      "phase_entered": "2026-10-20T15:34:22Z",
+      "type": "feature",
+      "initial_request": "Add a new way to reference attachments: typing @ lists the files already attached to the message, and picking one inserts a mention chip at the caret. Same file can be mentioned multiple times; chips keep position in sent bubble. Additive in AskFRND (tray stays, extend existing @ picker) and KV Generator chat (inline attach chip, Region N and art-style chips unchanged). One shared @mention attachment component. AskFRND API moves to block-based message with attachment refs by stable file ID; KV repeated attachment_ref confirmed; model receives position-aware references. Acceptance: 10 criteria (picker, multi-mention, chip/file deletion semantics, duplicate names, history persistence, model refs, shared component, AskFRND tray/mentions intact, KV attach flow intact, Region/art-style intact).",
+      "services": [
+        "web",
+        "api",
+        "ai-service"
+      ],
+      "brainstorming": {
+        "questions": [
+          {
+            "id": "shared_component",
+            "prompt": "Point 7 \u2014 what does 'one shared component' mean?",
+            "options": [
+              {
+                "label": "Shared core + 2 adapter",
+                "value": "Shared core + 2 adapter",
+                "description": "Shared picker section, chip, ContentBlock format, bubble renderer; per-editor insert adapters (Lexical for KV, MentionRichEditor for AskFRND).",
+                "recommended": true
+              },
+              {
+                "label": "Migrate AskFRND to Lexical",
+                "value": "Migrate AskFRND to Lexical",
+                "description": "One literal editor; touches 4 composers + edit mode.",
+                "recommended": false
+              }
+            ],
+            "recommended_label": "Shared core + 2 adapter",
+            "rationale": "Editors differ (Lexical vs string-token contentEditable); sharing everything above the editor avoids a fork without rewriting AskFRND.",
+            "answer": "Shared core + 2 adapter"
+          },
+          {
+            "id": "file_removal",
+            "prompt": "Point 3 \u2014 when a file is removed, what happens to its mentions?",
+            "options": [
+              {
+                "label": "Hapus semua mention",
+                "value": "Hapus semua mention",
+                "description": "Remove every chip of that file; surrounding text stays.",
+                "recommended": true
+              },
+              {
+                "label": "Flag sebagai missing",
+                "value": "Flag sebagai missing",
+                "description": "Keep chip in 'missing' state and block send.",
+                "recommended": false
+              }
+            ],
+            "recommended_label": "Hapus semua mention",
+            "rationale": "Message never carries a dangling ref; matches current KV useChipSync removal.",
+            "answer": "Hapus semua mention"
+          },
+          {
+            "id": "askfrnd_file_id",
+            "prompt": "How do AskFRND non-document files get a stable ID before send?",
+            "options": [
+              {
+                "label": "Temp ID dari client",
+                "value": "Temp ID dari client",
+                "description": "UUID at pick time sent alongside files[]; API maps it (same as KV).",
+                "recommended": true
+              },
+              {
+                "label": "Pre-upload semua file",
+                "value": "Pre-upload semua file",
+                "description": "Presigned upload on pick like large-docs; tray gets upload status.",
+                "recommended": false
+              }
+            ],
+            "recommended_label": "Temp ID dari client",
+            "rationale": "Keeps current upload flow unchanged; mirrors proven KV path.",
+            "answer": "Temp ID dari client"
+          },
+          {
+            "id": "composer_scope",
+            "prompt": "Which AskFRND-family composers get attachment mentions?",
+            "options": [
+              {
+                "label": "Hanya panel AskFRND",
+                "value": "Hanya panel AskFRND",
+                "description": "ChatInputMobile in PanelBody only.",
+                "recommended": true
+              },
+              {
+                "label": "Semua composer MentionRichEditor",
+                "value": "Semua composer MentionRichEditor",
+                "description": "ChatInputMobile, ChatInput, HomeBriefingComposer, ProjectRoomComposer.",
+                "recommended": false
+              }
+            ],
+            "recommended_label": "Hanya panel AskFRND",
+            "rationale": "User chose consistency across all MentionRichEditor composers; larger QA surface.",
+            "answer": "Semua composer MentionRichEditor"
+          },
+          {
+            "id": "edit_message",
+            "prompt": "Editing a sent message that contains attachment mentions?",
+            "options": [
+              {
+                "label": "Chip read-only saat edit",
+                "value": "Chip read-only saat edit",
+                "description": "Mentions shown and resent; no new mentions; files not re-attached.",
+                "recommended": true
+              },
+              {
+                "label": "Out of scope",
+                "value": "Out of scope",
+                "description": "Edit sends text only; attachment mentions dropped.",
+                "recommended": false
+              }
+            ],
+            "recommended_label": "Chip read-only saat edit",
+            "rationale": "Preserves mention positions without changing the edit-stream file contract.",
+            "answer": "Chip read-only saat edit"
+          },
+          {
+            "id": "duplicate_names",
+            "prompt": "Point 4 \u2014 how to distinguish files with the same name?",
+            "options": [
+              {
+                "label": "Suffix + thumbnail",
+                "value": "Suffix + thumbnail",
+                "description": "kv-a.png / kv-a.png (2) plus thumbnail on chip and picker.",
+                "recommended": true
+              },
+              {
+                "label": "Suffix urutan",
+                "value": "Suffix urutan",
+                "description": "Order suffix only.",
+                "recommended": false
+              },
+              {
+                "label": "Thumbnail + ukuran",
+                "value": "Thumbnail + ukuran",
+                "description": "Thumbnail on chip, size in picker.",
+                "recommended": false
+              }
+            ],
+            "recommended_label": "Suffix + thumbnail",
+            "rationale": "Unambiguous both as text and visually.",
+            "answer": "Suffix + thumbnail"
+          },
+          {
+            "id": "rollout",
+            "prompt": "Ship behind a feature flag?",
+            "options": [
+              {
+                "label": "Ya, flag baru",
+                "value": "Ya, flag baru",
+                "description": "Flag off = behavior identical to today.",
+                "recommended": true
+              },
+              {
+                "label": "Tanpa flag",
+                "value": "Tanpa flag",
+                "description": "Live on merge.",
+                "recommended": false
+              }
+            ],
+            "recommended_label": "Ya, flag baru",
+            "rationale": "Shared MentionRichEditor/StreamChatRequest/flattener paths; flag limits blast radius.",
+            "answer": "Ya, flag baru"
+          },
+          {
+            "id": "slug",
+            "prompt": "Workflow slug",
+            "options": [
+              {
+                "label": "chat-attachment-mentions",
+                "value": "chat-attachment-mentions",
+                "description": "/workflow start chat-attachment-mentions",
+                "recommended": true
+              },
+              {
+                "label": "Nanti dulu",
+                "value": "Nanti dulu",
+                "description": "Record decisions only.",
+                "recommended": false
+              }
+            ],
+            "recommended_label": "chat-attachment-mentions",
+            "rationale": "Covers both surfaces.",
+            "answer": "chat-attachment-mentions"
+          }
+        ],
+        "summary": "Add @-mentions of message attachments to AskFRND and KV Generator chat, additively. Typing @ lists files attached to the current message alongside existing mention types; picking inserts an ID-bearing chip at the caret; the same file may be mentioned many times; chips keep position in the sent bubble and history. Architecture: shared editor-agnostic core in web (ContentBlock/AttachmentRef types moved out of kvChatBlocks, MentionPopover 'Attachments' section with suffix+thumbnail disambiguation, one AttachmentMentionChip with dark/light variants, one blocks renderer for bubbles/history) plus two thin adapters: a Lexical @ typeahead plugin for KV and an ID-bearing chip + blocks serializer for MentionRichEditor (applied to all its composers: ChatInputMobile, ChatInput, HomeBriefingComposer, ProjectRoomComposer). KV: attach flow unchanged (attach chip \u00d7 removes file and all its chips); @-inserted chips \u00d7 remove only that node; removing a file removes every mention; add mutation listener so Backspace on chips stays consistent; Region N and art-style chips unchanged. Repeated attachment_ref already accepted by StreamChatRequest (in_array check, no distinct). AskFRND: tray unchanged; files get a client temp UUID at pick time sent alongside files[] and mapped by api; send adds optional message_blocks while keeping message string; history returns blocks + file ids; legacy threads fall back to current render; edit keeps attachment chips read-only. API: persist blocks + file ids for AskFRND, accept non-image attachment refs via client-id mapping, message nullable when blocks present, MessageBlocksFlattener Phase 2 substitutes attachment_ref with positional labels like @[Attachment N: name], ChatHelper returns file ids. ai-service: label each image/file with a text part ([Attachment N: name]) aligned with prompt tokens in chat_agent process_message_with_files and kv_generator _agno_chat_stream (account for synthetic current-kv at index 0); no provider interleaving (Agno drops list content on Gemini). Everything gated by a new feature flag; flag off or no attachment mention = payload identical to today.",
+        "completed_at": "2026-10-20T14:38:08Z",
+        "service_state_snapshots": {
+          "web": "AskFRND: MentionRichEditor (string-valued contentEditable, @label tokens) used by ChatInputMobile/ChatInput/HomeBriefingComposer/ProjectRoomComposer + ChatMessage edit; picker AgentMentionPopover over components/mentions/MentionPopover; selectedFiles File[] tray keyed by index; non-doc files multipart files[] without ID; large docs pre-uploaded via useChatDocumentUploads (ChatDocumentRef id). KV: Lexical 0.21 KvLexicalEditor with AttachmentRefNode/SelectionRefNode/ArtStyleRefNode, useChipSync one-chip-per-id, serializeToContentBlocks (no dedupe), KvUserBubbleInline renders blocks; no @ typeahead.",
+          "api": "ThreadController store/update + StreamChatRequest shared by AskFRND/KV/P&A; message_blocks (text|selection_ref|attachment_ref) + attachments[] accepted for all thread types; ref check in_array (repeats OK) L1490-1516; non-document attachments must be image/*; MessageBlocksFlattener drops refs to ''; blocks persisted in user_chat_history.message['blocks']; ChatPayloadData has no blocks; ChatHelper::formatChatHistoryEntry returns files as URLs without id.",
+          "ai-service": "chat_agent AgentRunDto message + images/files URL lists + documents; process_message_with_files appends images at end; kv_generator KvStreamRequest prompt (flattened) + attachments base64, synthetic current-kv at index 0; Agno arun(text, images=[...]) puts images after text; Gemini drops list content; nothing keyed by attachment id."
+        }
+      },
+      "prd_path": "frnd/docs/prd/chat-attachment-mentions.md",
+      "branch": "feature/daffa/vc-chat-attachment-mentions",
+      "service_prds": {
+        "api": {
+          "path": "api/docs/prd/chat-attachment-mentions.md",
+          "status": "completed"
+        },
+        "web": {
+          "path": "web/docs/prd/chat-attachment-mentions.md",
+          "status": "completed"
+        },
+        "ai-service": {
+          "path": "ai-service/docs/prd/chat-attachment-mentions.md",
+          "status": "completed"
+        }
+      },
+      "pr_urls": {},
+      "agent_state": "needs_approval",
+      "agent_state_reason": "Committed + pushed on feature/daffa/vc-chat-attachment-mentions (3 repos); PRs not opened yet",
+      "rollout": {
+        "feature_flag": "show-chat-attachment-mentions"
+      },
+      "wireframes": [
+        {
+          "slug": "chat-attachment-mentions",
+          "owner": "daffa",
+          "path": "web/src/wireframes/chat-attachment-mentions",
+          "branch": "wireframe/daffa/vc-chat-attachment-mentions",
+          "approval": "skipped_by_user",
+          "committed": false,
+          "note": "User chose not to commit/PR the wireframe (2026-10-20); files carried uncommitted onto the web feature branch as the UI foundation."
+        }
+      ],
+      "track_files": {
+        "api": "api/docs/tracks/chat-attachment-mentions.track.md",
+        "web": "web/docs/tracks/chat-attachment-mentions.track.md",
+        "ai-service": "ai-service/docs/tracks/chat-attachment-mentions.track.md"
+      },
+      "contracts": {
+        "attachment_manifest": "[{n,id,label,mime_type,kind}] api->ai-service, only when flag on and turn has attachment_ref",
+        "prompt_token": "@[Attachment N: label]",
+        "askfrnd_request": "message_blocks (JSON string in multipart) + file_ids[] aligned with files[]",
+        "flag": "show-chat-attachment-mentions"
+      },
+      "implementation_strategy": "sequential (subagents per service)",
+      "commits": {
+        "api": "fcb160251",
+        "web": "f43fc3ac1",
+        "ai-service": "53d503fb"
+      },
+      "pushed": true
+    },
+    "studio-canvas": {
+      "slug": "studio-canvas",
+      "type": "feature",
+      "phase": "implementation",
+      "phase_status": "inprogress",
+      "phase_entered": "2026-10-21T07:35:31.889605Z",
+      "worker": "daffa",
+      "initial_request": "New Studio tool: a node canvas around KV Craft and KV Motion. Design artifact https://claude.ai/artifact/AaEYrSJNX3TUGN32SJdYYf (Studio Design, 7 flows, 6 decisions agreed Oct 16). Feature spec https://claude.ai/artifact/GuFSgdNXDnWJXrc9ziWbfe (Claude Docs, NOT shared with the agent yet). Must be truly composable so Studio can grow (new node types without touching core).",
+      "references": {
+        "design_artifact": "https://claude.ai/artifact/AaEYrSJNX3TUGN32SJdYYf",
+        "feature_spec": "https://claude.ai/artifact/GuFSgdNXDnWJXrc9ziWbfe",
+        "feature_spec_access": "denied \u2014 ask Daffa to share before PRD"
+      },
+      "brainstorming": {
+        "service_state_snapshots": {
+          "web": {
+            "canvas_foundation": "ADR web/docs/adr/0005-canvas-layering.md (Accepted 2026-09-24): content / world overlay (DOM, lib/canvas/worldOverlay.ts + cameraCssVars) / screen overlay (cameraStore subscribe) / interaction. Shared by KV, decks, board.",
+            "fabric": "KvFabricCanvas.tsx (2672 lines) + components/studio/kv-generator/fabric/* (37 modules); components/board/* has tile/note/frame/arrow/comment on Fabric (Big Idea board).",
+            "xyflow": "@xyflow/react used ONLY by Workflows editor (components/workflows/WorkflowCanvasEditor.tsx + nodes/WorkflowNodes.tsx, ~976 lines); generic untyped side ports.",
+            "motion": "components/studio/kv-generator/motion/KvMotionEditor.tsx (Konva timeline over frozen base, Mediabunny MP4 export); spec 2026-08-20-kv-motion-multi-tile-design.md.",
+            "psd": "lib/studio/kv/psd/* (importPsd, psdTileSink).",
+            "collab": "lib/kv/yjsDoc.ts + Hocuspocus (collab/), persisted to kv_yjs_updates."
+          },
+          "api": {
+            "kv_model": "studio_files (metadata.kv_canvas, overlays JSON, share_token), kv_generations (versions, mode sketch|craft|resize), kv_resize_exports (+ _versions kind create|regenerate|region_edit|separate|restore), BrandSizePreset, kv_motion_projects/exports/templates/bumpers, kv-upscales.",
+            "resize_override_model": "tile overlays===null inherits; first edit freezes a WHOLE-LIST snapshot \u2014 no per-property overrides exist today.",
+            "workflows": "workflows.canvas_json, workflow_runs (+snapshot), workflow_run_steps; WorkflowDispatchService \u2192 ai-service /workflow/run (Agno compiler, single-entry/exit structured branches); billing AFTER each node via WorkflowCostService; no fan-out, no groups, no pre-run price.",
+            "tools": "tools table (slug, pillar studio|research, category visual|brief_strategy|video), seeded by StudioDevelopmentSeeder + data migrations; StudioToolController@index; web gating lib/toolPermissions.ts.",
+            "share": "ShareLink morph on StudioFile + shared_board_ids.",
+            "lark": "api/app/Support/LarkExternalUrl.php + LarkUnsupportedDocumentException (Lark doc reading exists)."
+          },
+          "ai-service": {
+            "llm": "AskFRND chat infra (Agno, app.agents.chat_agent) \u2014 must be reused for Text generator (feedback memory).",
+            "documents": "app/agents/chat_agent/documents.py parses attachments (PDF text).",
+            "workflow_compiler": "app/services/workflow/compiler.py (canvas \u2192 Agno Workflow)."
+          },
+          "precedent_live_objects": "decks ObjectRefType (studio_file, four_c, big_idea, persona, kpi, verbatim) with resolve/check/bind/detach/refresh/stale \u2014 reuse for v1.1 Live objects."
+        },
+        "external_state_snapshots": {
+          "tldraw": {
+            "url": "https://tldraw.dev/pricing",
+            "fact": "SDK 4.0 (Sep 2025) source-available tldraw license; production needs commercial license key, value-based pricing via sales, 100-day trial; shapes render as DOM via React; tldraw sync is server-authoritative, not Yjs; has a 'workflow' node-and-wire starter kit."
+          }
+        },
+        "design_decisions_from_artifact": [
+          "1. Master = Image node: generated image + overlays; re-run/region edit swaps only the image, overlays and motion stay.",
+          "2. Editing lives in focus mode (layers, inspector, drawing tools, region edit); canvas toolbar = Add, Select, Hand, Section, Sticky, Comment.",
+          "3. A size breaks away per property; only changed properties stop following the master.",
+          "4. Master image change \u2192 sizes Out of date with priced re-run; overrides kept.",
+          "5. Resize = floating-bar tool creating one Size set node (grid/list, group by).",
+          "6. Motion lives on each Image node (Static/Motion switch); animates overlays over the still; a size added to an animated set follows master motion."
+        ],
+        "questions": [
+          {
+            "id": "q1",
+            "prompt": "Relationship to KV Generator",
+            "answer": "New tool; KV Generator stays and is reused as parts."
+          },
+          {
+            "id": "q2",
+            "prompt": "PRD scope",
+            "answer": "v1 WITHOUT live objects (Flows 2\u20133 \u2192 v1.1)."
+          },
+          {
+            "id": "q3",
+            "prompt": "Existing KV files open in Studio?",
+            "answer": "No \u2014 new Studio files only, no migration."
+          },
+          {
+            "id": "q4",
+            "prompt": "Canvas engine",
+            "answer": "Own headless core + Fabric as first renderer on ADR 0005 / lib/canvas (not xyflow, not tldraw SDK). Borrow tldraw DESIGN patterns, never its code."
+          },
+          {
+            "id": "q5",
+            "prompt": "Graph persistence/collab",
+            "answer": "Yjs realtime via existing Hocuspocus; client writes intent (layout, params, wires), server writes facts (outputs, versions, billing)."
+          },
+          {
+            "id": "q6",
+            "prompt": "Composition model",
+            "answer": "New Composition model (master + layers + motion + variants with sparse per-property overrides) with adapters to KV (kv_generations, pipelines); KV Generator untouched."
+          },
+          {
+            "id": "q7",
+            "prompt": "Run engine",
+            "answer": "Studio-owned engine: per node, priced up front, versioned, input-hash cache/Out of date, fan-out; orchestration in api, executors call ai-service/KV; reuse Workflows callback + billing patterns."
+          },
+          {
+            "id": "q8",
+            "prompt": "Slug",
+            "answer": "studio-canvas"
+          },
+          {
+            "id": "q9",
+            "prompt": "Where composition layers + per-size overrides live (OQ-8)",
+            "answer": "Yjs (live intent) + immutable DB snapshot written by server on every run/version; runs/exports/share read the snapshot."
+          },
+          {
+            "id": "q10",
+            "prompt": "Collab (frnd-hocuspocus) for Studio Yjs",
+            "answer": "In scope: new `studio:` doc prefix + verifier + StudioPersistence in collab; api /internal/sanctum-verify-for-studio + studio_yjs_updates table; fully separate from KV persistence."
+          },
+          {
+            "id": "q11",
+            "prompt": "Follow Rafly's prototype (web origin/feature/rafly/vc-studio-prototype, xyflow + zustand mock, all 7 flows)?",
+            "answer": "Yes \u2014 port its UI (shell, nodes, panels, xyflow canvas) onto our headless core + Yjs + api. xyflow becomes the canvas render adapter (supersedes q4's Fabric-for-the-graph); Image node previews and focus mode keep the KV Fabric renderer; mock store slices are replaced by the real core phase by phase; colours/components tidied to tokens + frndOS v2. Naming (node-studio vs studio-canvas) to align with Rafly.",
+            "decided": "2026-10-21"
+          }
+        ],
+        "open_questions": [
+          {
+            "id": "o1",
+            "topic": "Feature Spec doc access",
+            "note": "Not shared with agent; reconcile spec with PRD once shared."
+          },
+          {
+            "id": "o2",
+            "topic": "Which templates ship in v1",
+            "note": "Design shows 4 (KV from a brief, Product in a scene, Resize to every format, Mood board to video); only 'KV from a brief' is designed."
+          },
+          {
+            "id": "o3",
+            "topic": "Not designed yet",
+            "note": "PSD upload \u2192 master, Share for approval, run failures + credit policy, multi-area region edit support in KV pipeline."
+          }
+        ],
+        "summary": "Studio is a new tool (KV Generator stays): a node canvas whose v1 covers Flow 1 (brief \u2192 Text generator \u2192 Sketches \u2192 Refine \u2192 master), Flow 4 (region edit in focus mode), Flow 5 (size set), Flow 6 (focus mode + per-property overrides), Flow 7 (Static/Motion), PSD entry, share and download \u2014 live objects (Flows 2\u20133) are v1.1. Architecture is a headless, engine-agnostic core in web/src/lib/studio/core (versioned records + migrations, typed ports/values, node-type registry, a single editor command API used by UI, templates, AskFRND/MCP and tests) with node types as plugins under lib/studio/nodes and Fabric as the first renderer under ADR 0005 / lib/canvas; lint-enforced boundaries keep core free of nodes and renderers. The graph lives in Yjs on the existing Hocuspocus server with one writer per field: client writes intent, server writes facts. A new Composition model (base image + layers + motion + variants with sparse per-property overrides) is a standalone pillar consumed by Image, Size set, focus mode, motion and export, adapting to KV's kv_generations and pipelines instead of changing them; it replaces KV resize's whole-snapshot override model for Studio only. A Studio-owned run engine in api runs nodes one at a time with up-front price, versioned outputs, input-hash staleness and list fan-out, delegating model calls to ai-service and KV endpoints; the Workflows engine is not reused because it compiles whole DAGs, bills after the fact and has no fan-out. Build order P0 core \u2192 P1 run \u2192 P2 composition + focus \u2192 P3 Flow 1 template \u2192 P4 size sets \u2192 P5 motion/PSD/share; success test: Video and Live object nodes added in v1.1 as plugins only.",
+        "completed_at": "2026-10-21T06:41:43.318348Z"
+      },
+      "prd_path": "frnd/docs/prd/studio-canvas.md",
+      "branch": "feature/daffa/vc-studio-canvas",
+      "branches": {
+        "api": "feature/daffa/vc-studio-canvas",
+        "web": "feature/daffa/vc-studio-canvas",
+        "ai-service": "feature/daffa/vc-studio-canvas"
+      },
+      "base_commits": {
+        "api": "8dea07dce",
+        "web": "7a675c0a2",
+        "ai-service": "8e7482e4"
+      },
+      "service_prds": {
+        "api": {
+          "path": "api/docs/prd/studio-canvas.md",
+          "tasks": 20,
+          "status": "in_progress"
+        },
+        "web": {
+          "path": "web/docs/prd/studio-canvas.md",
+          "tasks": 34,
+          "status": "in_progress"
+        },
+        "ai-service": {
+          "path": "ai-service/docs/prd/studio-canvas.md",
+          "tasks": 7,
+          "status": "in_progress"
+        }
+      },
+      "track_files": {
+        "api": "api/docs/tracks/studio-canvas.track.md",
+        "web": "web/docs/tracks/studio-canvas.track.md",
+        "ai-service": "ai-service/docs/tracks/studio-canvas.track.md"
+      },
+      "pr_urls": {},
+      "wireframe_preview": {
+        "branch": "wireframe/daffa/vc-studio-canvas",
+        "commit": "a476bae41",
+        "path": "web/src/wireframes/studio-canvas",
+        "note": "personal static preview, not a workflow artifact"
+      },
+      "implementation_strategy": "wireframe_then_implementation",
+      "implementation_batch": "P2",
+      "implementation_batch_status": "verified",
+      "implementation_verification": {
+        "date": "2026-10-26",
+        "batch": "P1-web",
+        "web_tasks_completed": [
+          14,
+          15,
+          16,
+          17,
+          18
+        ],
+        "smoke_file_id": "01m5ve0k6p8a4btxkr1s8b330y",
+        "browser": [
+          "real text generation and 2-credit charge",
+          "peer sync",
+          "per-version edits and reload",
+          "staleness and Keep",
+          "DOCX extraction",
+          "cancel keeps prior version",
+          "network refusal without stuck running"
+        ],
+        "core_checks": "185 passed, including reload output isolation regression",
+        "ui_checks": "382 passed",
+        "upload_checks": "3 passed, 10 assertions on frnd_studio_test",
+        "typecheck": "repo errors remain; no diagnostics in touched Studio paths",
+        "lint": "touched paths passed",
+        "limits": [
+          "live Lark extraction not exercised",
+          "PostHog Live Events and remote taxonomy not verified"
+        ],
+        "next": "P2 done and browser-verified (see implementation_p2_verification); next is P3 planning or the flag/permission gates"
+      },
+      "implementation_p2_verification": {
+        "date": "2026-10-26",
+        "batch": "P2",
+        "status": "browser_verified",
+        "smoke_file_id": "01m5ve0k6p8a4btxkr1s8b330y",
+        "browser": [
+          "real image run: 1536x1024, 10 cr, one charge, one kv_generations mode sketch, one immutable version",
+          "focus mode on the extracted Fabric surface",
+          "Text + Shape overlays placed and survived reload (3 layers)",
+          "two-area region edit -> v2 operation=region_edit, overlays preserved, one POST",
+          "failure path: not_found from a stale queue worker refunded exactly once, then retry succeeded"
+        ],
+        "defects_fixed": [
+          "3bc01718d malformed persisted overlay crashed focus",
+          "232a79a7f Text/Shape never placed a layer (prototype setFocusTool)",
+          "04f52a992 non-ULID prototype id blocked paid runs with an opaque error",
+          "6c4789d05 migration now mints api-valid ULIDs and rewrites override keys"
+        ],
+        "checks": "web 415 vitest + 84 bun fabric, collab 15, api 12/81 (StudioImageRunTest), ai-service 7",
+        "limits": [
+          "size tabs / sparse overrides not exercised live",
+          "image-overlay placement not exercised live",
+          "two-tab overlay sync and in-flight cancel not exercised"
+        ]
+      },
+      "implementation_planning": {
+        "date": "2026-10-26",
+        "batch": "P2",
+        "status": "planned_not_implemented",
+        "plan": "docs/superpowers/plans/2026-10-26-studio-canvas-p2.md",
+        "next_task": "Task 1: freeze image contracts and reconcile service PRDs",
+        "checkpoints": {
+          "web": "2f98daafd",
+          "api": "6d1f3a7c5",
+          "ai-service": "c1c055d3"
+        },
+        "decisions": [
+          "reuse KV /complete through bounded API image job",
+          "Studio single fixed-charge/refund owner with Studio-owned KV model persistence",
+          "immutable pre-queue capture and per-version Composition snapshot",
+          "reuse nested params.domain intent with collaborative leaf writes",
+          "Fabric focus and multi-region master edit; existing-variant sparse persistence P2, size orchestration P4"
+        ],
+        "planning_smoke": [
+          "nested domain intent survives collab serialization",
+          "current collab schema rejects image output"
+        ],
+        "limits": [
+          "P2 runtime implementation not started",
+          "no P2 provider or browser smoke",
+          "no push or PR"
+        ]
+      },
+      "extra_repos": {
+        "collab": {
+          "repo": "alva-intelligence/frnd-hocuspocus",
+          "base": "main",
+          "branch": "feature/daffa/vc-studio-canvas"
+        }
+      },
+      "ui_source": {
+        "branch": "origin/feature/rafly/vc-studio-prototype",
+        "commit": "e529c0367",
+        "worktree": "web/.worktrees/rafly-studio-prototype",
+        "preview_port": 3010
+      }
+    },
+    "kv-agentic-canvas-p1-1": {
+      "slug": "kv-agentic-canvas-p1-1",
+      "type": "feature",
+      "parent_feature": "kv-agentic-canvas-p1",
+      "worker": "daffa",
+      "phase": "completion",
+      "phase_status": "inprogress",
+      "phase_entered": "2026-10-23T08:53:37Z",
+      "initial_request": "Di Craft canvas (kosong atau tidak), chat agentic bisa 'generate 3 ide beda-beda tema kemerdekaan' \u2192 langsung N (\u22644) board ide BARU dari nol (tanpa board sumber) lewat plan card P1 + placeholder paralel, bukan 1 render cold-start. Craft dulu; Concept menyusul.",
+      "brainstorming": {
+        "service_state_snapshots": {
+          "api": "P1 branch (PR #791). Capability registry KvCanvasCapabilityRegistry (1 class + 1 line). VariantBoards requires board_id (proposeSteps boardOrFail, craft gate), places with adjacentFreeCenter. KvVariantRenderer fails without source, passes source as base, hardcodes mode craft + parent_generation_id. KvGeneratePayloadBuilder.build already accepts null baseGeneration, always sends aspect_ratio, canvas_mode 'craft', honours use_brand_knowledge (default on). KvBoardPlacement::nextFreeCenters handles zero boards \u2192 (0,0). KvAgentPlanService variant-specific (MAX_VARIANTS 4, new_ rows). KvAgentCanvasTurn::forTurn gated craft+chat; PROPOSAL_TOOLS fixed. StreamChatRequest allows Craft cold start (mode image + brief, no base).",
+          "ai-service": "P1 branch (PR #385). Craft typed msgs are chat turns; chat_mode guidance \u2192 suggest_mode_switch(to=image) \u2192 1 cold-start render (COLD_START_GUIDANCE: finished KV, no logo). kv_plan_tools.py proposal tools fixed set (propose_kv_variants/sizes); R12 resolver maps 'duplicate + change' \u2192 variant; needs new action for 'N new ideas from scratch'.",
+          "web": "P1 branch (PR #1104). KvPlanCard branches on capability name (variant_boards/add_sizes). Agent placeholders only when canvasMode craft. Concept fan-out handleExploreDirectionsConcurrent (question card multi-select \u2192 Generate N, sketch) exists but is Concept-only, card-driven, not plan card. useKvStream sends aspect_ratio '' when unset \u2192 ai asks via question card.",
+          "collab": "No change expected: add_board / rekey_board_tip / hide_board from P1 cover it."
+        },
+        "external_state_snapshots": {},
+        "questions": [
+          {
+            "id": "Q1",
+            "prompt": "Aspect ratio for new ideas (no source board)",
+            "options": [
+              "Picker on the plan card (default from the user's words, else 4:5)",
+              "Agent asks first with a card",
+              "Fixed default"
+            ],
+            "answer": "Picker on the plan card"
+          },
+          {
+            "id": "Q2",
+            "prompt": "Non-empty canvas + 'generate 3 new ideas' with no board named",
+            "options": [
+              "New ideas from scratch",
+              "Ask: from scratch or variant of the active board",
+              "Empty canvas only"
+            ],
+            "answer": "Ask: from scratch or variant of the active board (clarifying card)"
+          },
+          {
+            "id": "Q3",
+            "prompt": "Wireframe for the 'N new ideas' plan card",
+            "options": [
+              "Add a scenario to the P1 wireframe",
+              "No wireframe"
+            ],
+            "answer": "No wireframe (user decision; reuse P1 plan card + kv-agent-structure-cards look; deviation from wireframe gate recorded)"
+          },
+          {
+            "id": "Q4",
+            "prompt": "Branch strategy",
+            "options": [
+              "Stack on P1",
+              "Wait for P1 merge"
+            ],
+            "answer": "P1 already merged (2026-10-22) \u2192 branch feature/daffa/vc-kv-agentic-canvas-p1-1 from latest develop/development"
+          }
+        ],
+        "summary": "New P1 capability `concept_boards` (Craft only): the agent proposes N\u22644 distinct NEW ideas from scratch (directions + \u22643 suggestion chips each, one call), shown on the existing P1 plan card with an aspect-ratio picker (default from the request, else 4:5) and no Copy-layers toggle; Go places N placeholders with nextFreeCenters (row from (0,0) on an empty canvas, after existing boards otherwise) and renders them in parallel as Craft cold-start KVs (mode image, no base, brand knowledge honoured, logo composited later). Reuse: capability registry, plan service/view/Go-Cancel, ledger, run view items, undo, RenderKvVariantJob; changes: renderer no-source branch (no base, no parent_generation_id, no layer copy, aspect from plan), plan service generalised beyond variants, new ai-service propose_kv_concepts + resolver action distinguishing 'N new ideas' vs 'N variants of V2', web plan card capability branch + aspect picker. On a non-empty canvas with no board named, a clarifying card asks 'from scratch or variant of <active board>'. No wireframe (user decision). Collab unchanged. Concept-mode (sketch) support is out of scope (later).",
+        "completed_at": "2026-10-23T03:12:49Z"
+      },
+      "notes": "Builds on kv-agentic-canvas-p1 (PRs api#791 web#1104 ai#385 collab#20 in review). 2026-10-23: PRD approved (42597d2). Wireframe waived by user. Branches cut from latest base containing merged P1 (api 9ff48111b, ai e31243d7, web e5e1735a7). 2026-10-23: split done (C1\u2013C12); default aspect 1:1, presets 16:9/9:16/1:1 (4:5 dropped). Entered implementation. 2026-10-23: branches current with base (0 behind), PRs opened api#792 ai#386 web#1106. 2026-10-23: all 3 PRs MERGED (06:59Z). P1.1 track files still say in_progress \u2014 mark completed in the follow-up session's first commit per repo (no direct develop commits).",
+      "prd": "frnd/docs/prd/kv-agentic-canvas-p1-1.md",
+      "prd_commit": "42597d2",
+      "branch": "feature/daffa/vc-kv-agentic-canvas-p1-1",
+      "worktrees": {
+        "api": "api/.worktrees/kv-agentic-canvas-p1-1",
+        "web": "web/.worktrees/kv-agentic-canvas-p1-1",
+        "ai-service": "ai-service/.worktrees/kv-agentic-canvas-p1-1"
+      },
+      "wireframes": [
+        {
+          "slug": "none",
+          "approval": "waived",
+          "note": "User decided no wireframe (2026-10-23); reuses P1 plan card look (kv-agent-structure-cards, frnd-web #1072). Deviation from wireframe gate."
+        }
+      ],
+      "contracts": "docs/superpowers/plans/2026-10-23-kv-agentic-canvas-p1-1-concept-contracts.md",
+      "service_prds": {
+        "api": "api/docs/prd/kv-agentic-canvas-p1-1.md",
+        "web": "web/docs/prd/kv-agentic-canvas-p1-1.md",
+        "ai-service": "ai-service/docs/prd/kv-agentic-canvas-p1-1.md"
+      },
+      "track_files": {
+        "api": "api/docs/tracks/kv-agentic-canvas-p1-1.track.md",
+        "web": "web/docs/tracks/kv-agentic-canvas-p1-1.track.md",
+        "ai-service": "ai-service/docs/tracks/kv-agentic-canvas-p1-1.track.md"
+      },
+      "pr_urls": {
+        "api": "https://github.com/alva-intelligence/frnd-api-php/pull/792",
+        "ai-service": "https://github.com/alva-intelligence/frnd-ai-services/pull/386",
+        "web": "https://github.com/alva-intelligence/frnd-web/pull/1106"
+      },
+      "merged": {
+        "api": "2026-10-23T06:59:08Z",
+        "ai-service": "2026-10-23T06:59:00Z",
+        "web": "2026-10-23T06:59:47Z"
+      }
+    },
+    "internal-model-tiers-superadmin": {
+      "slug": "internal-model-tiers-superadmin",
+      "phase": "pr_submission",
+      "phase_entered": "2026-10-27T06:27:40Z",
+      "worker": "daffa",
+      "branches": {
+        "api": "feature/daffa/vc-internal-model-tiers",
+        "web": "feature/daffa/vc-internal-model-tiers",
+        "ai-service": "feature/daffa/vc-internal-model-tiers"
+      },
+      "pr_urls": {
+        "api": null,
+        "web": null,
+        "ai-service": null
+      },
+      "prd_path": "frnd/docs/prd/internal-model-tiers-superadmin.md",
+      "source": "Session 01a1777f (MODEL: Check KV chat model usage), 2026-10-26 KV Anthropic billing incident",
+      "wireframes": [],
+      "notes": "Wireframe skipped \u2014 admin-only surface, third tab on existing /admin/models-settings reusing LlmRoutingSection pattern. Skip decided by daffa 2026-10-27.",
+      "service_prds": [
+        {
+          "service": "api",
+          "path": "api/docs/prd/internal-model-tiers-superadmin.md",
+          "tasks": 6
+        },
+        {
+          "service": "ai-service",
+          "path": "ai-service/docs/prd/internal-model-tiers-superadmin.md",
+          "tasks": 8
+        },
+        {
+          "service": "web",
+          "path": "web/docs/prd/internal-model-tiers-superadmin.md",
+          "tasks": 5
+        }
+      ],
+      "track_files": [
+        {
+          "service": "api",
+          "path": "api/docs/tracks/internal-model-tiers-superadmin.track.md"
+        },
+        {
+          "service": "ai-service",
+          "path": "ai-service/docs/tracks/internal-model-tiers-superadmin.track.md"
+        },
+        {
+          "service": "web",
+          "path": "web/docs/tracks/internal-model-tiers-superadmin.track.md"
+        }
+      ]
+    }
+  }
+}
