@@ -49,6 +49,7 @@ This feature moves tier configuration into that same panel. The mechanism alread
 - **FR-9** — If the push to ai-service fails, the value stays saved and the response carries `warning: "ai_unreachable"`; ai-service picks it up on its next poll.
 - **FR-10** — The `decision` tier accepts the `typesafe`, `clef` and `clef-flash` providers; the other tiers must not offer them, because those tables only populate a `decision` entry.
 - **FR-11** — Vision lanes keep the existing deepseek→openai auto-fallback; an explicit superadmin override is respected as-is, matching current env-override semantics.
+- **FR-13** — KV chat follows a superadmin override on the `conversation` tier ahead of the bound role's model (`agent_config.model`), so an outage is fixable from the panel instead of by reseeding agent rows. With no override saved, the bound role's model still wins (today's behaviour — the env default for this tier is deepseek, and silently downgrading creative chat on deploy is not acceptable).
 - **FR-12** — The four agents constructed at module import (`brand_tonality_agent`, `report_narrative_agent`, `image_translation`, `benchmarks/explain`) become lazily constructed, so an override reaches them without a restart.
 
 ### Non-Functional
@@ -115,6 +116,7 @@ No new table. New rows in `platform_settings` (`key` unique, `value` varchar(255
 
 ## Open Questions
 
+0. Five KV one-shot lanes still hardcode `gpt-4o-mini`/`gpt-4o` through the OpenAI SDK (chat suggestions ×2, logo directive, concept metadata, post-generation summary). They are unaffected by an Anthropic outage (separate provider) but they cannot follow a provider flip. Moving them onto the `glue` tier means migrating an OpenAI-SDK completion to an Agno model at each site — a different change from this PR's plumbing, tracked as follow-up together with the two vision-pinned lanes (`KV_DETECT_MODEL` gemini, `KV_RESIZE_VISION_MODEL`).
 1. Should the panel expose `INTERNAL_DECISION_TASK_PROVIDERS` (JSON per-task map) in v1, or keep it env-only? *Proposal: env-only for now — it is a listening-specific map, not an incident lever.*
 2. Should `INTERNAL_TRANSLATE_PROVIDER` join the panel? It is pinned to openai by a latency/cost bench. *Proposal: include it read-only so the panel is a complete picture.*
 3. Should a tier override expire automatically (incident TTL) so temporary flips do not drift? *Proposal: out of scope for v1; the audit log plus the "source: admin" badge makes drift visible.*
