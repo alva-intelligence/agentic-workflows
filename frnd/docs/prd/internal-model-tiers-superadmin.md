@@ -3,7 +3,7 @@ title: Internal Model Tiers — Superadmin Control
 slug: internal-model-tiers-superadmin
 author: daffa
 created: 2026-10-27
-status: draft
+status: review
 services: [api, web, ai-service]
 ---
 
@@ -51,6 +51,8 @@ This feature moves tier configuration into that same panel. The mechanism alread
 - **FR-11** — Vision lanes keep the existing deepseek→openai auto-fallback; an explicit superadmin override is respected as-is, matching current env-override semantics.
 - **FR-13** — KV chat follows a superadmin override on the `conversation` tier ahead of the bound role's model (`agent_config.model`), so an outage is fixable from the panel instead of by reseeding agent rows. With no override saved, the bound role's model still wins (today's behaviour — the env default for this tier is deepseek, and silently downgrading creative chat on deploy is not acceptable).
 - **FR-12** — The four agents constructed at module import (`brand_tonality_agent`, `report_narrative_agent`, `image_translation`, `benchmarks/explain`) become lazily constructed, so an override reaches them without a restart.
+- **FR-14** — A separate `KV` pill edits `internal_kv_<lane>_<provider|model|effort>` across all workspaces in the environment. Sixteen lanes: chat, canvas, intent reply, edit intent, layer descriptions, canvas intent, suggestions, logo directive, metadata, summary, refiner, object detection, resize vision, resize image, image expand, resize region edit. Reset preserves existing defaults; user-selected generation and specialized engines are unchanged.
+- **FR-15** — KV status/choices come from runtime. Bound-agent defaults remain labeled; SDK lanes stay provider-locked. Validate merged provider/model-specific effort, requiring explicit provider for model and explicit model for effort overrides. Reject unknown keys, unsupported combinations, missing credentials and incompatible retained values. Last reset must reach every worker through a polling JSON object, including `{}`.
 
 ### Non-Functional
 
@@ -74,9 +76,10 @@ This feature moves tier configuration into that same panel. The mechanism alread
 
 The section mirrors `LlmRoutingSection`:
 - An AdminCard "Currently running" showing each tier's effective provider/model/effort and its source (`admin` / `env` / `last_known`).
-- An AdminCard per tier with a provider select, a model select (filtered to that provider's table), an effort select (from the provider's effort vocabulary), and a "Use env default" clear action.
+- An AdminCard per tier with a provider select, a model select (filtered to that provider's table), an effort select from `efforts_by_provider_model`, and a "Use env default" clear action. Model changes clear incompatible effort; unknown custom models use default effort only.
 - Saved/Running badges, disabled options with a reason when ai-service reports the provider has no key configured.
 - Save opens a confirm modal stating the impact, then toasts success — or a second toast when `warning === "ai_unreachable"`.
+- A fourth pill, `KV`, provides per-function cards with live resolution/source, provider/model/effort controls, reset, discard, and a scoped confirmation. No KV override changes the global Internal tiers configuration.
 
 Wireframe phase is skipped: this is an admin-only surface that reuses an existing page, existing components (`AdminCard`, frndos `Button`/`Label`), and an existing visual pattern on the same route.
 
@@ -113,10 +116,11 @@ No new table. New rows in `platform_settings` (`key` unique, `value` varchar(255
 - **AC-6** — With ai-service down, a save still persists and responds with `warning: "ai_unreachable"`; ai-service adopts the value on its next poll.
 - **AC-7** — Every save produces one audit-log entry with the before/after map and the acting user.
 - **AC-8** — The four previously import-frozen agents pick up an override without a restart.
+- **AC-9** — Save and clear a KV-only override through the live UI; KV status changes without a restart, global tiers remain unchanged, and invalid lane/model/provider combinations return 422 without writes.
 
 ## Open Questions
 
-0. Five KV one-shot lanes still hardcode `gpt-4o-mini`/`gpt-4o` through the OpenAI SDK (chat suggestions ×2, logo directive, concept metadata, post-generation summary). They are unaffected by an Anthropic outage (separate provider) but they cannot follow a provider flip. Moving them onto the `glue` tier means migrating an OpenAI-SDK completion to an Agno model at each site — a different change from this PR's plumbing, tracked as follow-up together with the two vision-pinned lanes (`KV_DETECT_MODEL` gemini, `KV_RESIZE_VISION_MODEL`).
+0. KV SDK-backed lanes expose model selection while keeping their existing provider/client. Object detection additionally supports OpenAI gpt-4o/gpt-4o-mini, with Gemini unchanged as default and shared polygon refinement. A live smoke proves returned detections, not segmentation quality parity; representative KV evaluation is required before changing the default. Resize image remains OpenAI.
 1. Should the panel expose `INTERNAL_DECISION_TASK_PROVIDERS` (JSON per-task map) in v1, or keep it env-only? *Proposal: env-only for now — it is a listening-specific map, not an incident lever.*
 2. Should `INTERNAL_TRANSLATE_PROVIDER` join the panel? It is pinned to openai by a latency/cost bench. *Proposal: include it read-only so the panel is a complete picture.*
 3. Should a tier override expire automatically (incident TTL) so temporary flips do not drift? *Proposal: out of scope for v1; the audit log plus the "source: admin" badge makes drift visible.*
