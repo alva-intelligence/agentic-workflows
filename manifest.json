@@ -1,9 +1,9 @@
 {
-  "version": "4.1.0",
+  "version": "4.1.1",
   "updated": "2026-11-05",
   "files": {
     "VERSION": {
-      "sha256": "3b10b6ad566eadbcacadb33c591f1ec629593d6adf47442e56e0f61996829ef7",
+      "sha256": "9737915fce5e934ea348658fccb82a4c532157d2161bb032a240c2837b8f66cb",
       "install_to": ".agentic-workflows/VERSION",
       "type": "metadata"
     },
