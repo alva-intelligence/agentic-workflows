@@ -32,9 +32,10 @@
 > 2. **There is no deploy step — both branches are live estates.** The branch shape is the standard
 >    one (`development` for work, `main` for release), but a Prefect worker polls each estate and
 >    `git clone`s the branch **at run time**. So a merge is live the moment it lands — there is no
->    build or release to forget. Feature work branches from and PRs into `development`; promotion to
->    `main` is a deliberate PR opened by a human. Open PRs; never merge them yourself, never push
->    directly to either branch.
+>    build or release to forget. Feature work branches from and PRs into `development`; merging there
+>    needs a separate, explicit, task-specific live-estate approval in addition to the task's
+>    `auto_merge` choice — without it, open the PR and stop. Promotion to `main` is a separate,
+>    human-only PR. Never open or merge promotion, and never push directly to either branch.
 
 ### Service Owners & Contacts
 

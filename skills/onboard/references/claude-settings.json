@@ -17,7 +17,15 @@
       "Bash(git stash:*)",
       "Bash(git rev-parse:*)",
       "Bash(git remote:*)",
-      "Bash(gh pr:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr status:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr edit:*)",
+      "Bash(gh pr comment:*)",
+      "Bash(gh pr ready:*)",
       "Bash(gh api:*)",
       "Bash(gh repo:*)",
       "Bash(gh issue:*)",
@@ -85,7 +93,12 @@
       "Bash(git push -f:*)",
       "Bash(git reset --hard:*)",
       "Bash(rm -rf:*)",
-      "Bash(gh pr merge:*)",
+      "Bash(gh pr merge --admin:*)",
+      "Bash(gh pr merge --auto --admin:*)",
+      "Bash(gh pr merge --squash --admin:*)",
+      "Bash(*pulls/*/merge*)",
+      "Bash(*enablePullRequestAutoMerge*)",
+      "Bash(*mergePullRequest*)",
       "Bash(clickhouse client:*)",
       "Bash(clickhouse-client:*)",
       "Bash(prefect profile use:*)",
@@ -109,7 +122,8 @@
       "$defaults",
       "Read-style calls against the listed destinations are allowed: fetching a PRD doc the user pointed at via the Lark CLI, fetching Figma design context / metadata / screenshots via MCP, querying context7 docs, querying PostHog events / insights / persons, listing Drive / Calendar / Gmail items the user owns.",
       "Scoped writes that the user has explicitly directed in this session are allowed: creating a single Figma diagram the user requested. Lark is READ-ONLY in this workflow — no doc, wiki, or task writes, and always via the CLI, never an MCP.",
-      "Still BLOCK (defaults remain in force): any write to Lark (docs, wiki, tasks, messages), broadcast/mass messaging on Gmail, sending email to recipients outside the org without explicit user direction, modifying or deleting Drive/PostHog items the agent did not create this session, toggling PostHog feature flags or cohorts, making Drive files public, uploading repo source or secrets to any of these destinations."
+      "Still BLOCK (defaults remain in force): any write to Lark (docs, wiki, tasks, messages), broadcast/mass messaging on Gmail, sending email to recipients outside the org without explicit user direction, modifying or deleting Drive/PostHog items the agent did not create this session, toggling PostHog feature flags or cohorts, making Drive files public, uploading repo source or secrets to any of these destinations.",
+      "Pull-request merge is never blanket-allowed. `gh pr merge` is intentionally absent from the allow-list: it must pass the user confirmation gate and may proceed only when this task's delivery choice is `auto_merge`, every paginated review thread has been addressed and resolved, required CI and the configured expected review pass on the latest head, no conflicts remain, and branch protections are not bypassed. `data-pipeline` merges additionally need explicit task-specific live-estate approval; promotion to production remains separate human-only work. Raw API merge mutations are denied; the gated `gh pr merge` (or a native queue that enforces the same conditions) is the only merge path. The confirmation gate is not a place to route around policy."
     ]
   }
 }
