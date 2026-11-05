@@ -32,7 +32,7 @@ What gets installed:
   - A three-checkpoint workflow state machine: scope → automatic preparation →
     implementation → delivery. Bugs and improvements skip comprehensive PRDs.
   - Visual testing of UI work — the agent reproduces rendering claims itself.
-  - Auto-updating instruction system (stays in sync with team changes)
+  - Auto-updating instructions and curated model recommendations (stays in sync with team changes)
   - Templates for PRDs, service PRDs, track files, and PRs
 
 Supported: any agent environment that loads SKILL.md skills and can delegate work.
@@ -293,6 +293,46 @@ frndos/ (workspace, feature A active)
   session in that directory, feature state keyed by slug.
 - `/workflow start` offers this whenever an active feature exists.
 
+### Collaboration service
+
+`alva-intelligence/frnd-hocuspocus` runs in `hocuspocus/` on default port **1234**
+(`npm run dev`, Node **20.12+**, `GET /health`). Its development/PR base is **`main`**; use
+feature branches and the normal delivery checkpoint, never direct main pushes or implicit deploys.
+
+It is frndOS's shared Yjs state service for **Decks, Docs, KV canvases and Studio graphs**, plus
+presence in **Proposals, Insights and Market**. The API owns authentication/permissions and database
+migrations; Hocuspocus persists updates in that same Postgres and exposes internal HTTP document
+operations to the API. Studio run/version facts also flow through this bridge.
+
+Onboarding includes it by default when web/full-stack is selected; unrelated setups may skip it.
+Before collaboration work, verify the service plus `NEXT_PUBLIC_HOCUSPOCUS_URL` (web), `COLLAB_URL`
+(API), `API_BASE_URL` (including `/api`), `DATABASE_URL` and matching internal tokens (Hocuspocus/API).
+Keep secrets out of logs and reports. Existing customized env/start/launch files are never silently
+rewritten by an instruction update; rerun the relevant onboarding steps with consent.
+
+A page loading is not a persistence check: Studio and Decks have local-only fallback paths when
+collaboration is unconfigured. Verify two authorized clients exchanging edits and a reload after
+saving when testing real collaboration. This framework change does not patch app fallback behavior
+or establish that any live deployment is misconfigured.
+
+### Model recommendations
+
+[`workflow/model-catalog.json`](workflow/model-catalog.json) is the single curated catalog of main
+and subagent model/effort pairs, with one strongly recommended choice per role and alternatives.
+Recommended means strongly recommended, not required. Update the catalog rather than duplicating
+model names in instructions or editor configuration.
+
+Use the user's actually available configured models and supported effort, regardless of provider
+or subscription. Resolve real identifiers through the environment; labels are not API IDs. Keep
+explicit user choices, do not silently switch the main model or add providers, and explain a usable
+fallback if the preferred pair is unavailable.
+
+The normal updater distributes catalog changes. On onboarding, session start and immediately after
+an update, the agent reviews a new/changed catalog, summarizes recommendations and availability,
+then records its digest in `.agentic-workflows/.model-catalog-reviewed`. An unchanged completed
+review does not repeat the notice; an interrupted review is not acknowledged. No background model
+discovery or ranking service is added.
+
 ### Creating a New Workspace for a Different Project
 
 Use `/setup-workspace` to create a brand new agentic workspace for a completely different project using this framework as the base. The skill walks you through an interactive wizard:
@@ -300,7 +340,7 @@ Use `/setup-workspace` to create a brand new agentic workspace for a completely 
 1. Project identity (name, description, structure)
 2. Services (repos, stack, ports, health checks)
 3. Workflow phases (keep/remove/add)
-4. Model preferences for subagent delegation (no agent files exist)
+4. Advisory model catalog and environment-supported delegation (no agent files exist)
 5. Skills and MCP servers
 6. Dev environment (toolchain versions, branch conventions)
 
@@ -312,7 +352,7 @@ Skills are slash commands you invoke directly. They're the entry points for each
 
 | Skill | What it does |
 |-------|-------------|
-| `/onboard` | Full workspace setup — GitHub access, service cloning, dependencies, .env files, database, editor config, MCP servers. Optional services (data-pipeline, desktop) included or skipped here. Run once after bootstrap. |
+| `/onboard` | Full workspace setup — GitHub access, service cloning, dependencies, .env files, database, editor config, MCP servers. Includes Hocuspocus by default for web/full-stack; data-pipeline and desktop are optional. Run once after bootstrap. |
 | `/workflow start <slug>` | Start a feature, bug, or improvement run. Creates workflow state and enters the scope checkpoint. |
 | `/workflow status` | Show current phase, phase_status, checkpoints, branch, PRDs, tracks, PRs, and review watch. |
 | `/workflow next` | Optional explicit, gate-checked transition. Not required for automatic preparation and cannot substitute for a checkpoint approval. |
@@ -342,7 +382,8 @@ Skills are slash commands you invoke directly. They're the entry points for each
    a manifest snapshot, diffs it against the next release's keys, and deletes
    installed files whose manifest entries vanished
 6. If fragments changed, `AGENTS.md` is regenerated automatically
-7. For non-trivial changes (settings, schema migrations, one-time legacy
+7. A new/changed model catalog triggers a review and user notice; explicit choices remain intact
+8. For non-trivial changes (settings, schema migrations, one-time legacy
    cleanup predating the snapshot), use `/workflow-update`
 
 ### Repository structure
@@ -380,6 +421,7 @@ agentic-workflows/
     phases.json           # Phase state machine definitions (checkpoints + auto paths)
     gates.json            # Gate conditions, checkpoint rules, delivery policy
     state-schema.json     # JSON schema for .workflow-state.json (optional consent fields)
+    model-catalog.json    # Curated main/subagent recommendations; no provider pins
   .github/workflows/
     check-manifest-coverage.yml  # CI: manifest coverage + workflow metadata
     update-manifest.yml          # CI: rehash distributed files on main

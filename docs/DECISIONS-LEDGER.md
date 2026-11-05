@@ -31,6 +31,8 @@ Obligations, both in the **same commit** as the change:
 | 2026-11-05 | `TECH-LEAD-VERIFY-1` | The main agent is the technical lead: plan plus risk-scaled verification plan for every task, reproduce evidence instead of trusting subagent claims, adversarial review plus a personal final whole-change review, TODO reconciliation against the original request, resource headroom check and bounded concurrency, optional intercom. Tests remain evidence, never “formal proof”; leave one small runnable regression for non-trivial logic, with no new suites, frameworks, or dependencies. | Verification-by-subagent-claim reading of `ORCH-ROSTER-GONE-1`, the all-tests-opt-in default in `testing-policy.md`, README orchestrator verification text. | Merged work needs a single accountable verdict; reproduced evidence and a final diff review catch drift that parallel “done” reports miss. Owner call, 2026-11-05. | The lead must re-run checks and review every diff, adding critical-path time; no new test infrastructure means regression coverage is targeted, not exhaustive. |
 | 2026-11-05 | `DELIVERY-CONSENT-1` | Delivery is an explicit per-task choice after verification: `local_test` (manual test first, no PR, checkpoint pending, never completes), `open_pr` (open and stop; fixes only on a separate explicit request), or `auto_merge` (explicit open+monitor+fix+merge opt-in). `delivery: null` fails closed; consent is never inferred from artifacts or inherited across tasks. Branch push also waits for delivery or an explicit push instruction. | Prior implementation→pr_submission→PR pipeline that opened PRs by default, README lifecycle and PR conventions, `pr-feedback/SKILL.md` auto-fix-on-feedback, `workflow/SKILL.md` transition rules. | A verified branch is not permission to publish; `open_pr` was silently becoming fix-and-merge work. Owner call, 2026-11-05. | Extra explicit stop and state field; `local_test`/`open_pr` tasks can sit pending; feedback work needs its own authorization. |
 | 2026-11-05 | `AUTO-MERGE-FAILCLOSED-1` | `auto_merge` requires a full paginated thread inventory (all resolved, only addressed), required CI and the actual configured review on the latest head, current approvals with no changes requested or conflicts, clean self/security/adversarial/final verification, no branch-protection bypass, and the latest head SHA pinned with `--match-head-commit`. Zero threads before the expected review is not completion; every push invalidates proof. Bounded watch defaults to 30 minutes / 3 rounds, persisted in the track with canonical `max_rounds`, `rounds_used`, `last_checked_sha`, and status names; resumable, with no background daemon. data-pipeline needs `live_merge_approved`; production promotion stays separate human work. | `pr-feedback/SKILL.md` merge flow, `workflow-rules.core.md` auto-merge guidance, `gates.json` pr_submission/pr_review completion gates, README delivery text. | The earlier flow could merge on a stale head, treat zero early threads as clean, or resolve unaddressed feedback. Owner call after review, 2026-11-05. | Merges wait for the configured review and CI; more bookkeeping (watch state, proof SHAs); no native auto-merge or queue unless it enforces the same conditions. |
+| 2026-11-05 | `MODEL-CATALOG-1` | Replace provider-specific model/role lists and paid CLI access probes with the distributed advisory catalog and native configured-model/effort/auth inspection. Preserve explicit choices and the running main model; acknowledge only completed digest reviews. | Onboarding §1.5 / Step 3; superseded excerpts retained below. | Model recommendations change independently of provider subscriptions; a display label is not an API identifier. Scope and implementation approved for this task. | Native capability limits remain visible; unverified access is never claimed to work. |
+| 2026-11-05 | `ENV-LOCAL-1` | Service env files stay local; credentials are never pasted/uploaded into chat. MCP authentication is configured locally and verified independently of CLI authentication. Existing API keys are preserved; generate APP_KEY only when empty in a fresh local setup. | Onboarding Step 6's secret-upload/unconditional key-generation flow and Step 11's token-paste requests; superseded excerpts below. | The new shared collaboration token must not leak via its setup instructions, and rerunning setup must not invalidate existing encrypted data. Security correction within the approved onboarding scope. | User places files locally; native checks report presence/match/length only. |
 
 ## Open questions
 
@@ -39,3 +41,37 @@ Obligations, both in the **same commit** as the change:
 | `ONB-LINEAGE-CONTRACT-1` | Should data-service get a verified-stamp tool of its own, so `stamp head` stops being its documented remedy? `db-sync.sh` cannot be reused — it is hardcoded to `frnd_agg_marts`. | **Open.** Needs a decision from Fahmi; it is a new script in `frnd-clickhouse-api`, not a doc edit. |
 | `ONB-PORTS-BACKING-1` | Should `check-manifest-coverage.py`-style CI assert that no port listed as backing in the service tables appears in `OWNED_PORTS`? Today the separation is a convention held by a note. | **Open.** Cheap to add; nobody has asked for it. |
 | `ONB-MARTS-LOCAL-1` | `setup-local-demo.sh`'s `apply_dir` globs `*.sql` and runs `017_fix_social_mart_sorting_keys.sql` (`DO NOT RUN THIS AUTOMATICALLY`) unattended on every laptop it provisions. | **Open, deliberately not fixed.** Fixing it changes what the script applies. Documented in 7.4c so no doc edit implies it is handled. |
+
+## Superseded model access and credential instructions
+
+> ⛔ **SUPERSEDED** by MODEL-CATALOG-1 (2026-11-05). Kept for history — do not build from this.
+
+Previous onboarding model guidance and probes (full passage: [4.1.1 source](https://github.com/alva-intelligence/agentic-workflows/blob/a95224617c02cecb982b49ee848395c2f28d0b00/skills/onboard/SKILL.md)):
+
+```text
+- Anthropic: Claude Opus 5 (planning), Claude Sonnet 5 (coding)
+- OpenAI: GPT-5.3-Codex (coding), GPT-5.6 (exploratory)
+
+Claude Code:
+echo "OK" | claude -p --model claude-opus-5 2>&1 | head -1
+echo "OK" | claude -p --model claude-sonnet-5 2>&1 | head -1
+
+OpenCode:
+opencode run -m anthropic/claude-opus-5 "respond with just OK" 2>&1 | head -5
+```
+
+> ⛔ **SUPERSEDED** by ENV-LOCAL-1 (2026-11-05). Kept for history — do not build from this.
+
+Retired Step 6 instructions (full passage at the same pinned source above):
+
+```text
+1. Tell user: "Please paste or upload each .env file content here. I'll write them to the correct locations."
+2. STOP AND WAIT for user to paste/upload.
+
+Once all .env files are in place, run post-env setup for API:
+cd api && php artisan key:generate --no-interaction && cd ..
+
+GitHub MCP: "Please provide your GitHub PAT (paste it or tell me when you've added it to the config)"
+Figma MCP: "Please provide your Figma access token"
+Sentry MCP: ask for token → wait → configure
+```

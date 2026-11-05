@@ -32,6 +32,8 @@ Capture the full output. Parse it for:
 - **Updated files:** lines starting with `+` (e.g., `+ .agentic-workflows/fragments/workflow-rules.md`)
 - **Failed files:** lines starting with `!`
 - **Whether AGENTS.md was regenerated**
+- **Model catalog review pending:** the advisory notice and catalog digest, when printed. The notice
+  is informational; it never counts as a completed review.
 
 "Already up-to-date" means only that the distributed files match. It does **not** mean the 4.1
 policy migration has run. Do not stop on that line alone: continue to Step 3 and check the policy
@@ -227,6 +229,41 @@ If any skill files were updated:
 1. Inform user: "Skills were updated. Restart your agent session for changes to take effect."
 2. List which skills changed and briefly what's different
 
+#### 3g. Advisory model catalog review
+
+`workflow/model-catalog.json` is distributed like the other workflow data files. update-check may
+print a "model catalog review pending" notice when the installed digest differs from
+`.agentic-workflows/.model-catalog-reviewed`. That notice is informational — it never acknowledges
+the review.
+
+1. Compute the digest and compare it with the marker. If they match, stop; nothing is pending.
+2. Otherwise follow `workflow-rules.core.md` → "Model recommendations (advisory)": summarize the
+   strong model + effort pair per role and the alternatives once, resolve them against the models
+   and effort levels this harness/account actually expose, and preserve explicit user
+   model/provider choices.
+3. Preserve explicit choices and the running main model. For new delegated tasks without an
+   override, use the harness's available per-task model/effort capability. Do not edit provider
+   settings, add credentials or run paid probes. Explain a supported configured fallback when
+   the preferred pair is unavailable.
+4. After review, confirm the catalog still matches the digest you reviewed and write that digest
+   to `.agentic-workflows/.model-catalog-reviewed` using the available file-write capability. A
+   changed catalog needs a new review, not an acknowledgment of unseen content. A deferred,
+   interrupted or failed review leaves the marker untouched.
+
+The marker is derived cache only — not consent, not user state, and it has no revision counter.
+The update script never writes it; the agent writes it only after the review actually completes.
+
+#### 3h. Hocuspocus availability in existing workspaces
+
+The new registry/onboarding references support `hocuspocus/` (`frnd-hocuspocus`), default-in for
+new web/full-stack setups. Updating instructions does **not** opt an existing developer in. A
+missing `optional_services.hocuspocus` key means not selected, never approval to clone or configure.
+
+If collaboration work needs it, offer the relevant `/onboard` steps. Obtain the user's selection
+before adding it, and preserve other selections. Do not rewrite env files, custom `run-all.sh`,
+launch configuration or permissions as part of the update. Explain which additions are needed and
+ask before editing customized files. No schema migration or service-state rewrite is required.
+
 ### Step 4: Final verification
 
 After applying all changes:
@@ -270,7 +307,14 @@ After applying all changes:
    ```bash
    cat .agentic-workflows/.version
    ```
-5. **Report:**
+5. **Check the advisory model catalog review state:**
+   ```bash
+   shasum -a 256 .agentic-workflows/workflow/model-catalog.json | awk '{print $1}'
+   cat .agentic-workflows/.model-catalog-reviewed 2>/dev/null || echo "(no completed review)"
+   ```
+   Equal digests = reviewed. A missing or stale marker is **review pending**, not a failure; never
+   write it as part of verification.
+6. **Report:**
    ```
    Update complete! v2.0.38 → v2.0.39
 
@@ -309,4 +353,7 @@ Verify the current installation is healthy.
 4. Check `.agentic-workflows/.version` matches manifest version
 5. Check the 4.1 policy fields: if absent, report **migration pending (safe defaults apply)** and
    point at `/workflow-update`; do not treat absence as an authorization or as a hard failure.
-6. Report any issues found
+6. Check the advisory model catalog: if `.agentic-workflows/.model-catalog-reviewed` is missing or
+   its digest differs from `workflow/model-catalog.json`, report **catalog review pending** (with
+   the digest); do not write the marker, and do not treat it as an install failure.
+7. Report any issues found

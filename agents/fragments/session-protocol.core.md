@@ -5,7 +5,7 @@
 ### Step 0: Detect workspace state
 
 1. **No service directories** (none of `api/`, `web/`, `ai-service/`, `data-service/`,
-   `data-pipeline/`, `desktop/` exist) → Fresh workspace. Ask: "This workspace hasn't been set up
+   `data-pipeline/`, `desktop/`, `hocuspocus/` exist) → Fresh workspace. Ask: "This workspace hasn't been set up
    yet. Would you like to start onboarding now?" On yes, execute `skills/onboard/SKILL.md`
    directly. On no, tell the user they can run `/onboard` later.
 2. **`.onboard-state.json` exists and `status` is `"in_progress"`** → Check `env_status`,
@@ -18,13 +18,18 @@
    `/workflow start <feature-slug>`, `/workflow list`.
 4. **`.workflow-state.json` exists** → Proceed through the remaining steps.
 
-### Optional services: data-pipeline (frnd-orchestration) and desktop (frnd-desktop)
+### Service dependencies: Hocuspocus, data-pipeline and desktop
 
-`data-pipeline/` (frnd-orchestration — Prefect data orchestration) and `desktop/` (frnd-desktop —
-native SwiftUI macOS app) are **optional services**; a developer may legitimately not have them
-cloned. When the user's request touches their domain:
+`hocuspocus/` (frnd-hocuspocus — shared Yjs editing and presence) is included by default for
+web/full-stack onboarding, but may be explicitly skipped for unrelated setups. `data-pipeline/`
+(frnd-orchestration — Prefect flows) and `desktop/` (frnd-desktop — native macOS app) are optional.
+When the user's request needs their capabilities:
 
-- data-related orchestration/flow/pipeline work → needs `data-pipeline/`; native desktop-app work →
+- Live Decks, Docs, KV or Studio editing, collaboration/persistence checks, or proposal/Insights/
+  Market presence → needs Hocuspocus configured with the API and its Postgres. A page rendering
+  without a collab connection is not evidence that edits persist. Require the repo for collab
+  service changes; an explicitly configured remote service is not permission to change a live estate.
+- Data orchestration/flow/pipeline work → needs `data-pipeline/`; native desktop-app work →
   needs `desktop/`.
 - If the directory is **absent**, stop and recommend onboarding it first (execute the matching
   onboarding path in `skills/onboard/SKILL.md` when the user agrees). Do not silently skip a
@@ -35,7 +40,11 @@ cloned. When the user's request touches their domain:
 
 Run the update-check script and sync the current branch. Detailed procedure (including dependency
 bootstraps and conflict handling): `skills/workflow/references/session-checks.md` →
-"Update check + sync".
+"Update check + sync". After updating, review `.agentic-workflows/workflow/model-catalog.json`
+using the model-catalog procedure in the workflow rules. Review on first use or a changed catalog
+digest, notify the user once, and acknowledge only after the review completes. Preserve explicit
+model/provider choices; unavailable recommendations are not permission to invent model IDs or
+silently switch the running main model. Unchanged catalogs do not repeat the notice.
 
 ### Step 2: Load workflow state
 

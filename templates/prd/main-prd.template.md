@@ -70,6 +70,10 @@ answer implicit._
 
 {{DATA_PIPELINE_SCOPE}}
 
+### Hocuspocus (`hocuspocus/`)
+
+{{HOCUSPOCUS_SCOPE}}
+
 ## UI/UX
 
 ### Key Screens

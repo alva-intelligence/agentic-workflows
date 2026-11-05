@@ -28,7 +28,8 @@ Split the active feature's main PRD into service PRDs.
 
 2. **Create the branch locally (before splitting).**
    - Determine the base branch from the service registry: `develop` for api/web/desktop,
-     `development` for ai-service/data-service/data-pipeline.
+     `development` for ai-service/data-service/data-pipeline, `main` for hocuspocus (its working
+     base — branch from and PR into it, never push to it directly).
    - Resolve the branch prefix from `features[<slug>].type`: `feature` → `feature/`, `bug` →
      `fix/`, `improvement` → `improvement/`. If the type is missing/unknown, ask once and persist
      the answer; do not guess.

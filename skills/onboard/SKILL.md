@@ -58,6 +58,7 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
   "services": ["api", "web", "ai-service", "data-service"],
   "tools": ["claude-code", "cursor"],
   "optional_services": {
+    "hocuspocus": "included|skipped",
     "data-pipeline": "included|skipped",
     "desktop": "included|skipped"
   },
@@ -87,6 +88,7 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
     "web": "completed|pending",
     "ai-service": "completed|pending",
     "data-service": "completed|pending",
+    "hocuspocus": "completed|pending",
     "data-pipeline": "n/a",
     "desktop": "n/a"
   },
@@ -95,7 +97,7 @@ Throughout onboarding, maintain a `.onboard-state.json` file at the workspace ro
 ```
 
 > **`env_status` covers included services only** — entries for skipped optional services
-> (`data-pipeline`, `desktop`) are omitted entirely: they don't exist in this workspace.
+> (`hocuspocus`, `data-pipeline`, `desktop`) are omitted entirely: they don't exist in this workspace.
 
 The workflow engine reads this file. **`/workflow start` will block** if any of these are not resolved:
 - `env_files` is not `"completed"` for ALL selected services
@@ -166,6 +168,7 @@ Check access to each repo:
 - `gh repo view alva-intelligence/frnd-web` → Frontend
 - `gh repo view alva-intelligence/frnd-ai-services` → AI Service
 - `gh repo view alva-intelligence/frnd-clickhouse-api` → Data Service
+- `gh repo view alva-intelligence/frnd-hocuspocus` → Hocuspocus (collaboration server)
 
 Check git config: `git config --global user.name` and `git config --global user.email`.
 
@@ -183,6 +186,7 @@ Present ALL questions in a single message:
 | 4 | Data Service | `data-service/` | FastAPI, Python, pandas | **:9999** · ch `:8123`, prefect `:4200` |
 | 5 | Data Pipeline | `data-pipeline/` | Prefect 3, Python 3.12, ClickHouse, AWS S3 | prefect `:4200` · ch `:8123` |
 | 6 | Desktop *(optional)* | `desktop/` | Swift, SwiftUI, macOS 26+, Xcode, Metal | — (native app) |
+| 7 | Hocuspocus *(optional)* | `hocuspocus/` | Node 20.12+, TypeScript, Yjs, Hocuspocus, tsx | **:1234** · pg `:5432` (the API's) |
 
 > **Bold = the port that service serves on; the rest are backing services it connects to.** Only the
 > bold ones are started, health-checked or stopped by `run-all.sh` — Postgres `:5432`, Redis `:6379`,
@@ -190,6 +194,13 @@ Present ALL questions in a single message:
 > 7.5.2), reported but never killed. **Data Pipeline has no bold entry**: it runs no server, is absent
 > from `run-all.sh` by design, and the two ports shown are what its flows talk to. It is also the only
 > service with no `.env` — its credentials live in Prefect Secret blocks (7.5.3).
+
+> **Hocuspocus is the collaboration server (frnd-hocuspocus).** Include it by default whenever
+> **Frontend** is selected: Studio graphs, deck editing and the `doc:`/`kv_file:` documents sync and
+> persist through it, so a web developer without it gets silent local-only editing. Skip it only for a
+> workspace that genuinely has no web/collaboration work. Its base branch is **`main`**, and it has
+> **no migrations of its own** — it writes into the API's already-migrated PostgreSQL, which means it
+> needs `api/` selected too.
 
 **If you picked Data Service, pick Data Pipeline too.** They are the two halves of one data path:
 data-pipeline *writes* `frnd_agg_marts.*`, data-service *reads and serves* them. "Why is this metric
@@ -217,6 +228,7 @@ required. You start that server yourself when you work on flows.
 | AI Service | `ai-service/.env` | rifki |
 | Data Service | `data-service/.env` | fahmi, arhen |
 | Data Pipeline | Prefect Secret blocks — **not** a `.env` ¹ | fahmi |
+| Hocuspocus | `hocuspocus/.env` | API/collaboration maintainer — confirm with the team; its token must match the API's |
 
 ¹ Data Pipeline is the one service whose runtime credentials do not live in a `.env`. ClickHouse
 host/port/user/password, the data-service callback token and the AWS keys are **Prefect Secret
@@ -247,19 +259,26 @@ Use the ask tool with these EXACT options (multi-select):
 
 ### 1.4 Optional services (ask always)
 
-> "Two services are optional — include them now or skip until a task needs them?"
-> 1. **Data Pipeline** `data-pipeline/` (frnd-orchestration) — Prefect transform layer. Needed for data-flow work.
-> 2. **Desktop** `desktop/` (frnd-desktop) — native SwiftUI macOS app. Needed for desktop-app work.
-> 3. **Lark CLI (read-only)** — lets the agent read any pasted Lark doc link. Uses the **Lark CLI, not an MCP** — no sync, nothing is ever written back to Lark.
+> "Services are optional — include them now or skip until a task needs them?"
+> 1. **Hocuspocus** `hocuspocus/` (frnd-hocuspocus) — collaboration server for live editing/presence. **Included by default when you picked Frontend**; say so in the same question and let the user skip it if their work is unrelated.
+> 2. **Data Pipeline** `data-pipeline/` (frnd-orchestration) — Prefect transform layer. Needed for data-flow work.
+> 3. **Desktop** `desktop/` (frnd-desktop) — native SwiftUI macOS app. Needed for desktop-app work.
+> 4. **Lark CLI (read-only)** — lets the agent read any pasted Lark doc link. Uses the **Lark CLI, not an MCP** — no sync, nothing is ever written back to Lark.
 
-Record the choices in `.onboard-state.json`: `optional_services: {"data-pipeline": "included|skipped", "desktop": "included|skipped"}` and `lark_cli: "connected|skipped"`. Recommendation: include Data Pipeline alongside Data Service (one data path, two repos); everything else can be skipped without loss.
+Record the choices in `.onboard-state.json`: `optional_services: {"hocuspocus": "included|skipped", "data-pipeline": "included|skipped", "desktop": "included|skipped"}` and `lark_cli: "connected|skipped"`. Recommendation: include Hocuspocus with Frontend (live editing needs it) and Data Pipeline alongside Data Service (one data path, two repos); everything else can be skipped without loss.
 
-Skipping only defers — `/workflow` and the Session Start Protocol will recommend onboarding a skipped optional service the first time a task actually touches its domain.
+Add included optional services to the selected `services` array too; omit their env entries when
+skipped. Preserve existing choices unless the user changes them explicitly.
 
-### 1.5 Which AI provider subscriptions?
+Skipping only defers — `/workflow` and the Session Start Protocol will recommend onboarding a skipped optional service the first time a task actually touches its domain. **Never treat a skipped or absent Hocuspocus as working collaboration:** live editing and presence need it running, with `web` and `api` configured to reach it (Step 6).
 
-- Anthropic: Claude Opus 5 (planning), Claude Sonnet 5 (coding)
-- OpenAI: GPT-5.3-Codex (coding), GPT-5.6 (exploratory)
+**On an existing workspace, offer — never opt in.** A missing `optional_services.hocuspocus` key means "not selected", not "include it"; onboarding it requires the explicit yes above, and nothing here clones `hocuspocus/` or rewrites `run-all.sh`/`launch.json` as a side effect of re-running onboarding.
+
+### 1.5 Existing model access and preferences
+
+Ask which configured models/providers the user already uses and any explicit preferences. Any
+provider, subscription, API access or harness-managed setup is valid. Keep existing choices;
+resolve the current catalog against actual capabilities in Step 3, not a hardcoded provider list.
 
 ### 1.6 Optional integrations
 
@@ -321,6 +340,11 @@ The agent checks each tool and takes the right action. **Do this directly — do
 | Bun | latest | `command -v bun` | Missing → `brew install oven-sh/bun/bun`. Installed → `brew upgrade bun` |
 | Composer | latest | `command -v composer` | Missing → `brew install composer`. Installed → `brew upgrade composer` |
 | uv | latest | `command -v uv` | Missing → `brew install uv`. Installed → `brew upgrade uv` |
+
+> **The onboarding Node 22 pin covers Hocuspocus too.** The collaboration server needs **≥ 20.12** because
+> `src/config.ts` calls `loadEnvFile`; its own `engines` field only says 20, which is understated.
+> Never downgrade Node to satisfy that field — anything below 20.12 fails at boot with a
+> `loadEnvFile` import error that names the module, not the version.
 
 **If a pinned tool is installed but wrong version**, use the ask tool:
 
@@ -444,30 +468,31 @@ Mark `steps.prerequisites` as `"completed"` in `.onboard-state.json` and proceed
 
 ## Step 3: Verify Model Access
 
-Based on CLI choice and subscriptions from Step 1:
+Read `.agentic-workflows/workflow/model-catalog.json` and follow the model-catalog review procedure
+in the workflow rules in `AGENTS.md`. These are current team recommendations, not mandatory model
+pins or a requirement to buy a particular provider's subscription.
 
-**Claude Code:**
-```bash
-echo "OK" | claude -p --model claude-opus-5 2>&1 | head -1
-echo "OK" | claude -p --model claude-sonnet-5 2>&1 | head -1
-```
+1. For the editor/CLI selected in Step 1, inspect its available configured models, supported effort
+   levels and native authentication status. Use its actual identifiers; never guess them from the
+   catalog's display names. Do not launch paid model probes or request secret keys in chat.
+2. Present the recommended main/subagent pairs and usable alternatives. Preserve explicit model
+   and provider choices. If the running main model cannot be changed here, explain the user's
+   selection action rather than claiming to have changed it. No delegation capability is valid:
+   the main agent does the work and states the limitation.
+3. Prefer a supported configured fallback when a recommendation is unavailable; explain the
+   fallback and any unverified access. Do not enable another provider or overwrite user settings.
+   If the chosen CLI has no usable authenticated model, keep `steps.model_access` pending and
+   help the user complete its native authentication; do not mark unverified access as working.
+4. After the catalog summary and availability review complete, record its digest in
+   `.agentic-workflows/.model-catalog-reviewed` as described in the workflow rules. An interrupted
+   review must not be acknowledged. An unchanged completed review does not repeat the notice.
 
-**OpenCode:**
-```bash
-opencode run -m anthropic/claude-opus-5 "respond with just OK" 2>&1 | head -5
-```
-
-**Amp:**
-```bash
-command -v amp && amp --version 2>&1 | head -1
-```
-Amp manages model access internally via your Amp account — no per-model CLI verification needed. If `amp` is not found, ask the user to install it from [ampcode.com](https://ampcode.com).
-
-Report which models work and suggest fallbacks for any that fail.
+Mark `steps.model_access` completed only when the chosen environment has usable model access;
+record the evidence and any capability limits. Existing explicit choices need no second approval.
 
 ## Step 4: Clone Repositories
 
-Only clone services the user selected. Skip if directory already exists. **Optional services** (`data-pipeline`, `desktop`) are cloned only when the user included them in the Step 1.4 ask — set the `OPTIONAL_*` flags accordingly before running the block.
+Only clone services the user selected. Skip if directory already exists. **Optional services** (`hocuspocus`, `data-pipeline`, `desktop`) are cloned only when the user included them in the Step 1.4 ask — set the `OPTIONAL_*` flags accordingly before running the block.
 
 ```bash
 # API
@@ -489,6 +514,10 @@ Only clone services the user selected. Skip if directory already exists. **Optio
 
 # Desktop — OPTIONAL (frnd-desktop, native SwiftUI macOS app, Xcode-driven).
 [ -d "desktop" ] || [ "$OPTIONAL_DESKTOP" != "1" ] || (git clone https://github.com/alva-intelligence/frnd-desktop.git desktop && cd desktop && git checkout develop)
+
+# Hocuspocus — OPTIONAL (frnd-hocuspocus, the collaboration server). Base branch is MAIN,
+# not develop/development: feature branches still required, PRs target main, never push to it.
+[ -d "hocuspocus" ] || [ "$OPTIONAL_HOCUSPOCUS" != "1" ] || (git clone https://github.com/alva-intelligence/frnd-hocuspocus.git hocuspocus && cd hocuspocus && git checkout main)
 ```
 
 > **Why data-pipeline is worth cloning even if you never edit it.** The marts every dashboard reads
@@ -583,7 +612,19 @@ cd data-service && source .venv/bin/activate && pip install -r requirements.txt 
 # Data Pipeline (venv already created in 5.1) — BOTH files: requirements-dev.txt carries
 # pytest and ruff, and the runtime install deliberately omits them.
 cd data-pipeline && source .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt && deactivate; cd ..
+
+# Hocuspocus (npm ci — installs from package-lock.json; needs Node >= 20.12, satisfied by the
+# Node 22 pin from Step 2)
+cd hocuspocus && npm ci; cd ..
 ```
+
+> **Hocuspocus runs on Node, not Bun or Python.** Use **`npm ci`** (lockfile-exact), not `npm install`
+> — the repo ships a `package-lock.json` and `npm ci` is what its own workflow uses. Confirm the
+> interpreter before installing:
+>
+> ```bash
+> node -v   # expect v22.x — >= 20.12 is the real floor (loadEnvFile), engines only says 20
+> ```
 
 > **Data Pipeline — confirm `prefect` actually landed.** It is the only service whose CLI the rest of
 > onboarding calls by path, and nothing later installs it:
@@ -623,6 +664,7 @@ Use the ask tool:
 > | Frontend | `web/.env.local` | fahrizky, daffa |
 > | AI Service | `ai-service/.env` | rifki |
 > | Data Service | `data-service/.env` | fahmi, arhen |
+> | Hocuspocus | `hocuspocus/.env` | API/collaboration maintainer — confirm with the team |
 >
 > - Yes, I have all the .env files ready
 > - I have some but not all
@@ -630,30 +672,48 @@ Use the ask tool:
 
 **If "Yes, I have all" or "I have some":**
 
-1. Tell user: "Please paste or upload each .env file content here. I'll write them to the correct locations."
-2. **STOP AND WAIT** for user to paste/upload. The user may send one file at a time or all at once.
-3. For each .env content the user provides:
-   - Identify which service it belongs to (look for service-specific keys like `DB_DATABASE` for API, `NEXT_PUBLIC_` for Frontend, etc.)
-   - Write the content to the correct path:
-     - API → `api/.env`
-     - Frontend → `web/.env.local`
-     - AI Service → `ai-service/.env`
-     - Data Service → `data-service/.env`
-   - If you can't identify the service, ask the user which service it's for
-4. After writing each file, confirm: "✓ Written to `<path>`"
-5. After all files are written, verify:
+1. Ask the user to place the selected services' files locally using their editor or the team's
+   secure transfer channel. **Never ask for secret file contents pasted or uploaded into chat.**
+   If files are already local, request paths only and obtain permission before replacing existing
+   files. Copy without displaying contents; do not route secrets through prompts or tool output.
+2. **STOP AND WAIT** until the user confirms the files are in place.
+3. Verify presence only for selected services; skipped services have no env entries:
    ```bash
    [ -f api/.env ] && echo "✓ api/.env" || echo "✗ api/.env missing"
    [ -f web/.env.local ] && echo "✓ web/.env.local" || echo "✗ web/.env.local missing"
    [ -f ai-service/.env ] && echo "✓ ai-service/.env" || echo "✗ ai-service/.env missing"
    [ -f data-service/.env ] && echo "✓ data-service/.env" || echo "✗ data-service/.env missing"
+   [ -f hocuspocus/.env ] && echo "✓ hocuspocus/.env" || echo "✗ hocuspocus/.env missing"
    ```
-6. If any selected services are still missing .env, ask user to provide them before continuing.
-7. Once all .env files are in place, **run post-env setup for API:**
-   ```bash
-   cd api && php artisan key:generate --no-interaction && cd ..
-   ```
-8. Mark `env_status` per service and set `steps.env_files` accordingly.
+4. Missing selected files keep their service pending. Ask the user to place them locally before
+   continuing; never mark a placeholder as configured.
+5. For a selected local API, verify `APP_KEY` with its native configuration without printing it.
+   Generate a key only if it is empty in a fresh local setup; **never replace an existing key**.
+6. Mark `env_status` per service only after its required checks; set `steps.env_files` accordingly.
+
+> **Hocuspocus's `.env` must agree with the API's, and the token is the usual tripwire.** It is not a
+> standalone secret: `X_INTERNAL_TOKEN` in `hocuspocus/.env` must be **byte-identical** to
+> `API_INTERNAL_TOKEN` in `api/.env`, and it must be at least **20 characters**. `API_BASE_URL` must
+> **include the `/api` suffix** (`http://localhost:9191/api`) — a bare host produces 404s on every
+> auth callback. `DATABASE_URL` is the **API's** PostgreSQL DSN; hocuspocus has no database of its own
+> and no migrations to run.
+>
+> Before marking Hocuspocus `env_status` completed, use the API's installed Laravel/Dotenv parser
+> and Node's `process.loadEnvFile` to compare the effective token values **byte for byte**. Require
+> equality and at least 20 characters; equal lengths alone prove nothing. Preserve quoted values,
+> whitespace, comments and environment overrides according to each runtime's parser — do not
+> hand-parse secrets with grep/cut/tr. Report only match/mismatch and length, never the values.
+> Failed or unverified checks keep this service pending.
+>
+> Never `source` or `eval` a `.env` as shell code, put tokens in command arguments/chat, or rotate
+> only one side. Validate `API_BASE_URL`, the shared Postgres target and both callers too; verify an
+> authorized connection after startup before claiming collaboration works.
+>
+> Then wire the two callers in the same pass: API `.env` needs `COLLAB_URL=http://127.0.0.1:1234`, web
+> `.env.local` needs `NEXT_PUBLIC_HOCUSPOCUS_URL=ws://localhost:1234`. Without the web key, the Studio
+> and deck editors fall back to local-only state and no error appears — a configuration gap, not a
+> running incident. Restart the web dev server after changing a `NEXT_PUBLIC_*` value; it is read at
+> build time.
 
 > **Computing `steps.env_files` when Data Pipeline is selected.** Aggregate over the services that
 > actually need a file: a service whose `env_status` is `"n/a"` counts as **satisfied**, not pending.
@@ -1523,11 +1583,20 @@ If `run-all.sh` doesn't exist in the workspace root, create it from the template
 
 Make it executable: `chmod +x run-all.sh`
 
+> **Hocuspocus is in the template.** Node's native env parser validates its configured `PORT`
+> (default `1234`); shared/reserved ports and missing Node 20.12+/npm block Hocuspocus, not unrelated apps. Health,
+> startup and conflict checks use that same port; an occupied port prevents a new launch.
+> `--stop` verifies the recorded PID, start time and process group before signalling the whole
+> group. It never kills Hocuspocus by port. Untracked listeners or stale records need manual
+> inspection, not a blind kill.
+>
+> **An existing `run-all.sh` is never regenerated behind the user's back.** If the workspace already has one, report that Hocuspocus is missing from it and offer to add the block — the user may have customised the file, and overwriting it is not an onboarding step. Same rule for `.claude/launch.json` in Step 9.
+
 ## Step 8: Set Up Documentation Structure
 
 ```bash
 mkdir -p docs/prd
-for service in api web ai-service data-service; do
+for service in api web ai-service data-service hocuspocus; do
   if [ -d "$service" ]; then
     mkdir -p "$service/docs/prd" "$service/docs/tracks"
   fi
@@ -1576,6 +1645,8 @@ For tools that support `launch.json` (Claude Code Desktop), generate the dev ser
 2. Remove entries for services the user didn't select
 3. Done — commands run directly (tools in system `PATH`)
 
+> If `.claude/launch.json` already exists, **do not overwrite it.** Add only the entries the user is missing (e.g. `hocuspocus`) after asking, or leave it and say what is absent — the file may carry hand-tuned commands.
+
 The template configures:
 
 | Name | Command | cwd | Port |
@@ -1588,6 +1659,10 @@ The template configures:
 | web | `bun run dev` | `web/` | 3000 |
 | ai-service | `fastapi dev` | `ai-service/` | 8000 |
 | data-service | `uvicorn app.main:app --reload --port 9999` | `data-service/` | 9999 |
+| hocuspocus | `npm run dev` | `hocuspocus/` | 1234 by default; use its configured `PORT` |
+
+Use Hocuspocus's actual configured `PORT` when creating its launch entry; the template's 1234 is
+only the default. Keep existing customized entries unless the user approves a change.
 
 All commands run directly against tools on `PATH`. Infrastructure services (PostgreSQL, Redis) should start before app services.
 
@@ -1831,30 +1906,21 @@ See [references/mcp-configs.md](references/mcp-configs.md) for per-tool config t
 - Add to MCP config for ALL user-selected tools (Claude Code, Cursor, OpenCode, Amp)
 - Fastest path: `npx add-mcp "npx -y agentation-mcp server"` auto-detects installed tools and writes the correct config to each
 
-**3. GitHub MCP** — requires a Personal Access Token. Use the ask tool:
+**3. GitHub MCP** — requires native authentication or a Personal Access Token.
 
-> "GitHub MCP needs a Personal Access Token. Do you have one?"
-> - Yes, I have a PAT ready
-> - No, I need to create one
-
-If **"Yes"**:
-1. Tell user: "Please provide your GitHub PAT (paste it or tell me when you've added it to the config)"
-2. **STOP AND WAIT** for user to provide the token
-3. Use the ask tool: "Have you provided the GitHub PAT?"
-4. Only after confirmation, write the MCP config with the token
-5. Verify: `gh auth status` should show authenticated
-
-If **"No"**:
-1. Tell user: "Generate one at https://github.com/settings/tokens — select 'repo' scope"
-2. **STOP AND WAIT** for user to create and provide the token
-3. Continue as above once provided
+Have the user configure credentials locally using their tool's supported auth/secret mechanism.
+For a PAT, use https://github.com/settings/tokens with only the required repository permissions.
+Never request, read back or print the token in chat. Wait for local-setup confirmation before
+checking the MCP's native connection status; unverified access stays pending or is explicitly skipped.
+`gh auth status` verifies the CLI only — it is not proof that the MCP is authenticated.
 
 **4. Laravel Boost** (API only, no credentials needed — just configure)
 - Only configure if user selected API service
 
 ### Optional MCPs — ask ONE AT A TIME (based on Step 1 answers)
 
-Only configure MCPs the user selected in Step 1.5. For each one that needs credentials, **STOP and WAIT** for the token.
+Only configure MCPs the user selected in Step 1.6. For credentials, use the same local-auth flow
+above; **STOP and WAIT** for local-setup confirmation, never for a token pasted into chat.
 
 **Lark CLI** (if selected in 1.4) — **read-only, via the Lark CLI — never an MCP**: lets the agent read any pasted Lark doc link (PRD briefs, wiki pages) straight from the source. The workflow never writes to Lark — no doc, wiki, or task sync, ever.
 
@@ -1863,28 +1929,14 @@ Guide the user to connect the CLI once (one-time):
 2. Verify read access: on any Lark doc URL the user pastes, run the CLI's doc-fetch command and confirm the content comes back.
 3. Record `lark_cli: "connected"` in `.onboard-state.json` (or `"skipped"` — the user can connect later; until then Lark links are handled by the user pasting text).
 
-**Figma MCP** (if selected):
+**Figma MCP** (if selected): have the user complete native authentication or add their token
+locally (https://www.figma.com/developers/api#access-tokens). Confirm setup and verify the native
+connection without receiving or displaying credentials.
 
-Use the ask tool:
-> "Figma MCP needs a Personal Access Token. Do you have one?"
-> - Yes, I have a token
-> - No, I need to create one
+**Sentry MCP** (if selected): use the same local-auth/confirmation flow; never request a token in chat.
 
-If **"Yes"**:
-1. Ask user: "Please provide your Figma access token"
-2. **STOP AND WAIT** for user to provide the token
-3. Use the ask tool: "Have you provided the Figma token?"
-4. Only after confirmation, write the MCP config
-
-If **"No"**:
-1. Tell user: "Generate one at https://www.figma.com/developers/api#access-tokens"
-2. **STOP AND WAIT** for user to create and provide the token
-3. Continue as above once provided
-
-**Sentry MCP** (if selected):
-- Same pattern: ask for token → wait → configure
-
-**IMPORTANT: Never write placeholder tokens like `<your-token>` into config files.** Either write the real token the user provided, or skip the MCP entirely. Placeholder tokens cause startup errors.
+**Never write placeholder tokens into runtime config files.** If credentials are not configured
+locally, leave the integration pending or explicitly skip it; do not invent a working connection.
 
 ## Step 12: Verify & Complete — **STOP, ask user**
 
@@ -1900,7 +1952,7 @@ Use the ask tool:
 
 1. **Check for port conflicts first** (same ports as run-all.sh):
 ```bash
-for port in 9191 3000 8000 9999 1025 8025 8123 4200; do
+for port in 9191 3000 8000 9999 1234 1025 8025 8123 4200; do
   pid=$(lsof -ti :$port 2>/dev/null)
   if [ -n "$pid" ]; then
     echo "⚠ Port $port in use by PID $pid — $(ps -p $pid -o comm= 2>/dev/null)"
@@ -1933,6 +1985,9 @@ curl -sf http://localhost:8000/health &>/dev/null && echo "✓ AI Service" || ec
 # Data Service: 401 = auth-protected but running
 data_code=$(curl -so /dev/null -w "%{http_code}" http://localhost:9999/api/v1/health/ 2>/dev/null || echo "000")
 [[ "$data_code" == "200" || "$data_code" == "401" ]] && echo "✓ Data Service (HTTP $data_code)" || echo "✗ Data Service — down"
+
+# Hocuspocus (if selected): the updated launcher checks /health on its configured PORT.
+[ ! -d hocuspocus ] || ./run-all.sh --status
 
 # Infrastructure
 pg_isready -h localhost -p 5432 && echo "✓ PostgreSQL" || echo "✗ PostgreSQL — down"
@@ -2076,8 +2131,9 @@ cd data-pipeline && PREFECT_PROFILE=local .venv/bin/prefect flow-run ls --limit 
 
    > ⚠️ **Check the script before running this if the workspace predates 2026-09-07.** `--stop`
    > sweeps ports after killing tracked PIDs. In the version generated from the current template
-   > that sweep iterates `OWNED_PORTS` only (`9191 3000 8000 9999 1025 8025`) and deliberately
-   > leaves `SHARED_PORTS` (`8123` ClickHouse, `4200` Prefect) alone. **Older generated copies
+   > that sweep iterates `OWNED_PORTS` only (API/web/AI/data/mail ports). Hocuspocus is stopped only
+   > through its verified recorded process group, never by port. `SHARED_PORTS` (`5432` Postgres,
+   > `6379` Redis, `8123` ClickHouse, `4200` Prefect) are left alone. **Older generated copies
    > included 8123 and 4200 in the sweep and `kill -9`'d them** — the same local ClickHouse and
    > Prefect server this run told the developer to leave running, and the same two ports the old
    > script's own header claimed it "never starts or stops". `--kill-ports` had the identical bug,
@@ -2147,7 +2203,11 @@ If the user runs `/onboard verify` (or any agent checks onboarding state):
 2. For each pending env file, check if the real file now exists (not a placeholder)
 3. For pending db_setup, check if `psql -h localhost -p 5432 -d frnd -c "SELECT 1"` succeeds
 4. Update the state file with any newly completed items
-5. Report what's still missing
+5. For included Hocuspocus, repeat Step 6's native-parser checks: `API_BASE_URL` includes `/api`,
+   `DATABASE_URL` targets the API's local/dev Postgres, both callers are configured, and the
+   effective tokens match byte-for-byte with ≥20 characters. Equal lengths are not equality.
+   Report only pass/fail and lengths, never values; unverified/mismatched config stays pending.
+6. Report what's still missing
 
 ## /onboard resume
 

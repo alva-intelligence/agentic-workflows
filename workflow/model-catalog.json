@@ -1,0 +1,18 @@
+{
+  "roles": {
+    "main": {
+      "strongly_recommended": { "model": "Claude Opus 5.5", "effort": "high" },
+      "alternatives": [
+        { "model": "GPT 6.1-Sol", "effort": "xhigh" }
+      ]
+    },
+    "subagents": {
+      "strongly_recommended": { "model": "DeepSeek V4.1 Flash", "effort": "max" },
+      "alternatives": [
+        { "model": "GLM 5.3 Flash", "effort": "max" },
+        { "model": "Claude Sonnet 5.5", "effort": "xhigh" },
+        { "model": "GPT 6.1-Terra", "effort": "xhigh" }
+      ]
+    }
+  }
+}

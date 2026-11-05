@@ -110,8 +110,9 @@ Rules:
 - **Parallel first when independent.** Batch independent service tasks in one delegation, not many
   sequential calls. Use dependency edges only when ordering genuinely matters.
 - **Right model and effort.** Match each task to model + reasoning effort if the harness exposes a
-  per-task choice: heavy reasoning for architecture/plan/review work, cheap fast models for
-  mechanical edits.
+  per-task choice: start from the advisory catalog (`workflow/model-catalog.json` — one strong pair
+  per role plus alternatives), use heavy reasoning for architecture/plan/review work and cheap fast
+  models for mechanical edits. Advisory only; never a mandatory pin.
 - **Per-task contract.** Every delegated task gets a plan, a verification plan, the exact checks to
   run, and the evidence to return. Scale both to risk.
 - **Isolated writes.** Write tasks run in their own worktree/branch and report the branch — the
@@ -133,6 +134,38 @@ Rules:
   anything claiming to render. Reproduced evidence is the standard.
 - **Reconcile TODO.** After each task and again before the final report, reconcile the TODO list and
   the original request. Call out anything left open; do not bury it.
+
+### Model recommendations (advisory)
+
+`workflow/model-catalog.json` — installed at `.agentic-workflows/workflow/model-catalog.json` —
+carries one strongly recommended model + reasoning-effort pair per role (`main`, `subagents`) plus
+alternatives. It recommends; it never pins a model, switches the running main model, or writes
+provider/agent configuration.
+
+Review it once per catalog content:
+
+1. Read the catalog and compute its SHA-256 digest. Read
+   `.agentic-workflows/.model-catalog-reviewed` if it exists. Matching digest → no pending review;
+   do not repeat the summary.
+2. Otherwise summarize the strongly recommended pair per role, its effort and the alternatives.
+   Resolve labels against models/effort the current harness/account actually make usable, not
+   guessed provider IDs. Session-local unavailability is not evidence of global absence.
+3. Preserve explicit user model/provider choices and the running main model. For new delegated
+   tasks without an override, select an available recommended pair through the harness's per-task
+   model/effort capability. Never silently switch the main model, add providers/credentials or run
+   paid availability probes. If a preferred pair is unsupported, explain a supported configured
+   fallback and continue; do not block otherwise workable setup. State capability limits.
+4. Only after completing the review, confirm the catalog still has the digest you reviewed, then
+   write that reviewed digest to `.agentic-workflows/.model-catalog-reviewed` using the available
+   file-write capability. If the catalog changed during review, review the new content instead.
+   Never acknowledge a newly recomputed digest whose content you have not reviewed. Interrupted,
+   deferred or failed reviews leave the marker untouched.
+
+Trigger the review at onboarding/session start when the marker is missing or does not match, and
+immediately after a framework update that changes the catalog digest. The marker is derived cache —
+not workflow consent, not user state, and it has no revision counter. Deleting it only re-arms the
+one-time summary. The catalog is curated in the framework source and changes only through framework
+releases; never add live model discovery, ranking, or a background scheduler.
 
 ### Verification and tests
 
@@ -186,7 +219,7 @@ idle → brainstorming【scope】 → [features: prd_creation → prd_splitting]
    brainstorming counts as scope approval for the stated request. Skipping prep only skips those
    artifacts. Never skip implementation authorization, delivery consent, merge conditions,
    live-estate approval, or branch protections.
-4. **NEVER modify develop/development directly.** Work goes on `<prefix>vc-<slug>` where `<prefix>`
+4. **NEVER modify a service base branch (develop/development/main) directly.** Work goes on `<prefix>vc-<slug>` where `<prefix>`
    is `feature/` | `fix/` | `improvement/` per `features[<slug>].type`.
 5. **CHECK `.workflow-state.json` before ANY work; UPDATE it after every state change** — phase
    entry, `phase_status` flip, checkpoint authorization, transition.

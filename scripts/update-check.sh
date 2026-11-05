@@ -92,6 +92,34 @@ info "Branch: $BRANCH"
 # ── Ensure cache directory exists ────────────────────────────────────────────
 mkdir -p "$CACHE_DIR"
 
+compute_sha256() {
+  local file="$1"
+  if [[ -f "$file" ]]; then
+    shasum -a 256 "$file" | awk '{print $1}'
+  else
+    echo ""
+  fi
+}
+
+CATALOG_FILE="$CACHE_DIR/workflow/model-catalog.json"
+CATALOG_MARKER="$CACHE_DIR/.model-catalog-reviewed"
+
+catalog_review_notice() {
+  [[ -f "$CATALOG_FILE" ]] || return 0
+  local digest reviewed=""
+  digest=$(compute_sha256 "$CATALOG_FILE" 2>/dev/null) || return 0
+  [[ -n "$digest" ]] || return 0
+  if [[ -f "$CATALOG_MARKER" ]]; then
+    reviewed=$(tr -d '[:space:]' < "$CATALOG_MARKER" 2>/dev/null || true)
+  fi
+  [[ "$reviewed" != "$digest" ]] || return 0
+  header "Model catalog review pending (advisory)"
+  info "Catalog: ${CATALOG_FILE#"$WORKSPACE_ROOT"/}"
+  info "Digest: $digest"
+  info "Review recommendations and available models/effort per AGENTS.md; preserve user choices."
+  info "Only after that content is reviewed, record its digest in ${CATALOG_MARKER#"$WORKSPACE_ROOT"/}."
+}
+
 # ── Fetch remote manifest ───────────────────────────────────────────────────
 fetch_remote() {
   local url="$1"
@@ -114,6 +142,7 @@ if ! REMOTE_MANIFEST=$(fetch_remote "$REPO_URL_BASE/manifest.json"); then
     exit 1
   fi
   ok "Using cached version."
+  catalog_review_notice
   exit 0
 fi
 
@@ -146,6 +175,7 @@ fi
 # ── Compare versions ────────────────────────────────────────────────────────
 if [[ "$LOCAL_VERSION" == "$REMOTE_VERSION" ]] && [[ "$BOOTSTRAP" == false ]]; then
   ok "Already up-to-date (v$LOCAL_VERSION)."
+  catalog_review_notice
   exit 0
 fi
 
@@ -309,15 +339,6 @@ SKIPPED_COUNT=0
 FAILED_COUNT=0
 FRAGMENTS_CHANGED=false
 declare -a UPDATED_FILES=()
-
-compute_sha256() {
-  local file="$1"
-  if [[ -f "$file" ]]; then
-    shasum -a 256 "$file" | awk '{print $1}'
-  else
-    echo ""
-  fi
-}
 
 for i in $(seq 0 $(( TOTAL_FILES - 1 ))); do
   repo_path="${FILE_REPO_PATHS[$i]}"
@@ -502,11 +523,14 @@ fi
 echo ""
 ok "Done."
 
+# Pending-review reminder only — the updater never acknowledges the review.
+catalog_review_notice
+
 # ── Next steps (shown after bootstrap or first run) ─────────────────────────
 if [[ "$BOOTSTRAP" == true ]] || [[ -z "$LOCAL_VERSION" ]]; then
   # Check if this is a fresh workspace (no service dirs)
   has_services=false
-  for dir in api web ai-service data-service; do
+  for dir in api web ai-service data-service data-pipeline desktop hocuspocus; do
     if [[ -d "$WORKSPACE_ROOT/$dir" ]]; then
       has_services=true
       break

@@ -36,6 +36,13 @@
       "port": 9999
     },
     {
+      "name": "hocuspocus",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "hocuspocus",
+      "port": 1234
+    },
+    {
       "name": "mailhog",
       "runtimeExecutable": "mailhog",
       "runtimeArgs": [],

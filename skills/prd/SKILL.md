@@ -42,7 +42,7 @@ Create the main PRD for a feature.
    continue. Do not run a challenge/relentless-clarifying loop.
 
 4. **Research current system state (before drafting).** Read the relevant service code
-   (`api/`, `web/`, `ai-service/`, `data-service/`, `data-pipeline/` as applicable), existing PRDs in
+   (`api/`, `web/`, `ai-service/`, `data-service/`, `data-pipeline/`, `hocuspocus/` as applicable), existing PRDs in
    `docs/prd/`, and recent commits in the affected areas. Reconcile the PRD with what already
    exists; record conflicts as decisions or open questions.
 

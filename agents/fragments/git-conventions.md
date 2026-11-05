@@ -8,14 +8,15 @@
   - `bug` → `fix/`
   - `improvement` → `improvement/`
 - Human branches: `<prefix><description>` (no `vc-` infix)
-- Created from latest `develop` (for api, web, desktop) or `development` (for ai-service, data-service, data-pipeline)
-- NEVER work directly on develop/development
+- Created from latest `develop` (for api, web, desktop), `development` (for ai-service, data-service, data-pipeline), or `main` (for hocuspocus)
+- NEVER work directly on develop/development/main
 
 ### Branch Workflow
 
-1. Ensure you're on the latest develop/development:
+1. Set `BASE_BRANCH` from the service registry (`develop`, `development`, or `main` for
+   hocuspocus), then sync it:
    ```bash
-   git checkout develop && git pull origin develop
+   git checkout "$BASE_BRANCH" && git pull --ff-only origin "$BASE_BRANCH"
    ```
 2. Resolve `<prefix>` from feature type (feature/ | fix/ | improvement/), then create the branch:
    ```bash
@@ -56,7 +57,7 @@ Examples:
   - Track file
   - Self-review summary
   - Security audit summary (no high/critical findings)
-- **Target branch:** `develop` (api, web) or `development` (ai-service, data-service, data-pipeline)
+- **Target branch:** `develop` (api, web), `development` (ai-service, data-service, data-pipeline), or `main` (hocuspocus)
 - **Review:** A human/repo owner reviews on the PR. The orchestrator may address feedback and
   resolve threads; re-request review only when the user says so.
 
@@ -115,6 +116,11 @@ Rules:
 | AI Service | alva-intelligence/frnd-ai-services | `development` |
 | Data Service | alva-intelligence/frnd-clickhouse-api | `development` |
 | Data Pipeline | alva-intelligence/frnd-orchestration | `development` |
+| Hocuspocus | alva-intelligence/frnd-hocuspocus | `main` |
+
+> **`main` is hocuspocus's working base, not a release-only branch like the others.** Branch from it,
+> open PRs against it, never push to it directly. That is a service-specific branch rule: it grants
+> no extra merge authority, and the delivery checkpoint still gates every push and PR.
 
 ### Rules
 

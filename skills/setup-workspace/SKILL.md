@@ -119,8 +119,10 @@ If user picks **Custom**, ask them to list:
 
 **No agent roster and no generated agent files.** The running agent is the orchestrator: it plans,
 delegates implementation to subagents when useful, verifies every claim, and keeps the final
-verdict. The current harness supplies whatever delegation/intercom capability it has; no named
-model, tool, or per-editor agent definition is written into the workspace.
+verdict. The current harness supplies whatever delegation/intercom capability it has; no model,
+tool, or per-editor agent definition is written into the workspace. The shipped catalog
+(`workflow/model-catalog.json`) carries advisory recommendations only — never generated model
+definitions.
 
 ### 3.1 Execution defaults
 
@@ -128,10 +130,23 @@ model, tool, or per-editor agent definition is written into the workspace.
 > the main agent. Trivial or tightly coupled work may stay in the main agent; a complex bug may use
 > subagents. The user can override at the implementation checkpoint; do not ask again once chosen.
 >
-> No model names are pinned or generated. Match model and reasoning effort per task at delegation
-> time, using whatever the current harness exposes.
+> No model is pinned or generated, and none is switched automatically. Start from the advisory
+> catalog (`workflow/model-catalog.json`): one strongly recommended model + effort pair per role,
+> plus alternatives. Match the current harness/account's usable models and effort levels, keep any
+> explicit user choices, and continue on a supported fallback when the strong pick is unavailable.
 
-### 3.2 Editor support
+### 3.2 Advisory model catalog
+
+> The workflow ships an advisory model catalog. At onboarding/session start, and right after an
+> update changes it, the agent summarizes its recommendations once and checks them against the
+> models you can actually use here. It never changes your model/provider setup, adds credentials,
+> or runs paid checks. A completed review is cached by content digest in
+> `.agentic-workflows/.model-catalog-reviewed`; an unchanged catalog is not summarized again, and
+> an interrupted review stays pending.
+>
+> Canonical procedure: `workflow-rules.core.md` → "Model recommendations (advisory)".
+
+### 3.3 Editor support
 
 > "Any editor/CLI targets?" (skills are shared; no per-editor agent files are generated)
 > - Text input, free-form
@@ -229,12 +244,14 @@ Update files in `workflow/`:
 1. **`phases.json`** — Only include phases the user selected. Add custom phases.
 2. **`gates.json`** — Define gate conditions for each phase transition. Remove gates for dropped phases. Add gates for custom phases. Keep the three checkpoint guards explicit: scope before preparation, implementation before code changes, delivery before PR/merge work.
 3. **`state-schema.json`** — Adapt the feature schema to the phases and service structure. Always include `phase_status` with **all three values** (`idle` | `inprogress` | `completed`), and the required `agent_state` / `agent_state_reason` pair (both null, or reason non-empty). Include the optional checkpoint fields with safe defaults: `scope_approved` (false), `automation` (`{brainstorming:false, implementation:false}`), `execution_mode` (null), `implementation_approved` (false), `delivery` (null), `live_merge_approved` (false). Existing state files without these fields must remain valid.
+4. **`model-catalog.json`** — Copy the advisory catalog unchanged (labels + effort only; no provider or API identifiers). Give it a manifest entry with `type: workflow` and `install_to: .agentic-workflows/workflow/model-catalog.json`. Do not generate per-editor model definitions or write the `.model-catalog-reviewed` marker into the repo.
 
 ## Step 9: (was Agent Definitions — no agent files anymore)
 
 The orchestrator model needs **no agent files**: the running agent drives all phases, delegation
 happens via the harness's subagent capability, and per-task models/effort are chosen at delegation
-time (see `workflow-rules.core.md`). No model preferences are generated; skip to Step 10.
+time (see `workflow-rules.core.md`). The only model guidance is the advisory catalog from Step 8 —
+no pins and no generated preferences; skip to Step 10.
 
 ## Step 10: Generate Skills
 
@@ -280,6 +297,7 @@ Verify:
 - `phases.json` phases match `state-schema.json` enum
 - `gates.json` has entries for all phase transitions
 - Checkpoint fields are present or optional-with-safe-defaults; no agent roster or routing table is generated
+- `workflow/model-catalog.json` parses, keeps one strongly recommended model + effort pair per role, and pins nothing
 - No references to `frndos` remain (replaced with user's project name)
 
 ## Step 16: Summary

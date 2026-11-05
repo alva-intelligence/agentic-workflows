@@ -3,12 +3,16 @@
 # Usage: ./run-all.sh [--stop] [--status] [--check]
 #
 # Requires the toolchain from /onboard Step 2 to be on PATH.
-# Services: API (9191), Frontend (3000), AI Service (8000), Data Service (9999)
+# Services: API (9191), Frontend (3000), AI Service (8000), Data Service (9999),
+#           Hocuspocus (1234)
+#
+# Hocuspocus starts only when hocuspocus/ and hocuspocus/.env both exist. It stores Yjs
+# updates in the API's Postgres and needs the API running for auth, so it starts last.
 #
 # NOT started here: Data Pipeline has no long-running server (flows run on a Prefect
-# worker) and is absent by design. Ports 8123 (local ClickHouse) and 4200 (local Prefect)
+# worker) and is absent by design. Postgres 5432, Redis 6379, ClickHouse 8123 and Prefect 4200
 # are SHARED_PORTS: reported by --check and --status, and NEVER killed by --stop or
-# --kill-ports. /onboard tells the developer to leave both running, so killing them here
+# --kill-ports. /onboard tells the developer to leave them running, so killing them here
 # would break the estate the same run just set up. Enforced by the two arrays below --
 # every kill loop iterates OWNED_PORTS only.
 
@@ -48,15 +52,32 @@ is_running() { [[ -n "${1:-}" ]] && kill -0 "$1" 2>/dev/null; }
 # SHARED: started by the developer per /onboard 7.4.2 and 7.5.2 and left running on
 #         purpose. Observed, never killed. Do not merge these two lists.
 OWNED_PORTS=(9191 3000 8000 9999 1025 8025)
-SHARED_PORTS=(8123 4200)
+SHARED_PORTS=(5432 6379 8123 4200)
+CHECK_PORTS=("${OWNED_PORTS[@]}")
 
 port_pid() { lsof -ti :"$1" 2>/dev/null || true; }
 port_cmd() { ps -p "$1" -o comm= 2>/dev/null || echo "unknown"; }
 
+HOCUSPOCUS_PORT=""
+if [[ -d "$SCRIPT_DIR/hocuspocus" && -f "$SCRIPT_DIR/hocuspocus/.env" ]]; then
+  HOCUSPOCUS_PORT=$(node -e '
+    try {
+      process.loadEnvFile(process.argv[1]);
+      const port = Number(process.env.PORT ?? 1234);
+      if (!Number.isInteger(port) || port < 1 || port > 65535) process.exit(1);
+      process.stdout.write(String(port));
+    } catch { process.exit(1); }
+  ' "$SCRIPT_DIR/hocuspocus/.env" 2>/dev/null) || true
+  for reserved_port in "${OWNED_PORTS[@]}" "${SHARED_PORTS[@]}"; do
+    [[ "$HOCUSPOCUS_PORT" != "$reserved_port" ]] || HOCUSPOCUS_PORT=""
+  done
+  [[ -z "$HOCUSPOCUS_PORT" ]] || CHECK_PORTS+=("$HOCUSPOCUS_PORT")
+fi
+
 # ── Port conflict check ──────────────────────────────────────────────────────
 check_ports() {
   local conflicts=0
-  for port in "${OWNED_PORTS[@]}"; do
+  for port in "${CHECK_PORTS[@]}"; do
     local pid
     pid=$(port_pid "$port")
     if [[ -n "$pid" ]]; then
@@ -75,8 +96,8 @@ check_ports() {
   done
   if [[ $conflicts -gt 0 ]]; then
     echo ""
-    log_warn "$conflicts port conflict(s). Stop existing processes or use: ./run-all.sh --kill-ports"
-    log_warn "(--kill-ports never touches ${SHARED_PORTS[*]}.)"
+    log_warn "$conflicts port conflict(s). Stop existing processes; --kill-ports only covers ${OWNED_PORTS[*]}."
+    log_warn "Hocuspocus uses its tracked process group, never port-based kills. Shared ports ${SHARED_PORTS[*]} are left alone."
     return 1
   fi
   return 0
@@ -96,6 +117,18 @@ kill_ports() {
 # ── Stop ─────────────────────────────────────────────────────────────────────
 stop_all() {
   echo -e "\n${BOLD}Stopping all services...${NC}\n"
+
+  local pid
+  pid=$(read_pid hocuspocus)
+  if [[ "$pid" =~ ^[1-9][0-9]*$ && "$pid" != 1 && -f "$PID_DIR/hocuspocus.started" ]] &&
+     is_running "$pid" &&
+     [[ "$(LC_ALL=C ps -p "$pid" -o lstart= 2>/dev/null)" == "$(cat "$PID_DIR/hocuspocus.started")" ]] &&
+     [[ "$(ps -p "$pid" -o pgid= 2>/dev/null | tr -d '[:space:]')" == "$pid" ]]; then
+    kill -- "-$pid" 2>/dev/null && log_ok "Stopped hocuspocus process group (PID $pid)" || log_warn "Failed to stop hocuspocus"
+  elif [[ -n "$pid" ]]; then
+    log_warn "Hocuspocus PID could not be verified; no process killed"
+  fi
+  rm -f "$PID_DIR/hocuspocus.pid" "$PID_DIR/hocuspocus.started"
 
   # 1. Stop tracked PIDs
   for name in api api-queue web ai-service data-service mailhog; do
@@ -131,7 +164,8 @@ stop_all() {
 # ── Status ───────────────────────────────────────────────────────────────────
 show_status() {
   echo -e "\n${BOLD}Service Status${NC}\n"
-  for name in api api-queue web ai-service data-service mailhog; do
+  for name in api api-queue web ai-service data-service hocuspocus mailhog; do
+    [[ "$name" != hocuspocus || -d "$SCRIPT_DIR/hocuspocus" ]] || continue
     local pid
     pid=$(read_pid "$name")
     if is_running "$pid"; then
@@ -156,6 +190,16 @@ show_status() {
   data_code=$(curl -so /dev/null -w "%{http_code}" http://localhost:9999/api/v1/health/ 2>/dev/null || echo "000")
   [[ "$data_code" == "200" || "$data_code" == "401" ]] && log_ok "Data Service (9999) — HTTP $data_code" || log_warn "Data Service (9999) — down"
 
+  if [[ -d "$SCRIPT_DIR/hocuspocus" ]]; then
+    if [[ -n "$HOCUSPOCUS_PORT" ]]; then
+      local collab_code
+      collab_code=$(curl -so /dev/null -w "%{http_code}" "http://localhost:$HOCUSPOCUS_PORT/health" 2>/dev/null || echo "000")
+      [[ "$collab_code" == "200" ]] && log_ok "Hocuspocus ($HOCUSPOCUS_PORT) — HTTP 200" || log_warn "Hocuspocus ($HOCUSPOCUS_PORT) — down"
+    else
+      log_warn "Hocuspocus — needs .env, Node >= 20.12 and a valid, non-reserved PORT"
+    fi
+  fi
+
   pg_isready -h localhost -p 5432 &>/dev/null && log_ok "PostgreSQL (5432)" || log_warn "PostgreSQL (5432) — down"
   redis-cli ping &>/dev/null && log_ok "Redis" || log_warn "Redis — down"
 }
@@ -177,6 +221,7 @@ preflight() {
   [[ -d "$SCRIPT_DIR/web" ]] && log_ok "web/ exists" || log_warn "web/ not found — skipping"
   [[ -d "$SCRIPT_DIR/ai-service" ]] && log_ok "ai-service/ exists" || log_warn "ai-service/ not found — skipping"
   [[ -d "$SCRIPT_DIR/data-service" ]] && log_ok "data-service/ exists" || log_warn "data-service/ not found — skipping"
+  [[ -d "$SCRIPT_DIR/hocuspocus" ]] && log_ok "hocuspocus/ exists" || log_warn "hocuspocus/ not found — skipping"
 
   echo ""
 
@@ -184,8 +229,15 @@ preflight() {
   [[ ! -d "$SCRIPT_DIR/web" ]] || [[ -f "$SCRIPT_DIR/web/.env.local" ]] && log_ok "web/.env.local exists" || log_warn "web/.env.local missing"
   [[ ! -d "$SCRIPT_DIR/ai-service" ]] || [[ -f "$SCRIPT_DIR/ai-service/.env" ]] && log_ok "ai-service/.env exists" || log_warn "ai-service/.env missing"
   [[ ! -d "$SCRIPT_DIR/data-service" ]] || [[ -f "$SCRIPT_DIR/data-service/.env" ]] && log_ok "data-service/.env exists" || log_warn "data-service/.env missing"
+  [[ ! -d "$SCRIPT_DIR/hocuspocus" ]] || [[ -f "$SCRIPT_DIR/hocuspocus/.env" ]] && log_ok "hocuspocus/.env exists" || log_warn "hocuspocus/.env missing"
 
   echo ""
+
+  if [[ -d "$SCRIPT_DIR/hocuspocus" ]]; then
+    if [[ -z "$HOCUSPOCUS_PORT" ]] || ! command -v npm &>/dev/null; then
+      log_warn "Skipping Hocuspocus: needs .env, Node >= 20.12/npm and a valid, non-reserved PORT; collaboration unavailable"
+    fi
+  fi
 
   # Check port conflicts
   check_ports || true
@@ -243,6 +295,23 @@ start_all() {
     log_warn "Skipping Data Service (missing dir or .env)"
   fi
 
+  # Hocuspocus (collaboration server — needs the API up for auth; stores updates in its Postgres)
+  if [[ -d "$SCRIPT_DIR/hocuspocus" ]] && [[ -f "$SCRIPT_DIR/hocuspocus/.env" ]]; then
+    if [[ -n "$HOCUSPOCUS_PORT" ]] && command -v npm &>/dev/null && [[ -z "$(port_pid "$HOCUSPOCUS_PORT")" ]]; then
+      set -m
+      (cd "$SCRIPT_DIR/hocuspocus" && PORT="$HOCUSPOCUS_PORT" exec npm run dev > "$LOG_DIR/hocuspocus.log" 2>&1) &
+      local pid=$!
+      save_pid "hocuspocus" "$pid"
+      LC_ALL=C ps -p "$pid" -o lstart= > "$PID_DIR/hocuspocus.started" 2>/dev/null || true
+      set +m
+      log_ok "Hocuspocus started on :$HOCUSPOCUS_PORT"
+    else
+      log_warn "Skipping Hocuspocus (needs npm, valid config and a free PORT; see --check)"
+    fi
+  else
+    log_warn "Skipping Hocuspocus (missing dir or .env)"
+  fi
+
   # Mailhog (email testing for API)
   if command -v mailhog &>/dev/null; then
     (mailhog > "$LOG_DIR/mailhog.log" 2>&1) &
@@ -263,6 +332,9 @@ start_all() {
   echo "    Frontend      → http://localhost:3000"
   echo "    AI Service    → http://localhost:8000"
   echo "    Data Service  → http://localhost:9999"
+  if [[ -n "$HOCUSPOCUS_PORT" ]]; then
+    echo "    Hocuspocus    → ws://localhost:$HOCUSPOCUS_PORT (health: http://localhost:$HOCUSPOCUS_PORT/health)"
+  fi
   echo "    Mailhog UI    → http://localhost:8025"
   echo ""
   echo "  Logs:    tail -f $LOG_DIR/<service>.log"
@@ -287,7 +359,7 @@ case "${1:-}" in
     echo "    --status       Show status of all services + health checks"
     echo "    --stop         Stop the services this script starts (never ${SHARED_PORTS[*]})"
     echo "    --kill-ports   Kill processes on ports ${OWNED_PORTS[*]}"
-    echo "                   (never ${SHARED_PORTS[*]} — shared ClickHouse / Prefect)"
+    echo "                   (never ${SHARED_PORTS[*]} — shared infrastructure)"
     echo "    --help         Show this help message"
     echo ""
     ;;

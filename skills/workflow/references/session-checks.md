@@ -6,11 +6,12 @@ These are the deep procedures referenced from the session-start protocol in `AGE
 
 After pulling the current branch, check whether each service repo that has a **feature branch** checked out is up to date with its base branch. Stale feature branches cause painful conflicts at PR time, so surface this early.
 
-**For each service directory** (`api/`, `web/`, `ai-service/`, `data-service/`) that exists AND is on a `feature/*`, `fix/*`, or `improvement/*` branch:
+**For each registered service directory** that exists AND is on a `feature/*`, `fix/*`, or `improvement/*` branch:
 
 1. Determine the **base branch** from the Service Registry (`skills/onboard/references/service-registry.md`):
-   - `api/`, `web/` → `develop`
-   - `ai-service/`, `data-service/` → `development`
+   - `api/`, `web/`, `desktop/` → `develop`
+   - `ai-service/`, `data-service/`, `data-pipeline/` → `development`
+   - `hocuspocus/` → `main` (its working base — not a release-only branch)
 2. Fetch origin and compare:
    ```bash
    cd <service>
@@ -45,6 +46,7 @@ Only check services that **actually exist** in the workspace. The authoritative 
 | Frontend | `web/` directory | `curl -sf http://localhost:3000` |
 | AI Service | `ai-service/` directory | `curl -sf http://localhost:8000/health` |
 | Data Service | `data-service/` directory | `curl -so /dev/null -w "%{http_code}" http://localhost:9999/api/v1/health/` (200 OR 401) |
+| Hocuspocus | `hocuspocus/` directory | `curl -sf http://localhost:1234/health` (use effective `PORT`, including exported overrides) |
 | PostgreSQL | `api/` exists | `pg_isready -h localhost -p 5432` |
 | Redis | `ai-service/` exists | `redis-cli ping` |
 
@@ -53,6 +55,14 @@ If any required service is DOWN:
 - Offer: "Should I run `./run-all.sh` to start all services?"
 - Or: "Should I start just the specific services needed?"
 - Wait for services to be healthy before proceeding
+
+**Hocuspocus down is not the same as a broken UI.** When a task touches live editing or presence and
+`hocuspocus/` exists, a down collaboration server (or a missing `NEXT_PUBLIC_HOCUSPOCUS_URL` /
+`COLLAB_URL`) can disable sync or persistence even when a page renders. Studio/deck local fallback
+paths can look editable, while other failures reject writes or become read-only. Report it as **collaboration unavailable** with the three-side config from
+`service-registry.md` (Hocuspocus, API `COLLAB_URL`, web `NEXT_PUBLIC_HOCUSPOCUS_URL`) and never
+describe a successful page load as proof that sync works. A 200 from `GET /health` proves the process
+and its config loaded, not that two clients sync.
 
 ### Update check + sync
 
@@ -67,6 +77,12 @@ curl -sL "https://raw.githubusercontent.com/alva-intelligence/agentic-workflows/
   -o /tmp/aw-update-check.sh && bash /tmp/aw-update-check.sh --bootstrap
 ```
 
+Read regenerated `AGENTS.md` if the script reports regeneration. Review the installed model catalog
+using "Model recommendations (advisory)" in the workflow rules: compare its digest with
+`.agentic-workflows/.model-catalog-reviewed`, summarize new content/availability once, preserve
+explicit choices, and acknowledge only the content actually reviewed. This also applies offline
+using the cached catalog. No new providers or credentials are required.
+
 **Pull latest code** (only if inside a git repo with a remote):
 ```bash
 git fetch origin && git pull --rebase origin $(git branch --show-current)
@@ -76,6 +92,7 @@ If lockfiles changed, update dependencies:
 - `bun install` (web — only if `web/` exists)
 - `composer install` (api — only if `api/` exists)
 - `uv sync` (python services — only if they exist)
+- `npm ci` (hocuspocus — only if it exists and its lockfile changed)
 
 If conflicts arise:
 1. List ALL conflicted files with a summary

@@ -16,7 +16,7 @@ slug: <feature-slug>
 author: <who wrote this>
 created: <YYYY-MM-DD>
 status: draft | review | approved
-services: [api, web, ai-service, data-service, data-pipeline]  # services touched
+services: [api, web, ai-service, data-service, data-pipeline, hocuspocus]  # services touched
 ---
 ```
 
@@ -68,7 +68,7 @@ services: [api, web, ai-service, data-service, data-pipeline]  # services touche
 title: <Feature Name> — <Service Name>
 slug: <feature-slug>
 parent_prd: docs/prd/<feature-slug>.md
-service: <api|web|ai-service|data-service|data-pipeline|desktop>
+service: <api|web|ai-service|data-service|data-pipeline|hocuspocus|desktop>
 created: <YYYY-MM-DD>
 status: draft | in_progress | completed
 ---
@@ -94,6 +94,9 @@ status: draft | in_progress | completed
 #### Rules
 
 - Each service PRD maps to one track file at `<service>/docs/tracks/<feature-slug>.track.md`.
+- Base branches follow the service registry: `develop` (api, web), `development` (ai-service,
+  data-service, data-pipeline), `main` (hocuspocus). Hocuspocus uses `main` as its working base,
+  which does not relax the feature-branch rule, the delivery checkpoint, or branch protection.
 - Do not ask the user to approve each service PRD. Preparation continues to the implementation
   checkpoint.
 - The branch is created locally during splitting. Push only with delivery authorization or a separate explicit user instruction.

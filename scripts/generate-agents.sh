@@ -162,3 +162,4 @@ fi
 
 echo ""
 ok "Done."
+info "Read regenerated AGENTS.md before continuing, including any pending model-catalog review."
