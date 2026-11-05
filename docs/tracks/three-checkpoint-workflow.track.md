@@ -96,4 +96,9 @@ These are reproducible verification results, not mathematical formal verificatio
 reply/resolve/merge mutations or production actions are exercised. A full autonomous agent session
 on every supported harness is not simulated by declarative checks.
 
-Delivery checkpoint: pending user choice after final verification. Keep this branch local.
+Source-maintenance delivery explicitly authorized by the user: “merge locally and opush”.
+Merge this verified branch into this instruction repository's `main`, then make a normal push.
+No PR was requested. This is a source-repository delivery instruction, not a new service-workflow
+`delivery` enum or permission to merge/deploy a service. GitHub reports `main` unprotected and no
+applicable branch rules; no protection is disabled or bypassed. Remote-head verification follows
+the push; the source track remains in progress until that delivery is observed.
