@@ -48,9 +48,9 @@ preparation at the current phase.
 
 If the user asked to **skip** brainstorming: record `brainstorming.user_skipped = true`, add a
 `brainstorming.decisions[]` entry `{topic: "brainstorming", decision: "user_skipped", rationale:
-"<their wording>"}`. A skip waives the artifact, not the scope checkpoint: the summary still gets
-written and scope still needs approval (unless `automation.brainstorming` is true and no stop
-condition remains).
+"<their wording>"}`. Write the summary from `initial_request` and set `scope_approved = true`:
+an explicit brainstorming skip authorizes preparation for that stated scope only. It never
+authorizes implementation, publication, or merging.
 
 ### Step 1: Load latest service state
 
@@ -141,8 +141,9 @@ Then:
 On approval: set `scope_approved = true`, clear the attention pair, set `phase_status =
 "completed"`, save. If the user declines, record the declined scope and stop; do not prepare.
 
-**Approval wording matters.** "Skip brainstorming", "looks interesting", or silence is not scope
-approval. An explicit "yes, that scope", "go ahead with this", or an equivalent instruction is.
+**Approval wording matters.** "Looks interesting" or silence is not scope approval. An explicit
+"skip brainstorming" approves preparation for the stated request; "yes, that scope", "go ahead
+with this", or an equivalent instruction also approves scope.
 If the user's original request already explicitly approved this exact scope, record that wording
 and do not re-ask.
 

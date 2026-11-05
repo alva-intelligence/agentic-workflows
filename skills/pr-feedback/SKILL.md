@@ -72,10 +72,10 @@ Persist the choice plus the bounded watch contract in the task's track file:
 | live_merge_approved | false (n/a unless data-pipeline) |
 | started_at | 2026-11-05T10:00:00Z |
 | deadline | 2026-11-05T10:30:00Z |
-| max_fix_rounds | 3 |
-| fix_rounds_used | 0 |
-| last_head_sha | <sha> |
-| status | running | paused | complete |
+| max_rounds | 3 |
+| rounds_used | 0 |
+| last_checked_sha | <sha> |
+| status | watching (or not_started / paused / done / expired) |
 ```
 
 Default bounds are **30 minutes** and **3 fix rounds**; the user may override either. Persist the
@@ -110,7 +110,7 @@ gh api graphql --paginate \
           nodes{
             id isResolved isOutdated path line
             comments(first:100){
-              pageInfo{hasNextPage endCursor}
+              totalCount
               nodes{id databaseId author{login} body}
             }
           }

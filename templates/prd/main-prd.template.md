@@ -104,8 +104,8 @@ duplicate the full delivery/merge policy here._
 - **Rollback/recovery:** <how to undo, when relevant>.
 
 No new test dependency is added for verification. Existing targeted tests/lint/checks are allowed
-and default; new tests require an explicit user request. Never call these checks formal
-verification or a formal proof.
+and default. Leave one small runnable regression check for non-trivial logic; reuse existing checks
+where sufficient. Never call these checks formal verification or a formal proof.
 
 ## Delivery & Rollout
 

@@ -38,8 +38,8 @@ Split the active feature's main PRD into service PRDs.
    - If the branch already exists, verify it is the expected branch and base it on the latest base
      without rewriting history. Do not recreate it.
    - Record `features[<slug>].branch` in `.workflow-state.json`.
-   - **Do not push yet.** The push happens after implementation approval, when implementation
-     starts, unless the user explicitly asked for an earlier push.
+   - **Do not push yet.** Push only with `delivery: open_pr` / `auto_merge`, or a separate explicit
+     user instruction to push. Implementation approval alone is not publication consent.
    - If the user explicitly skipped the main PRD, the branch still gets created here; the service
      split comes from the approved scope summary rather than a fabricated PRD.
 

@@ -54,7 +54,7 @@ services: [api, web, ai-service, data-service, data-pipeline]  # services touche
   recorded command/action plus observed result; never call checks or tests "formal verification" or
   "formal proof".
 - No new test dependencies. Existing targeted tests/lint/checks are permitted and are the default
-  evidence; new tests require an explicit user request for that task.
+  evidence. Leave one small runnable regression check for non-trivial logic; reuse existing checks where sufficient.
 
 ### Service PRD
 
@@ -84,7 +84,7 @@ status: draft | in_progress | completed
 5. **API Contract** — Endpoints this service exposes or consumes.
 6. **Data Changes** — Migrations, schema changes, and rollback considerations.
 7. **Verification** — Risk-scaled verification plan and manual steps. Existing targeted automated
-   checks are allowed and expected; new tests/dependencies require an explicit user request. Never
+   checks and minimal regression checks are allowed and expected; no new test dependencies. Never
    describe this section as formal verification.
 8. **Delivery** — Delivery constraints for this service, including whether merging is live (for
    example `data-pipeline`). The actual delivery mode is authorized per task in workflow state and
@@ -96,7 +96,7 @@ status: draft | in_progress | completed
 - Each service PRD maps to one track file at `<service>/docs/tracks/<feature-slug>.track.md`.
 - Do not ask the user to approve each service PRD. Preparation continues to the implementation
   checkpoint.
-- The branch is created locally during splitting and is not pushed before implementation approval.
+- The branch is created locally during splitting. Push only with delivery authorization or a separate explicit user instruction.
 
 ### Naming
 

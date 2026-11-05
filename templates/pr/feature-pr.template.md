@@ -35,7 +35,7 @@ _Recorded by the orchestrator via the `security-reviewer` skill during `pr_submi
 
 ### Testing / Verification
 
-{{TESTING_NOTES}}  <!-- Manual verification steps. Only include automated test notes if the user explicitly asked for tests (see testing-policy.md). -->
+{{TESTING_NOTES}}  <!-- Exact checks, observed results, manual steps, and unverified behavior. -->
 
 ### Delivery
 
@@ -56,5 +56,5 @@ _Recorded by the orchestrator via the `security-reviewer` skill during `pr_submi
 - [ ] If `auto_merge`: latest-head merge evidence recorded; every paginated thread addressed; branch protections not bypassed
 - [ ] If `data-pipeline` touched: separate task-specific live-estate approval recorded; production promotion left to a human
 - [ ] Manual verification steps pass
-- [ ] Automated tests pass (only applicable when the user explicitly requested tests — otherwise mark N/A)
+- [ ] Relevant automated checks pass; verification evidence and any untested behavior recorded
 - [ ] No `.env` or secrets committed

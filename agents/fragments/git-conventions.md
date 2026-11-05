@@ -24,7 +24,7 @@
    Feature work creates the branch during automatic preparation after scope approval.
    Bug/improvement work creates it at implementation entry, before implementation approval.
 3. Make commits on the branch
-4. Push to remote:
+4. Only with `delivery: open_pr` / `auto_merge`, or a separate explicit user push instruction, push to remote:
    ```bash
    git push -u origin <prefix>vc-<feature-slug>
    ```

@@ -35,8 +35,8 @@ Capture the full output. Parse it for:
 
 "Already up-to-date" means only that the distributed files match. It does **not** mean the 4.1
 policy migration has run. Do not stop on that line alone: continue to Step 3 and check the policy
-fields. If the files match, the state already has the 4.1 fields, and nothing failed, inform the user
-and stop.
+fields, settings permissions, and symlinks. Report up-to-date only after those checks; matching
+file versions alone never skip the remaining migration or verification.
 
 ### Step 2: Summarize changes
 
@@ -132,7 +132,7 @@ Procedure:
 1. Read the new schema; if it has no 4.1 policy fields, skip this step.
 2. Read `.workflow-state.json`; if it does not exist, skip — it will be created correctly later.
 3. For each feature entry, check which policy fields are missing. If none are missing, the state is
-   migrated; report that and stop.
+   migrated; report that and continue with the remaining checks.
 4. Show the exact fields and defaults to add, and ask once for confirmation. A single diff for the
    whole file — no per-feature or per-document approvals.
 5. On approval, write atomically and add only the missing fields, preserving every existing value
@@ -156,7 +156,7 @@ and only for tools the user actually installed.
 ```bash
 # Skills: must be a symlink that resolves to this workspace's .agents/skills.
 for link in .claude/skills .cursor/skills .opencode/skills; do
-  [ -e "$link" ] || continue
+  [ -e "$link" ] || [ -L "$link" ] || continue
   if [ -L "$link" ] && [ -e "$link" ] && \
      [ "$(cd "$link" && pwd -P)" = "$(cd .agents/skills && pwd -P)" ]; then
     echo "✓ $link -> $(readlink "$link")"
@@ -239,7 +239,7 @@ After applying all changes:
    workflow symlinks. Do not treat a missing `.claude/agents` as a failure.
    ```bash
    for link in .claude/skills .cursor/skills .opencode/skills; do
-     [ -e "$link" ] || continue
+     [ -e "$link" ] || [ -L "$link" ] || continue
      if [ -L "$link" ] && [ -e "$link" ] && \
         [ "$(cd "$link" && pwd -P)" = "$(cd .agents/skills && pwd -P)" ]; then
        echo "✓ $link -> $(readlink "$link")"

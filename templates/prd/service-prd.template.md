@@ -67,8 +67,8 @@ _Approach before implementation. Each task also carries a plan and verification 
 
 ## Verification
 
-_Existing targeted tests, lint, type checks, and manual checks are the default evidence. Do not add
-new test dependencies, files, or suites unless the user explicitly asked for tests in this task.
+_Existing targeted tests, lint, type checks, manual checks, and minimal runnable regression checks
+are the default evidence. Do not add test dependencies or scaffold a new suite.
 Never describe this section as formal verification._
 
 - **Risk level:** low / medium / high

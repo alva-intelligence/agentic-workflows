@@ -49,7 +49,7 @@
           ]
         },
         "phase_status": {
-          "description": "Status of the current phase. 'idle' when the phase has been entered but the agent has not started work. 'inprogress' when the agent is actively working. 'completed' when the phase's gate conditions (other than phase_status itself) are satisfied. 'completed' does NOT auto-advance — the workflow stays on the phase until the user (or orchestra at user direction) explicitly triggers transition to the next phase.",
+          "description": "Status of the current phase. 'idle' when the phase has been entered but the agent has not started work. 'inprogress' when the agent is actively working. 'completed' when the phase's gate conditions (other than phase_status itself) are satisfied. 'completed' records artifacts and checks, not consent. Approved preparation advances automatically per phases.json; scope, implementation, and delivery authorizations are independent and must satisfy gates.json.",
           "type": "string",
           "enum": ["idle", "inprogress", "completed"],
           "default": "idle"

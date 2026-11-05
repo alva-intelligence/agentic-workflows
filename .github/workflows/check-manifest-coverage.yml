@@ -11,7 +11,7 @@ on:
     branches: [main]
 
 jobs:
-  consistency:
+  check-manifest-coverage:
     runs-on: ubuntu-latest
     permissions:
       contents: read

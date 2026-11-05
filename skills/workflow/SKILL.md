@@ -64,7 +64,7 @@ Once `scope_approved` is true, preparation runs automatically:
 - **Feature:** `prd_creation` writes the main PRD, then `prd_splitting` creates the branch locally, writes every service PRD, and prepares each track with its task plans and verification plans. The workflow then enters `implementation` for the implementation checkpoint.
 - **Bug / improvement (hotfix is a bug):** `implementation` entry creates the branch locally, then prepares the track(s) with task plans and verification plans. The workflow then stops at the implementation checkpoint.
 - No per-document approvals, no draft-review loops, no `/workflow next` ceremony. The user sees one preparation summary at the implementation checkpoint.
-- Create the branch locally only. Do **not** push it before implementation approval unless the user explicitly asked for that push. Push after implementation approval, when implementation starts.
+- Create the branch locally only. Push only after `delivery: open_pr` / `auto_merge`, or a separate explicit user instruction to push. Scope and implementation approval alone never authorize a push.
 - If preparation hits a genuinely unresolved product or scope decision, gather it into one ask and resume preparation after the answer. Record decisions the agent made itself in `brainstorming.decisions[]` and in the PRD's decisions section.
 - User-requested skips are recorded and respected — for example `brainstorming.user_skipped: true` plus a `brainstorming.decisions[]` entry naming the skipped artifact. A skip waives artifact creation, never a checkpoint guard.
 - **Skipped main PRD on a feature:** record the skip in `brainstorming.decisions[]` and the track, then prepare service tracks from the approved scope summary. Do not fabricate a PRD. A gate that expects the skipped file is recorded as a user-authorized exception; scope, implementation, and delivery checkpoints are unaffected.
@@ -82,7 +82,7 @@ After preparation, present one compact package:
 
 Then ask once whether to start implementation. The same ask may collect an execution-mode override or a delivery preauthorization. If `implementation_approved` or `automation.implementation` is already true, do **not** ask — record the entry and start.
 
-On approval: set `implementation_approved: true`, clear `agent_state` / `agent_state_reason`, push the branch, and implement. `execution_mode` resolution:
+On approval: set `implementation_approved: true`, clear `agent_state` / `agent_state_reason`, and implement locally. Do not push without delivery authorization or a separate explicit push instruction. `execution_mode` resolution:
 
 - `feature` and `improvement` default to `subagents`.
 - `bug` (including hotfix) defaults to `main`.
@@ -106,11 +106,11 @@ The main agent is the technical lead. It owns planning, independent verification
 - **Adversarial review and final helicopter review.** Use an independent reviewer (a fresh subagent or a separate pass) to attack the change, then personally review the whole diff end to end before the delivery checkpoint. Record both outcomes in `verification` and the track.
 - **Resources.** Before intensive work (browser automation, builds, migrations, data jobs), check disk, memory, and CPU headroom. Bound concurrency. Release only resources the task owns (processes, ports, tabs, temp files); never kill shared infrastructure.
 - **TODO reconciliation.** Update the task checklist after each completed task. Before the final report, reconcile the checklist and the original request: every requested item accounted for, nothing extra silently added.
-- **Intercom.** If the current harness supports parent-child or sibling messaging, use it for interface details and steering. Otherwise all coordination routes through the main agent.
+- **Intercom.** If the current harness supports parent-child or sibling messaging, use it when helpful for interface details or steering; it is optional, not ceremony. Otherwise all coordination routes through the main agent.
 
 ## Verification policy
 
-No dependency is added for testing. Existing targeted tests, lint, type checks, build checks, and minimal regression checks are permitted and are the default evidence. New test files, suites, frameworks, or test dependencies require an explicit user request for this task. Never run an entire suite when a targeted check answers the question. Full rules: `references/testing-policy.md`.
+No dependency is added for testing. Existing targeted tests, lint, type checks, build checks, and minimal regression checks are permitted and are the default evidence. Leave one small runnable regression check for non-trivial logic; reuse existing checks where sufficient. New suites, frameworks, or test dependencies are not part of default verification. Never run an entire suite when a targeted check answers the question. Full rules: `references/testing-policy.md`.
 
 ## Delivery checkpoint
 
@@ -118,8 +118,8 @@ Delivery happens only after independent verification is complete and recorded. I
 
 | Delivery | Result |
 |---|---|
-| `local_test` | Verified work is run locally **first**, with automatic checks already complete. Give the user the URL/path and the exact steps to test the local flow manually; keep the requested server running and keep the branch. Do not mark the task complete, do not clean up the branch/server, and do not run `pr_submission` yet: `pr_submission` stays pending. After the user reports the manual result, they choose `open_pr` or `auto_merge` (or another local test round); record the final choice and continue through the normal phases. |
-| `open_pr` | Run `pr_submission` (self-review + security audit), open the PR, address review feedback, and hand it to the human owner. Do not merge. Completion waits for the human merge. |
+| `local_test` | Verified work is run locally **first**, with automatic checks already complete. Give the user the URL/path and the exact steps to test the local flow manually; keep the requested server running and keep the branch. Do not mark the task complete, do not clean up the branch/server, and stop before PR creation: `pr_submission` stays pending. After the user reports the manual result, they choose `open_pr` or `auto_merge` (or another local test round); record the final choice and continue through the normal phases. |
+| `open_pr` | Run `pr_submission` (self-review + security audit), open the PR and stop. Address feedback only on a separate explicit request; hand the PR to the human owner. Do not merge. Completion waits for the human merge. |
 | `auto_merge` | Run the PR pipeline, monitor the PR within the bounded watch, fix valid feedback, and merge only when every condition below holds. |
 
 - `delivery` is user instruction only. It is not inferred from a branch, PRD, track, PR, or a reconstructed feature state. A verified explicit consent persisted for the **same task** survives resume; a previous task's consent never carries to another task, and no global default exists.
@@ -136,7 +136,7 @@ Delivery happens only after independent verification is complete and recorded. I
 3. **Required checks and review on the latest head.** All required CI checks passed on the latest commit. The review the repository actually requires (required approvals, CODEOWNERS, bot review) has completed on that same head.
 4. **Approvals current.** No `CHANGES_REQUESTED`, required approvals present for the latest head, no merge conflicts, and every branch protection satisfied.
 5. **Proof package clean.** Self-review, security audit, adversarial review, and the final whole-change helicopter review are recorded with no must-fix items and no high/critical findings.
-6. **Head-specific proof.** Every push invalidates prior head-specific proof. Re-read the latest head SHA and re-run the merge-critical checks immediately before merging; record the SHA.
+6. **Head-specific proof.** Every push invalidates prior head-specific proof. Re-read the latest head SHA and re-run the merge-critical checks immediately before merging; record the SHA and pin the merge command with `--match-head-commit <reviewed-sha>`.
 7. **No bypass.** Never bypass branch protections, never admin-merge, never force-push a shared branch, never disable or skip a required check.
 8. **Native mechanisms.** Prefer a native auto-merge or merge queue only when it enforces these same conditions. Otherwise wait for the checks and merge normally.
 
@@ -251,7 +251,7 @@ Start a new feature workflow.
      "live_merge_approved": false
    }
    ```
-   If the user already gave an explicit scope/implementation/delivery instruction, record it in the matching field and note the exact wording in the track or `brainstorming.decisions[]`. A skip request alone is not an approval.
+   If the user already gave an explicit scope/implementation/delivery instruction, record it in the matching field and note the exact wording in the track or `brainstorming.decisions[]`. An explicit brainstorming skip approves preparation only; no skip authorizes implementation or delivery.
 7. Set `active_feature` to `<slug>`. Ask the user for worker name if not set.
 8. Save state.
 9. Enter `brainstorming` directly (`phase: "brainstorming"`, `phase_status: "idle"`). Do not ask whether to advance; the scope checkpoint is the next human moment. If the user asked to skip brainstorming, load the `brainstorm` skill and apply its skip path.
@@ -269,7 +269,7 @@ Explicitly transition to the next phase when the gate and checkpoint conditions 
 5. Enforce checkpoint guards in addition to the file gates:
    - To `prd_creation`: `scope_approved === true`.
    - To `implementation` from `brainstorming` (bug/improvement): `scope_approved === true`. This enters preparation only; code still waits for the implementation checkpoint.
-   - To `pr_submission`: `delivery` is `open_pr` or `auto_merge`. If `delivery` is `local_test`, the manual test is pending; do not advance and do not complete the task. If `delivery` is `null`, run the delivery checkpoint first.
+   - To `pr_submission`: implementation and independent verification are complete. Enter the delivery checkpoint; entering it does not authorize publication. If `delivery` is `null`, ask once here. For `local_test`, keep this checkpoint pending while the user tests; do not open a PR or complete the task.
    - To `completion` from `pr_submission`/`pr_review`: the PR is merged. For `auto_merge`, the full auto-merge gate passed; for `open_pr`, a human merged. There is no `local_test → completion` shortcut: local testing happens first, then the user chooses `open_pr` or `auto_merge` and the normal routes apply.
 6. Check each gate condition in `.agentic-workflows/workflow/gates.json` for the resolved transition. The agent's own checkpoint flags are additional guards, not replacements for file/branch/PR gates.
 7. If all pass → transition, update `phase`, `phase_entered`, set new `phase_status` to `"idle"`, save.
@@ -294,7 +294,7 @@ Discover ALL features across the team — not just local ones. Scans committed a
 1. Fetch latest from all remotes: `git fetch --all` in each service dir.
 2. Scan for features from multiple sources:
    - **PRDs:** `ls docs/prd/*.md` → extract slugs.
-   - **Feature branches:** `git branch -r | grep -E '^(feature|fix|improvement)/[^/]*vc-'` in each service → extract slugs. Legacy `<worker>/vc-` branch names are accepted alongside `<prefix>vc-`.
+   - **Feature branches:** `git for-each-ref --format='%(refname:strip=3)' refs/remotes | grep -E '^(feature|fix|improvement)/([^/]+/)?vc-[^/]+$'` in each service → extract slugs. Legacy `<worker>/vc-` branch names are accepted alongside `<prefix>vc-`.
    - **Worktrees:** `git worktree list` in each service dir plus sibling worktree dirs outside the workspace root.
    - **Track files:** `find . -name '*.track.md'` across all services → extract slugs.
 3. For each unique slug found, reconstruct the phase from committed artifacts (same logic as resume):

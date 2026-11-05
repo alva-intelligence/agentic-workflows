@@ -125,8 +125,9 @@ Agent:  [records the separate feedback request, then loads the pr-feedback skill
          what is valid, replies, resolves only addressed threads]
         Threads resolved.
 
-You:    Merge when ready.
-Agent:  [human merge recorded] → completion → idle.
+You:    I merged both PRs.
+Agent:  [verifies both PRs actually report MERGED, records the human merge]
+        → completion → idle.
 
 Note: auto_merge is a separate per-task opt-in. The agent opens, monitors,
 fixes, and merges only under the full fail-closed conditions below, within a

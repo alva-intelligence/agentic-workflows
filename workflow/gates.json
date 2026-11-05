@@ -29,7 +29,7 @@
       "satisfied_when": "features[active_feature].delivery is 'local_test', 'open_pr', or 'auto_merge', set by explicit user instruction for this feature/task",
       "options": {
         "local_test": "User manually tests locally first. Open no PR, merge nothing, and make no live-estate change. Keep the branch/worktree/server available and remain pending at the delivery checkpoint; there is no automatic completion. Only after the user confirms and chooses open_pr or auto_merge does delivery proceed.",
-        "open_pr": "Open the PR(s) and stop before any merge. Feedback is handled through pr_review. Merging remains a human action.",
+        "open_pr": "Open the PR(s) and stop. Address feedback only on a separate explicit user request; then use pr_review. Merging remains a human action.",
         "auto_merge": "Explicit per-task opt-in to open, monitor, fix, and merge under the fail-closed auto_merge_policy. A separate live_merge_approved is still required for data-pipeline."
       },
       "fail_closed": "delivery null (or absent) means no PR may be opened, no merge may happen, and nothing may be published. Verified explicit persisted consent for the same task may survive resume; never infer it from reconstructed artifacts or copy it from another task. A new task, scope, or target invalidates prior merge consent.",
@@ -77,7 +77,7 @@
       },
       {
         "type": "head_sha_recheck",
-        "description": "Every push invalidates all prior head-specific proof. Immediately before merging, re-read the latest head SHA and confirm it equals the SHA covered by checks, reviews, and verification."
+        "description": "Every push invalidates all prior head-specific proof. Immediately before merging, re-read the latest head SHA and confirm it equals the SHA covered by checks, reviews, and verification. Pin the merge call with gh pr merge --match-head-commit <reviewed-sha>; a concurrent push must fail safely."
       },
       {
         "type": "live_estate_extra_consent",
@@ -100,10 +100,11 @@
     "brainstorming": "A user request to skip brainstorming counts as scope approval for the stated request: set brainstorming.user_skipped=true, write the summary from the initial request, and set scope_approved=true. It does not approve implementation or delivery.",
     "prep_phases": "A user request to skip feature PRD creation/splitting skips only those artifacts and proceeds to the implementation checkpoint. Scope approval still authorizes only preparation. Bugs/improvements skip these phases by type, not as user skips.",
     "conditional_transitions": "Resolve one matching next transition per next_strategy key. A skipped conditional branch (e.g. pr_review on a clean merge) is not a failure.",
-    "artifact_override": "A recorded explicit user skip satisfies only that skipped phase's artifact conditions for gate evaluation (file exists, required sections, service PRDs, plan presence). It never satisfies checkpoint authorization, delivery consent, merge conditions, verification evidence, or branch protections.",
+    "artifact_override": "A recorded explicit user skip satisfies only that skipped phase's artifact conditions for gate evaluation (file exists, required sections, service PRDs). It never satisfies checkpoint authorization, delivery consent, merge conditions, verification evidence, or branch protections.",
     "never_skippable": [
       "implementation authorization before code changes",
       "delivery consent",
+      "task plan and verification evidence",
       "auto-merge conditions",
       "live-estate merge approval",
       "branch protections and required review",
@@ -265,8 +266,8 @@
         },
         {
           "type": "track_progress",
-          "description": "Track file must show progress.",
-          "check": "At least one task checked off in each service's track file"
+          "description": "All scoped implementation and acceptance work must be complete.",
+          "check": "Every scoped task and acceptance criterion in each service track is complete or explicitly deferred by the user; no unresolved must-fix remains. One checked task is not completion."
         },
         {
           "type": "git_branch",
@@ -316,9 +317,13 @@
           "check": "features[active_feature].pr_urls has at least one entry and `gh pr view` succeeds for each"
         },
         {
+          "type": "feedback_action_authorized",
+          "check": "delivery === 'auto_merge' OR a separate explicit request to address this task\u0027s feedback is recorded in the track. open_pr alone authorizes opening and stopping, not fixes."
+        },
+        {
           "type": "has_feedback",
           "description": "PR has at least one open review thread, change request, or failing check.",
-          "check": "`gh pr view --json reviewDecision,comments,reviews` shows reviewDecision === 'CHANGES_REQUESTED' OR any unresolved review thread OR any open review comment"
+          "check": "For every PR, fully paginate GraphQL reviewThreads and REST comments/reviews, inspect effective reviewDecision, and read gh pr checks/statusCheckRollup on the current head. There is an unresolved thread, an outstanding finding/change request, or a failing required check."
         },
         {
           "type": "phase_status_completed",
@@ -330,7 +335,7 @@
       "from": "pr_submission",
       "to": "completion",
       "strategy": "merged_clean",
-      "description": "PR merged with zero reviewer or bot feedback. Bypasses pr_review. delivery must authorize PR opening; if the orchestrator merged, delivery=auto_merge and auto_merge_policy must have passed.",
+      "description": "PR merged with no outstanding reviewer or bot feedback. Bypasses pr_review. delivery must authorize PR opening; if the orchestrator merged, delivery=auto_merge and auto_merge_policy must have passed.",
       "conditions": [
         {
           "type": "delivery_allows_pr",
@@ -351,8 +356,8 @@
         },
         {
           "type": "no_feedback",
-          "description": "PR has zero review comments and zero change requests across its lifetime.",
-          "check": "`gh pr view --json comments,reviews` shows no comments and no reviews with state CHANGES_REQUESTED or COMMENTED"
+          "description": "No outstanding feedback remains; historical addressed comments do not block completion.",
+          "check": "For every PR, fully paginate GraphQL reviewThreads and REST comments/reviews: all threads resolved and addressed, no outstanding finding or effective change request. Historical comments with recorded resolution are not open feedback."
         },
         {
           "type": "merge_authorized",

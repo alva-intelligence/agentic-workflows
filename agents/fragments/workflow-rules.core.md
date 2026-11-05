@@ -119,10 +119,10 @@ Rules:
 - **Subagent scope.** Each implementation subagent covers a service end-to-end: implement, verify its
   own work (targeted lint/tests/checks), and visual-test UI work when possible. Subagents NEVER ask
   the user, open PRs, merge, authorize delivery, or advance phases.
-- **Intercom.** If the harness supports mid-run messaging with a running subagent, use it for
-  steering and answers without killing the run. If it supports sibling-to-sibling messaging, let
-  subagents coordinate interface details directly while the orchestrator stays the source of truth
-  for decisions. Otherwise all coordination routes through the orchestrator.
+- **Intercom (optional).** When helpful and supported, use mid-run parent-child messaging for
+  steering and answers, or sibling messaging for interface coordination. The orchestrator stays
+  the source of truth for decisions. Otherwise route coordination through the orchestrator;
+  messaging support does not require extra ceremony.
 - **Resource discipline.** Before intensive work, check disk, memory, and CPU. Keep concurrency
   bounded. Release only resources the task owns — never kill shared databases, Prefect, or other
   developers' processes.
@@ -139,8 +139,8 @@ Rules:
 - **Never add dependencies for tests.** Do not scaffold test infrastructure or add test-only packages.
 - Default verification is the project's existing targeted tests, lint, type checks, and build/run
   checks, plus minimal regression checks around the changed behavior. This is allowed and expected.
-- Add new test files only when the user explicitly asks for them. Do not infer that existing tests
-  mean new tests are wanted.
+- For non-trivial logic, leave one small runnable regression check; reuse existing checks where
+  sufficient. Do not create a new suite or framework for ordinary verification.
 - Tests and checks are evidence, not "formal verification". Never claim a mathematical or exhaustive
   proof. Say what was run, what it covered, and what remains untested.
 
@@ -264,7 +264,8 @@ For `auto_merge`, the canonical fail-closed conditions are in
   items and no high/critical findings.
 - Branch protections are never bypassed, disabled, or force-pushed around.
 - Every push invalidates prior head-specific proof. Re-read the latest head SHA immediately before
-  merging and confirm it matches the reviewed SHA.
+  merging, confirm it matches the reviewed SHA, and pin the merge command with
+  `--match-head-commit <reviewed-sha>` so a concurrent push fails safely.
 - Prefer native auto-merge/merge queue only if it enforces the same conditions; otherwise merge only
   after the final check immediately before the merge call.
 - Bounded watch: default 30 minutes and 3 fix rounds (user may override). Persist progress, deadline,

@@ -1,19 +1,24 @@
 {
-  "version": "4.0.0",
-  "updated": "2026-10-18",
+  "version": "4.1.0",
+  "updated": "2026-11-05",
   "files": {
+    "VERSION": {
+      "sha256": "3b10b6ad566eadbcacadb33c591f1ec629593d6adf47442e56e0f61996829ef7",
+      "install_to": ".agentic-workflows/VERSION",
+      "type": "metadata"
+    },
     "agents/fragments/git-conventions.md": {
-      "sha256": "940dd97a0b2a1c8c51102779071e398cf2c5d9913b12ee35d17b0568f4d540e6",
+      "sha256": "9f48ca7c1287a3db18d3435e49bde6ad8305b5b2b1fbaab447a754d15fa30116",
       "install_to": ".agentic-workflows/fragments/git-conventions.md",
       "type": "fragment"
     },
     "agents/fragments/session-protocol.core.md": {
-      "sha256": "a03635f870924cbf340be2bac946225c78b9f4dabcbc39532ffcbf6b989498f2",
+      "sha256": "da0e6d2395d1be5a8225376402e57cc9128b7331983f8823df10e2b5492fae0e",
       "install_to": ".agentic-workflows/fragments/session-protocol.core.md",
       "type": "fragment"
     },
     "agents/fragments/workflow-rules.core.md": {
-      "sha256": "d9571a5148e7585031ede3738eec5cd000a77033488c80f99d0c767190f3ccd7",
+      "sha256": "0713b828d2b5542c7987dcd9b55250faa246fc8506990ac1ecf65f15dc3d98f1",
       "install_to": ".agentic-workflows/fragments/workflow-rules.core.md",
       "type": "fragment"
     },
@@ -23,7 +28,7 @@
       "type": "fragment"
     },
     "agents/AGENTS.md.template": {
-      "sha256": "3be9ab7696cb3ca6d80daa74c822dcb9384492deba27f9c7a4600933ab8d3568",
+      "sha256": "def92a377d64e421d0184c58d93b12b638b8938cd79944389e7d6970cdcf5060",
       "install_to": ".agentic-workflows/AGENTS.md.template",
       "type": "template"
     },
@@ -33,82 +38,82 @@
       "type": "script"
     },
     "scripts/generate-agents.sh": {
-      "sha256": "d5b50a3550f883df5ad80da026f14bc59b69926482ab0874cde24063e44472ae",
+      "sha256": "944bc496848f6a4b190c898cca1f46cf67ad9c3255ef0af958a0f03544788e47",
       "install_to": ".agentic-workflows/scripts/generate-agents.sh",
       "type": "script"
     },
     "workflow/phases.json": {
-      "sha256": "4735b3df4ca1f8175c9ea3bf43b997008001e704e34b8cfd4e7afc8c5f937895",
+      "sha256": "0dbca6e924c25df4df4da4adfcc58935df2c237402ce840990027bc1c739be6c",
       "install_to": ".agentic-workflows/workflow/phases.json",
       "type": "workflow"
     },
     "workflow/gates.json": {
-      "sha256": "930226295d179577da4911ce3618ce4bca7095fc180bfd2704d2ae49a1debbf6",
+      "sha256": "885a9433c20fa39202425f3401f98ac822bebf2480c79fad0ad1f2d976c39369",
       "install_to": ".agentic-workflows/workflow/gates.json",
       "type": "workflow"
     },
     "workflow/state-schema.json": {
-      "sha256": "214a3fea7baccf88190a90acd21fd28a2c6e126457892d93b3a694e726b7c789",
+      "sha256": "7f036c5de8b96f9b19418d98248852de1f418f43aa237e0e86ae1d1c72a9f94f",
       "install_to": ".agentic-workflows/workflow/state-schema.json",
       "type": "workflow"
     },
     "templates/prd/main-prd.template.md": {
-      "sha256": "9ebf21af9b5d244c3547275eb3544544344ccff365d3c54d65897bc304d03b20",
+      "sha256": "156e3d5c182ac7f3628f82a05f0137b9a8e7074c12fdad4ad254ff7a3923e592",
       "install_to": ".agentic-workflows/templates/prd/main-prd.template.md",
       "type": "template"
     },
     "templates/prd/service-prd.template.md": {
-      "sha256": "2202622abd98b4dfb9109aa8d53b81598fc3d6465ed8cdde356f0138dd70a9ee",
+      "sha256": "51044d4e4aca178ede346470e186d8ec479725e7d085ee67dc5dc6b697302c60",
       "install_to": ".agentic-workflows/templates/prd/service-prd.template.md",
       "type": "template"
     },
     "templates/tracks/feature.track.template.md": {
-      "sha256": "b8719971c45f5342803a8187bdf2e20fce3b4509cdbfffdf1decfe3e8e2bd6f6",
+      "sha256": "b50b9c82c8ca39b1e2e470ca6f282f3699ce920be743fb9fd72b013e8b4b999f",
       "install_to": ".agentic-workflows/templates/tracks/feature.track.template.md",
       "type": "template"
     },
     "templates/pr/feature-pr.template.md": {
-      "sha256": "380050a30bc537be580fccd79e298fd73f88417d49838307a2f6695a9be5d0cb",
+      "sha256": "8d9f4eb2533938f3285d7029934988cd96392ea781274062ca18a8a82746d9bf",
       "install_to": ".agentic-workflows/templates/pr/feature-pr.template.md",
       "type": "template"
     },
     "skills/setup-workspace/SKILL.md": {
-      "sha256": "e8ad77ce2eed4166d1d714fd541191e036ae954e69c0b24d456c3dd0c6420445",
+      "sha256": "a21fd9153cc5c6d0bace13217ac8126c934d85bbf9f18223b2c46db4fcb86af3",
       "install_to": ".agents/skills/setup-workspace/SKILL.md",
       "type": "skill"
     },
     "skills/onboard/SKILL.md": {
-      "sha256": "5d85e34fad950a676a81b5560dc50022a968ea66c148f4b238993a0286730818",
+      "sha256": "6ed756042d19202be0a9ecf8108e4264bb6a6e1c00ba4e05796bcd101e707a0f",
       "install_to": ".agents/skills/onboard/SKILL.md",
       "type": "skill"
     },
     "skills/workflow/SKILL.md": {
-      "sha256": "cfef6f313650d5cace4b06bdf75ffe411195a4f0e4f1adae9bd1f7834ce40070",
+      "sha256": "e67dbbb8b6f55725816fb3dd8b4e26dc3565dcc88d7a28fd21ce8ffad4eaff02",
       "install_to": ".agents/skills/workflow/SKILL.md",
       "type": "skill"
     },
     "skills/workflow-update/SKILL.md": {
-      "sha256": "ebdef1c717439b17a28ab4c725a84b625ece91840928b4cc1ac33934b15ea00d",
+      "sha256": "b251bfd31be2b1d5328f9a59840d5b11807e649a9d08fd9d963ab6c9dd20269a",
       "install_to": ".agents/skills/workflow-update/SKILL.md",
       "type": "skill"
     },
     "skills/prd/SKILL.md": {
-      "sha256": "420c709ac35e13c00e7ddd98da1b0ebf64941c3f08f8bac85850857bd9058e24",
+      "sha256": "ac1e3013482dd14b42d70faa2eb63ff1a0afb9708c41033befcdd9c1fec0120a",
       "install_to": ".agents/skills/prd/SKILL.md",
       "type": "skill"
     },
     "skills/prd-split/SKILL.md": {
-      "sha256": "d55357de7361b3a0efb42054af9e66b43977974bfd0e0757a71525098b40a123",
+      "sha256": "dd9f6795852433a9909aa3e49dd8ce4052000db79051d622a3f574718eef707d",
       "install_to": ".agents/skills/prd-split/SKILL.md",
       "type": "skill"
     },
     "skills/pr-feedback/SKILL.md": {
-      "sha256": "ec535163b990872a083849dad8708b821f5350ba3441ad9595cb728cd0b1eadf",
+      "sha256": "680f43a30ea7ce9d600bd809ae2098f1927eb4ae94fab843f4d8e79770b6f2c6",
       "install_to": ".agents/skills/pr-feedback/SKILL.md",
       "type": "skill"
     },
     "skills/brainstorm/SKILL.md": {
-      "sha256": "5587352a41762d45b54488de1a3ea2f44a751ed5f3e45ff3b7f512eb3983146d",
+      "sha256": "758236fa02175274f8b8a75b24eac359777471f409f888a93fd568c1536289a6",
       "install_to": ".agents/skills/brainstorm/SKILL.md",
       "type": "skill"
     },
@@ -128,12 +133,12 @@
       "type": "reference"
     },
     "skills/onboard/references/claude-settings.json": {
-      "sha256": "efdbf938a1398fd319155592833b38c57b930cf56c1a659ab16a410c1e1fba4e",
+      "sha256": "04d2d23a535c811cd802967b5abeb1684bc876b9f6c5f93629258623ed9915c1",
       "install_to": ".agents/skills/onboard/references/claude-settings.json",
       "type": "reference"
     },
     "skills/onboard/references/service-registry.md": {
-      "sha256": "907ca40c06ad1fd2399fb99c5a7f4df7b0fc2c74a9891796761ad06e143f0895",
+      "sha256": "f774c99eeab55f58206640d5749914722e54b42970e2d2fd27cc6f1101fd534c",
       "install_to": ".agents/skills/onboard/references/service-registry.md",
       "type": "reference"
     },
@@ -143,42 +148,42 @@
       "type": "reference"
     },
     "skills/prd/references/conventions.md": {
-      "sha256": "801054c04873972a41527733c1fa538fd61ccb8627ca3c18989b1030e5bdc9bb",
+      "sha256": "73bbc5af4a5b9b2be7e4f85578d4623ab32e8b6968acc9ea9e2536c55ab1935a",
       "install_to": ".agents/skills/prd/references/conventions.md",
       "type": "reference"
     },
     "skills/prd-split/references/conventions.md": {
-      "sha256": "801054c04873972a41527733c1fa538fd61ccb8627ca3c18989b1030e5bdc9bb",
+      "sha256": "73bbc5af4a5b9b2be7e4f85578d4623ab32e8b6968acc9ea9e2536c55ab1935a",
       "install_to": ".agents/skills/prd-split/references/conventions.md",
       "type": "reference"
     },
     "skills/workflow/references/track-conventions.md": {
-      "sha256": "799e5e8e417e6c9143147dd31913520fbf28c4303f6e38d1254bc028aa5abe26",
+      "sha256": "4c97ea323e06e4b552e5f4105783e3ae26929ee30b1963dfc15876f6843d0781",
       "install_to": ".agents/skills/workflow/references/track-conventions.md",
       "type": "reference"
     },
     "skills/workflow/references/testing-policy.md": {
-      "sha256": "d88cd9ee84c7d1dd07f4f03bfbaccff912401a5fb0e92e16677d084589e08eea",
+      "sha256": "2ac1f72fe89abd2f6e7b0685b31c3adbd8c3b228428c72b34c43c84627dc665f",
       "install_to": ".agents/skills/workflow/references/testing-policy.md",
       "type": "reference"
     },
     "skills/workflow/references/session-checks.md": {
-      "sha256": "9f48b04f6b4a9ed02f3d311376455b0b1036f73cbabfb0122d17f10b3ba92bec",
+      "sha256": "ec11c34d781e3f3cd98fe3f53420252fa495e216b2c6fdd70c2d01fbd0fc3979",
       "install_to": ".agents/skills/workflow/references/session-checks.md",
       "type": "reference"
     },
     "skills/brainstorm/references/question-patterns.md": {
-      "sha256": "a13a2a2f231644650a2c1a4f627639fd72dfd90054b7cda305e74acf5a43d278",
+      "sha256": "e5714419bf80f3d4fd5376c1fa672d949b9451276386d049a2805188d237a4d7",
       "install_to": ".agents/skills/brainstorm/references/question-patterns.md",
       "type": "reference"
     },
     "scripts/check-manifest-coverage.py": {
-      "sha256": "77077ee36b05993c26495812d220090230bd9dd4c7c58f2b734a4d6ddd49c62c",
+      "sha256": "35ab5fefddfa7e3f1bd42ef2288a244020fbb9da26eaa63c5498fab071ad8517",
       "install_to": "scripts/check-manifest-coverage.py",
       "type": "fragment"
     },
     "skills/visual-testing/SKILL.md": {
-      "sha256": "08f299f3827bb86094629597639368827189ed9e297884e5303a2f786b5b5f0d",
+      "sha256": "bf76dea5e2bd78ad24d95c9088e87e8a500506d709153efab3c6a9bd40f9024d",
       "install_to": ".agents/skills/visual-testing/SKILL.md",
       "type": "skill"
     }

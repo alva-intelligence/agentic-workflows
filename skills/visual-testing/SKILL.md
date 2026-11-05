@@ -53,21 +53,33 @@ endpoint. Do not reach for the default daemon — it attaches to the user's Chro
 ```bash
 # 1. Preflight first. Abort if this fails.
 ~/.agents/bin/res-ok || exit 1
+df -h .
+if lsof -tiTCP:9222 -sTCP:LISTEN >/dev/null 2>&1; then
+  printf "%s\n" "Port 9222 is occupied; reuse only a task-owned browser or choose another free port."
+  exit 1
+fi
 
 # 2. Start a private headless instance (temp profile, no window).
 CHROME="${CHROME_BIN:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
-PROFILE="$(mktemp -d)/headless-profile"
-"$CHROME" --headless=new --remote-debugging-port=9222 \
-  --user-data-dir="$PROFILE" about:blank &
+PROFILE="$(mktemp -d)"
+"$CHROME" --headless=new --remote-debugging-address=127.0.0.1 --remote-debugging-port=9222 \
+  --user-data-dir="$PROFILE" about:blank >"$PROFILE/chrome.log" 2>&1 &
 CHROME_PID=$!
 
-# 3. Drive it through CDP; every task in the round reuses this endpoint.
-BU_CDP_URL=http://127.0.0.1:9222 browser-use <<'PY'
+# 3. Drive it through its own named daemon, never a pre-existing default daemon.
+export BU_NAME="frnd-visual-$$" BU_CDP_URL=http://127.0.0.1:9222
+browser-use <<'PY'
 new_tab("http://localhost:3000/<route>")
 wait_for_load()
 print(page_info())
 PY
 ```
+
+Record the exact daemon name, CDP URL, PID, and profile path for the round. Reuse that name/URL
+on every call and share them with subagents; shell variables may not persist between tool calls.
+At the end, close owned tabs, stop that named daemon, terminate only that recorded Chrome process,
+and remove its temporary profile. A port collision is never permission to attach to another task's
+browser or terminate it.
 
 If a check needs the user's real session, the browser cannot be headless — switch deliberately to
 their Chrome and label the evidence "user-session background tab", not "headless". If login is
