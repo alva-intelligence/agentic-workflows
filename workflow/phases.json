@@ -2,71 +2,121 @@
   "status_semantics": {
     "phase_status": {
       "values": ["idle", "inprogress", "completed"],
-      "rule": "Phase is set to idle when entered. Set to inprogress when the orchestrator begins work. Set to completed once the phase's work is done and the gate to the next phase is satisfied. completed does NOT auto-advance — the workflow stays on the phase until the user (or the orchestrator at explicit user direction) triggers transition to the next phase."
-    }
+      "rule": "Phase is set to idle when entered. Set to inprogress when the orchestrator begins work. Set to completed once the phase's artifacts and checks are satisfied. completed is evidence only: it does not authorize crossing a human checkpoint, opening a PR, merging, or bypassing any gate condition. Phases with auto_advance=true advance automatically once completed and their authorizing checkpoint is satisfied. All other phases advance only through the gate's explicit authorization (user direction or a pre-recorded automation flag where the checkpoint rules allow it)."
+    },
+    "checkpoints": {
+      "scope": {
+        "phase": "brainstorming",
+        "authorization": "features[active_feature].scope_approved === true",
+        "set_by": "Explicit user agreement on direction, an explicit 'skip brainstorming' instruction (recorded as brainstorming.user_skipped), or automation.brainstorming=true after the orchestrator records the recommended/chosen directions and summary.",
+        "authorizes": "Preparation only: feature PRD creation/splitting, branch creation, track/plan preparation; for bugs/improvements, branch/plan preparation. Never code changes, PR creation, merging, or live-estate changes."
+      },
+      "implementation": {
+        "phase": "implementation",
+        "authorization": "implementation_approved === true OR automation.implementation === true",
+        "set_by": "Explicit user approval at the implementation checkpoint, or automation.implementation=true. Reaching the phase with prepared branch/plans is not approval.",
+        "authorizes": "Code changes and implementation work only. Never PR creation, delivery, merging, live-estate merges, or production promotion."
+      },
+      "delivery": {
+        "phase": "pr_submission",
+        "authorization": "delivery is explicitly local_test | open_pr | auto_merge",
+        "set_by": "Only an explicit user instruction for the current task. Verified persisted consent may survive resume for the same task; never infer it from artifacts or carry it across a new task/scope/target.",
+        "authorizes": "local_test: user manually tests locally; no PR is opened yet and the workflow stays pending at the delivery checkpoint with the branch/worktree/server available. open_pr: open PR(s) and stop before merge. auto_merge: explicit per-task open+monitor+fix+merge consent under workflow/gates.json conditions. Completion requires the intended PRs to be merged, or an explicit user cancellation outside this feature."
+      }
+    },
+    "auto_advance": {
+      "true": "After phase_status=completed and the authorizing checkpoint is satisfied, the phase transitions automatically. Only prd_creation and prd_splitting use this: after scope approval, feature preparation runs without per-document approvals or /workflow next ceremony.",
+      "false": "Do not transition merely because phase_status=completed. Wait for the gate's checkpoint authorization. A pre-recorded automation flag may satisfy that authorization automatically and let the gated phase run (scope preparation or implementation), but never automatic delivery, PR opening, merging, or live-estate changes.",
+      "note": "auto_advance is not consent. It cannot cross a human checkpoint, open a PR, merge, or replace delivery consent."
+    },
+    "gate_naming": "Every entry in a phase's next array has a gate in workflow/gates.json named <from>_to_<to>. Conditional transitions declare next_gates, mapping each next_strategy key to the gate that must pass. Gates are resolved from this metadata; no runtime engine is introduced."
   },
   "phases": {
     "idle": {
       "name": "Idle",
       "description": "No active work. Ready to capture a new feature, bug, or improvement request.",
       "agent": null,
+      "checkpoint": null,
+      "auto_advance": false,
       "next": ["brainstorming"],
       "allowed_actions": ["start_feature", "resume_feature"]
     },
     "brainstorming": {
       "name": "Brainstorming",
-      "description": "The orchestrator loads real service state, resolves ambiguity by exploring the codebase and the web first, and decides obvious answers itself (recorded as facts with rationale, never asked). Only genuinely ambiguous, taste, or expensive-to-reverse calls go to the user in one structured batch — zero questions is a valid outcome. 'No' is an acceptable answer; a user-requested skip is honored (recorded as user_skipped). For bug/improvement work the next phase is implementation directly; for features it is prd_creation.",
+      "description": "Scope checkpoint. The orchestrator loads real service state, resolves ambiguity by exploring the codebase and the web first, and decides obvious answers itself (recorded as facts with rationale, never asked). Only genuinely ambiguous, taste, or expensive-to-reverse calls go to the user in one structured batch; zero questions is valid. Scope approval is recorded as scope_approved and authorizes preparation only. With automation.brainstorming=true the orchestrator records recommended/chosen directions and sets scope_approved without asking again. A user-requested skip counts as scope approval (recorded as user_skipped). For bug/improvement work the next phase is implementation directly; for features it is prd_creation. Both paths run preparation automatically after scope approval and stop at the implementation checkpoint.",
       "agent": null,
+      "checkpoint": "scope",
+      "auto_advance": false,
       "next": ["prd_creation", "implementation"],
       "next_strategy": {
         "type_feature": "prd_creation",
         "type_bug_or_improvement": "implementation"
       },
-      "allowed_actions": ["load_service_state", "decide_obvious", "ask_user", "record_answer", "record_decision", "summarize"]
+      "next_gates": {
+        "type_feature": "brainstorming_to_prd_creation",
+        "type_bug_or_improvement": "brainstorming_to_implementation"
+      },
+      "allowed_actions": ["load_service_state", "decide_obvious", "ask_user", "record_answer", "record_decision", "summarize", "approve_scope", "record_scope_approval"]
     },
     "prd_creation": {
       "name": "PRD Creation",
-      "description": "Feature-only. Creating the main PRD from the brainstorming summary plus any user-supplied context. The PRD pulls the brainstorming outcome into a dedicated section. Comprehensive PRDs are for features — bugs/improvements never enter this phase.",
+      "description": "Feature-only automatic preparation. Creating the main PRD from the brainstorming summary plus any user-supplied context. Starts automatically after scope approval; no per-document approval and no /workflow next. The PRD pulls the brainstorming outcome into a dedicated section. Comprehensive PRDs are for features — bugs/improvements never enter this phase. Preparation only; this phase never authorizes code changes.",
       "agent": null,
+      "checkpoint": null,
+      "auto_advance": true,
       "next": ["prd_splitting"],
-      "allowed_actions": ["create_prd", "edit_prd"]
+      "allowed_actions": ["create_prd", "edit_prd", "auto_advance_prep"]
     },
     "prd_splitting": {
       "name": "PRD Splitting",
-      "description": "Feature-only. Check out the base branch, pull latest, create <prefix>vc-<slug> (prefix = feature/ per type), then split the main PRD into per-service PRDs on that branch.",
+      "description": "Feature-only automatic preparation. Starting from the latest base, create <prefix>vc-<slug> (prefix = feature/ per type), split the main PRD into per-service PRDs, and prepare tracks/plans. Starts automatically after prd_creation; no per-document approval and no /workflow next. Branch creation and planning are preparation, not implementation; no code changes before implementation approval. The phase stops at the implementation checkpoint.",
       "agent": null,
+      "checkpoint": null,
+      "auto_advance": true,
       "next": ["implementation"],
-      "allowed_actions": ["create_branch", "split_prd", "edit_service_prd"]
+      "allowed_actions": ["create_branch", "split_prd", "edit_service_prd", "prepare_tracks", "prepare_plans", "auto_advance_prep"]
     },
     "implementation": {
       "name": "Implementation",
-      "description": "Implementing the work by delegation: the orchestrator dispatches parallel per-service subagents (batched in one call, dependency edges, right model + reasoning effort per task, mid-run steering/intercom — the mechanism differs per harness). Bug/improvement path: create <prefix>vc-<slug> from the latest base at entry (no PRD phases ran). Subagents implement, verify their own work, and visual-test UI when possible; the orchestrator re-verifies every claim — re-running checks, reviewing diffs, and visual-testing UI paths itself.",
+      "description": "Implementation checkpoint. On entry, prepare the branch (bugs/improvements create <prefix>vc-<slug> now) and per-task plans plus verification plans. No code changes until implementation_approved=true or automation.implementation=true. Resolve execution_mode: feature/improvement -> subagents, bug/hotfix -> main; trivial or tightly coupled work may stay main; a complex bug may recommend subagents; user override wins. The orchestrator acts as technical lead: delegates independent subagents when useful, verifies their claims with reproduced evidence, runs adversarial review, and personally performs the final whole-change helicopter review. After independent verification and TODO reconciliation, advance to the delivery checkpoint.",
       "agent": null,
+      "checkpoint": "implementation",
+      "auto_advance": false,
       "next": ["pr_submission"],
-      "allowed_actions": ["create_branch", "delegate_subagents", "steer_subagents", "verify_work", "visual_testing", "update_track"]
+      "allowed_actions": ["prepare_branch", "prepare_plans", "resolve_execution_mode", "approve_implementation", "create_branch", "delegate_subagents", "steer_subagents", "plan_tasks", "verify_work", "adversarial_review", "final_review", "visual_testing", "resource_check", "reconcile_todo", "update_track"]
     },
     "pr_submission": {
       "name": "PR Submission",
-      "description": "The orchestrator runs a self code-review over the whole diff (a fresh-eyes reviewer subagent is allowed; the orchestrator owns the result), then the security-reviewer skill audit. Only after both pass does it open the PR. PR body includes the review notes and security audit summary; PRD links only when a PRD exists.",
+      "description": "Delivery checkpoint. After independent verification, present the delivery choice once: local_test, open_pr, or auto_merge. Nothing is opened or merged until the user records delivery for this task; delivery=null fails closed. local_test means the user manually tests locally first: open no PR, keep the branch/worktree/server available, and remain pending at this checkpoint until the user chooses open_pr or auto_merge. open_pr opens PR(s) with self-review and security summaries appended, then stops before merge. auto_merge is a separate explicit per-task opt-in to open, monitor, fix, and merge under the fail-closed checks in workflow/gates.json, with a bounded watch and head-specific rechecks. data-pipeline additionally requires live_merge_approved; production promotion is separate human work.",
       "agent": null,
+      "checkpoint": "delivery",
+      "auto_advance": false,
       "next": ["pr_review", "completion"],
       "next_strategy": {
         "has_feedback": "pr_review",
         "merged_clean": "completion"
       },
-      "allowed_actions": ["self_review", "delegate_review", "security_audit", "create_pr", "update_pr"]
+      "next_gates": {
+        "has_feedback": "pr_submission_to_pr_review",
+        "merged_clean": "pr_submission_to_completion"
+      },
+      "allowed_actions": ["self_review", "delegate_review", "security_audit", "request_delivery_choice", "record_delivery", "create_pr", "update_pr", "local_test", "monitor_pr", "merge_pr", "live_merge_approval"]
     },
     "pr_review": {
       "name": "PR Review",
-      "description": "PR has reviewer / bot feedback. The orchestrator loads the pr-feedback skill: classifies each thread (must-fix / nit / question), drafts a fix or reply, applies, pushes, and resolves the thread. Loops until zero open threads remain. No re-request of review unless the user says so.",
+      "description": "PR has reviewer / bot feedback. The orchestrator loads the pr-feedback skill: inventories every thread with pagination, classifies each (must-fix / nit / question), drafts a fix or reply, applies, pushes, and resolves only threads actually addressed. Loops until zero open threads remain. No re-request of review unless the user says so. Any push invalidates head-specific proof; auto-merge checks must be repeated on the latest head before merging.",
       "agent": null,
+      "checkpoint": null,
+      "auto_advance": false,
       "next": ["completion"],
-      "allowed_actions": ["read_review_threads", "address_feedback", "push_fix", "resolve_thread"]
+      "allowed_actions": ["read_review_threads", "inventory_threads", "address_feedback", "push_fix", "resolve_thread", "monitor_pr", "merge_pr"]
     },
     "completion": {
       "name": "Completed",
-      "description": "Feature merged. Cleaning up and marking complete.",
+      "description": "Delivered: all intended PRs are merged. Clean up and mark complete. Local manual testing before delivery is not completion; production promotion is not part of this phase.",
       "agent": null,
+      "checkpoint": null,
+      "auto_advance": false,
       "next": ["idle"],
       "allowed_actions": ["mark_complete", "cleanup_worktrees"]
     }
