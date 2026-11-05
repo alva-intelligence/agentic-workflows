@@ -1,25 +1,19 @@
 ---
 name: setup-workspace
-description: Interactive wizard to create a new agentic workspace — walks through project definition, services, agents, skills, MCPs, and generates all configuration files from the agentic-workflows framework.
+description: Interactive wizard to create a new agentic workspace — walks through project definition, services, delegation defaults, skills, MCPs, and generates all configuration files from the agentic-workflows framework.
 ---
 
 # Setup New Agentic Workspace
 
-This skill guides you through creating a brand new agentic workspace from the `agentic-workflows` framework. It asks questions about your project, then generates all the configuration files — agents, skills, fragments, schemas, and manifest.
+This skill guides you through creating a brand new agentic workspace from the `agentic-workflows` framework. It asks questions about your project, then generates the configuration files — fragments, skills, schemas, templates, and manifest.
 
 ## Interaction Model — READ THIS FIRST
 
-> **1. Switch to plan mode first.** Before executing anything, switch to planning mode:
->   - **Claude Code:** Enter plan mode (`/plan` or Shift+Tab)
->   - **Cursor:** Use chat mode (not agent mode)
->   - **OpenCode:** Switch to Plan agent (Tab)
+> **1. Use the current harness's planning/research mode when it has one.** If it has none, announce an explicit research phase and stay read-only until Step 5 is answered.
 >
 > **2. Steps 0–5 are interactive.** Present each step's questions, wait for answers. Do NOT assume or skip.
 >
-> **3. After Step 5 — switch to execution mode:**
->   - **Claude Code:** Exit plan mode (normal mode)
->   - **Cursor:** Switch to agent mode
->   - **OpenCode:** Switch to Build agent (Tab)
+> **3. After Step 5 — leave the planning/research mode** and generate files.
 >
 > **4. Create a todo checklist** based on user's answers. Only generate files relevant to what they selected.
 >
@@ -27,13 +21,9 @@ This skill guides you through creating a brand new agentic workspace from the `a
 
 ## Asking the User (MANDATORY)
 
-When you need user input, you MUST use your tool's dedicated ask/question tool:
+Use the structured ask/question capability the current harness exposes and block until the user responds. If the harness has no such capability, print one compact question block (options plus one recommendation) and wait for the reply.
 
-- **Claude Code:** Use the `AskUserQuestion` tool with structured options
-- **Cursor:** Use the built-in ask question tool
-- **OpenCode:** Use the question tool with select/text modes
-
-**NEVER** just print a question as plain text. **ALWAYS** use the ask tool so the agent blocks until the user responds.
+**NEVER** bury a question in narrative or drip-feed one question per turn.
 
 ## Before Starting
 
@@ -104,17 +94,19 @@ Record the full service registry.
 
 ## Step 2: Workflow Phases — **STOP, ask**
 
-Present the default 8-phase state machine:
+Present the default phase machine and its three human checkpoints:
 
-> "The default workflow has 8 phases:"
+> "The default workflow keeps these phase IDs:"
 > ```
 > idle → brainstorming → prd_creation → prd_splitting →
 > implementation → pr_submission → [pr_review?] → completion → idle
 > ```
 > `pr_review` is conditional — skipped when the PR merges cleanly with no reviewer feedback.
 >
-> "Which phases do you need?"
-> - **All 8** — Full workflow with brainstorming, PRD, implementation, PR submission + optional review
+> "Phases are bookkeeping. Only three moments need a person: **Scope** (end of brainstorming), **Implementation** (after automatic PRD/branch/plan preparation), and **Delivery** (after verification). Between them, preparation runs automatically — no per-document approvals and no manual phase advance."
+>
+> "Which phase set do you need?"
+> - **All 8** — Full workflow with brainstorming, PRD preparation, implementation, PR submission + optional review
 > - **No PRD splitting** — Single service, no need to split PRDs
 > - **Minimal** — Just: idle → implementation → pr_submission → completion
 > - **Custom** — I'll tell you which to keep/add
@@ -123,31 +115,26 @@ If user picks **Custom**, ask them to list:
 - Phases to **remove** from the default 8
 - Phases to **add** (describe what they do and where they fit)
 
-## Step 3: Agents — none by default — **STOP, ask**
+## Step 3: Delegation — no agent roster — **inform**
 
-**No agent roster.** The modern framework has a single orchestrator — the running agent itself —
-which delegates implementation to parallel subagents (right model + effort per task, intercom when
-the harness supports it, see `workflow-rules.core.md`).
+**No agent roster and no generated agent files.** The running agent is the orchestrator: it plans,
+delegates implementation to subagents when useful, verifies every claim, and keeps the final
+verdict. The current harness supplies whatever delegation/intercom capability it has; no named
+model, tool, or per-editor agent definition is written into the workspace.
 
-> "Any custom agents needed beyond the orchestrator + subagent model? (Default: none)"
+### 3.1 Execution defaults
 
-### 3.1 Models
-
-> "Any model preferences for subagent delegation?"
-> - **Opus 5** — planning, review, complex code work
-> - **Sonnet 5** — lighter mechanical tasks, status tracking
+> Execute `feature` and `improvement` work with subagents by default, and `bug`/`hotfix` work in
+> the main agent. Trivial or tightly coupled work may stay in the main agent; a complex bug may use
+> subagents. The user can override at the implementation checkpoint; do not ask again once chosen.
 >
-> "Default: per-task choice in the delegation batch — heavy reasoning for planning/review, cheap
-> models for mechanical edits. Want to pin anything?"
+> No model names are pinned or generated. Match model and reasoning effort per task at delegation
+> time, using whatever the current harness exposes.
 
 ### 3.2 Editor support
 
-> "Which editors/CLIs should the install target?" (skills are shared; no per-editor agent files
-> exist anymore)
-> - Claude Code
-> - Cursor
-> - OpenCode
-> - Amp
+> "Any editor/CLI targets?" (skills are shared; no per-editor agent files are generated)
+> - Text input, free-form
 
 ## Step 4: Skills & MCPs — **STOP, ask**
 
@@ -156,7 +143,7 @@ the harness supports it, see `workflow-rules.core.md`).
 > "Which skills do you need?"
 > - `/onboard` — Interactive workspace setup wizard
 > - `/workflow` — Feature state machine management
-> - `/brainstorm` — Multi-choice question generator for the brainstorming phase
+> - `/brainstorm` — Evidence-first brainstorming plus the scope checkpoint
 > - `/prd` — PRD creation helper
 > - `/prd-split` — PRD splitter (also creates the feature branch)
 > - `/pr-feedback` — address + resolve PR review threads
@@ -195,7 +182,7 @@ Tools are installed directly on the developer machine (Homebrew on macOS) — th
 > "List the languages, tools, and databases you need, with pinned versions. Examples:"
 > - Languages: `python@3.12`, `node@22`, `php@8.5`, `go`
 > - Databases: `postgresql@18`, `redis`, `mongodb-community`
-> - Tools: `curl`, `gh`, `git`, `jq`, `jj`
+> - Tools: `curl`, `gh`, `git`, `jq`
 
 These become the install/verify tables in the generated `onboard/SKILL.md` Step 2.
 
@@ -212,10 +199,7 @@ These become the install/verify tables in the generated `onboard/SKILL.md` Step 
 
 ---
 
-> **Switch to execution mode now.** The user has answered all questions.
-> - **Claude Code:** Exit plan mode (normal mode)
-> - **Cursor:** Switch to agent mode
-> - **OpenCode:** Switch to Build agent (Tab)
+> **Leave the planning/research mode now.** The user has answered all questions.
 >
 > **Create a todo checklist now.** Based on all answers, list every file that needs to be created or modified.
 
@@ -233,7 +217,7 @@ Based on user's answers, create/update files in `agents/fragments/`:
 
 1. **`service-registry.md`** — Replace with user's services table, start commands, health checks, env files
 2. **`session-protocol.md`** — Adapt health checks and service detection to match user's services
-3. **`workflow-rules.md`** — Update phase list, branch conventions, gate conditions. Remove sections for phases the user dropped. Add sections for custom phases.
+3. **`workflow-rules.md`** — Update phase list, branch conventions, gate conditions, and the three checkpoint guards (scope, implementation, delivery) with automatic preparation between them. Remove sections for phases the user dropped. Add sections for custom phases.
 4. **`git-conventions.md`** — Update branch naming, commit format, PR conventions, default branches per service
 5. **`prd-conventions.md`** — Keep or adapt based on whether PRD phases are included
 6. **`track-conventions.md`** — Keep or adapt based on whether track files are needed
@@ -243,15 +227,14 @@ Based on user's answers, create/update files in `agents/fragments/`:
 Update files in `workflow/`:
 
 1. **`phases.json`** — Only include phases the user selected. Add custom phases.
-2. **`gates.json`** — Define gate conditions for each phase transition. Remove gates for dropped phases. Add gates for custom phases.
-3. **`state-schema.json`** — Adapt feature schema to match the phases and service structure. Remove unused fields. Always include `phase_status` (`inprogress` | `completed`).
+2. **`gates.json`** — Define gate conditions for each phase transition. Remove gates for dropped phases. Add gates for custom phases. Keep the three checkpoint guards explicit: scope before preparation, implementation before code changes, delivery before PR/merge work.
+3. **`state-schema.json`** — Adapt the feature schema to the phases and service structure. Always include `phase_status` with **all three values** (`idle` | `inprogress` | `completed`), and the required `agent_state` / `agent_state_reason` pair (both null, or reason non-empty). Include the optional checkpoint fields with safe defaults: `scope_approved` (false), `automation` (`{brainstorming:false, implementation:false}`), `execution_mode` (null), `implementation_approved` (false), `delivery` (null), `live_merge_approved` (false). Existing state files without these fields must remain valid.
 
 ## Step 9: (was Agent Definitions — no agent files anymore)
 
 The orchestrator model needs **no agent files**: the running agent drives all phases, delegation
 happens via the harness's subagent capability, and per-task models/effort are chosen at delegation
-time (see `workflow-rules.core.md`). Record any custom pinned-model preferences in the
-registration notes; skip to Step 10.
+time (see `workflow-rules.core.md`). No model preferences are generated; skip to Step 10.
 
 ## Step 10: Generate Skills
 
@@ -272,7 +255,7 @@ Update files in `templates/`:
 
 1. **`prd/main-prd.template.md`** — Adapt frontmatter fields to user's services
 2. **`prd/service-prd.template.md`** — Same
-3. **`tracks/feature.track.template.md`** — Adapt to user's services and phases
+3. **`tracks/feature.track.template.md`** — Adapt to user's services and phases; keep the plan/verification/evidence, checkpoint, delivery, and bounded review-watch sections
 4. **`pr/feature-pr.template.md`** — Adapt to user's PR conventions
 
 ## Step 13: Update Manifest
@@ -296,7 +279,7 @@ Verify:
 - All files in `manifest.json` exist and hashes match
 - `phases.json` phases match `state-schema.json` enum
 - `gates.json` has entries for all phase transitions
-- Agent routing table covers all phases
+- Checkpoint fields are present or optional-with-safe-defaults; no agent roster or routing table is generated
 - No references to `frndos` remain (replaced with user's project name)
 
 ## Step 16: Summary
@@ -308,7 +291,6 @@ Workspace "<project-name>" generated on branch setup/<project-name>.
 
 Files created/modified:
   agents/fragments/     — <count> fragments
-  agents/tools/         — <count> agent definitions
   skills/               — <count> skills
   workflow/             — phases, gates, state schema
   templates/            — <count> templates
@@ -317,7 +299,7 @@ Files created/modified:
 To use this workspace:
   1. Create a new directory for your project
   2. Run the bootstrap script to install files
-  3. Open a Claude Code session and run /onboard
+  3. Open an agent session and run /onboard
 
 Branch: setup/<project-name>
 ```

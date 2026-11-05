@@ -1,13 +1,17 @@
 ---
 name: prd-split
-description: Split a main PRD into per-service PRDs
+description: Split a main PRD into per-service PRDs during automatic preparation after scope approval (feature path only)
 ---
 
 # PRD Splitter
 
-Owns the `prd_splitting` phase: creates the feature git branch from base, then splits the main PRD into per-service PRDs. (This phase replaces the old `branch_creation` phase — branch creation and splitting are now combined.)
+Owns `prd_splitting` for features. Runs automatically after the main PRD exists — no per-service
+approval loop. It creates the feature branch locally, splits the main PRD into per-service PRDs,
+and prepares each track with its task plans and verification plans. It does **not** push the branch
+before implementation approval and does not ask the user to approve each document.
 
-**Read `references/conventions.md` first** for the service-PRD frontmatter, required sections (including Verification rules), and the naming convention shared with main PRDs.
+**Read `references/conventions.md` first** for the service-PRD frontmatter, required sections
+(including Plan, Verification, and Delivery), and the naming convention shared with main PRDs.
 
 ## Commands
 
@@ -16,50 +20,56 @@ Split the active feature's main PRD into service PRDs.
 
 **Steps:**
 
-0. **Activate phase.** Flip `features[active_feature].phase_status` to `"inprogress"` in `.workflow-state.json`.
+0. **Guard.** Verify `features[active_feature].type === "feature"`. Bugs/improvements never enter
+   this phase. Verify `scope_approved === true`; if not, return to the scope checkpoint.
 
-1. **Enter plan mode (MANDATORY).** Call your harness's plan mode before reading any file or forming conclusions:
-   - Claude Code: `EnterPlanMode`
-   - Cursor: plan mode
-   - OpenCode: plan mode
-   - Amp: no plan mode — announce a "research phase" and stay read-only until Step 7.
+1. **Activate phase.** Flip `features[active_feature].phase_status` to `"inprogress"` in
+   `.workflow-state.json`.
 
-3. Verify workflow state is in `prd_splitting` phase.
-
-4. **Create the feature branch (before splitting).** This phase replaces the old `branch_creation` phase.
-   - Determine base: `develop` for api/web, `development` for ai-service/data-service.
-   - `git checkout <base> && git pull origin <base>`.
-   - **Resolve branch prefix from `features[<slug>].type`:**
-     - `feature` → `feature/`
-     - `bug` → `fix/`
-     - `improvement` → `improvement/`
-     - If `type` missing/unknown: ask user which prefix (feature/fix/improvement) and persist via `/workflow start` intake.
+2. **Create the branch locally (before splitting).**
+   - Determine the base branch from the service registry: `develop` for api/web/desktop,
+     `development` for ai-service/data-service/data-pipeline.
+   - Resolve the branch prefix from `features[<slug>].type`: `feature` → `feature/`, `bug` →
+     `fix/`, `improvement` → `improvement/`. If the type is missing/unknown, ask once and persist
+     the answer; do not guess.
    - Branch name: `<prefix>vc-<slug>`.
-   - Confirm: "Create branch `<prefix>vc-<slug>` from `<base>`?"
-   - On confirm: `git checkout -b <prefix>vc-<slug> && git push -u origin <prefix>vc-<slug>`.
-   - Update `.workflow-state.json`: set `features[<slug>].branch`.
+   - `git fetch origin`, switch to the base, fast-forward it, then `git switch -c
+     <prefix>vc-<slug>`.
+   - If the branch already exists, verify it is the expected branch and base it on the latest base
+     without rewriting history. Do not recreate it.
+   - Record `features[<slug>].branch` in `.workflow-state.json`.
+   - **Do not push yet.** The push happens after implementation approval, when implementation
+     starts, unless the user explicitly asked for an earlier push.
+   - If the user explicitly skipped the main PRD, the branch still gets created here; the service
+     split comes from the approved scope summary rather than a fabricated PRD.
 
-5. Read the main PRD from `.workflow-state.json` `prd_path`. Parse the "Service Breakdown" section.
+3. **Read the approved scope input.** Normally `features[active_feature].prd_path` points at the main PRD; parse its Service Breakdown section and frontmatter `services`. If the user explicitly skipped the main PRD, read the approved `brainstorming.summary` and `initial_request` instead, keep the skip recorded in `brainstorming.decisions[]`, and do not fabricate a PRD.
 
-6. **Research per-service codebases (MANDATORY).** For each service, read enough code to understand:
-   - Existing patterns for similar endpoints/components/models
-   - Integration points across services
-   - Active work in `<service>/docs/tracks/` that might conflict
+4. **Research each service enough to split correctly.** Read existing patterns for similar
+   endpoints/components/models, integration points, and active work in `<service>/docs/tracks/` that
+   could conflict. No code-graph MCP; grep/read.
 
-7. **Relentless clarifying questions (MANDATORY).** Before drafting any service PRD, surface EVERY ambiguity that would change how the split works. Prefer multiple small questions. Do NOT proceed until answered.
+5. **Split without a per-document approval.** For each service in the main PRD frontmatter (or
+   the approved scope summary when the PRD was skipped):
+   a. Read the service PRD template.
+   b. Extract the service's requirements, API contracts, data changes, dependencies, and risks.
+   c. Generate implementation tasks (TASK-1, TASK-2, ...) from the requirements.
+   d. For every task, write the plan (approach, touched areas, dependencies, risk) and the
+      verification plan (risk level, exact checks, expected evidence). Scale to risk; do not add
+      new test dependencies.
+   e. Write `<service>/docs/prd/<slug>.md`.
+   f. Create `<service>/docs/tracks/<slug>.track.md` from the track template, with the tasks,
+      plans, verification plans, `execution_mode` resolved default, `delivery: null`, and
+      `live_merge_approved: false`.
+   g. If a service-splitting decision is genuinely ambiguous and changes scope, collect it into one
+      ask. Do not ask for approval of the service PRD itself.
 
-8. Exit plan mode. For each service listed in the PRD frontmatter `services` field:
-   a. Read the service PRD template
-   b. Extract relevant requirements, API endpoints, data model changes for this service
-   c. Generate implementation tasks (TASK-1, TASK-2, ...) from the requirements
-   d. Present the draft service PRD to user
-   e. Use your ask tool for approval — surface any remaining per-service ambiguities here
-   f. On approval, write to `<service>/docs/prd/<slug>.md`
-   g. Create track file at `<service>/docs/tracks/<slug>.track.md`
+6. **Update state and continue automatically.** Set `service_prds` paths, flip `phase_status` to
+   `"completed"`, and move to `implementation`. No `/workflow next` ceremony.
 
-9. Update `.workflow-state.json` `service_prds` with paths. Flip `phase_status` to `"completed"`. Do NOT auto-advance.
-
-10. Report summary: "Feature branch created. Service PRDs created for: api, web, ai-service. Run `/workflow next` to advance to implementation."
+7. **Leave one preparation summary** for the implementation checkpoint: branch, services, track
+   paths, task counts, risk levels, and anything that needs the implementation decision. Do not ask
+   the user to review each document.
 
 ### `/prd split status`
-Show which service PRDs have been created and their status.
+Show which service PRDs and tracks have been prepared for the active feature, and their status.
