@@ -47,6 +47,12 @@ EXCLUSIONS: dict[str, str] = {
         "no meaning inside an onboarded workspace, which has no manifest.json "
         "to check."
     ),
+    "scripts/check-workflow.py": (
+        "Repo-internal declarative consistency check. It asserts agreement "
+        "between workflow/*.json, the generator version regression, and this "
+        "repo's source layout; it is not installed into workspaces and has no "
+        "runtime role there."
+    ),
 }
 
 def tracked_files() -> set[str]:
@@ -66,7 +72,7 @@ def main() -> int:
     declared = set(manifest.get("files", {}))
 
     under_dirs = {
-        f for f in tracked_files() if f.startswith(DISTRIBUTED_DIRS)
+        f for f in tracked_files() if f.startswith(DISTRIBUTED_DIRS) or f == "VERSION"
     }
 
     missing = sorted(f for f in under_dirs - declared if not excluded(f))
@@ -101,7 +107,7 @@ def main() -> int:
 
     print(
         f"manifest coverage OK — {len(declared)} declared, "
-        f"{len(under_dirs)} tracked under {', '.join(DISTRIBUTED_DIRS)}"
+        f"{len(under_dirs)} tracked under {', '.join(DISTRIBUTED_DIRS)} and VERSION"
         + (f", {len(EXCLUSIONS)} excluded" if EXCLUSIONS else "")
     )
     return 0

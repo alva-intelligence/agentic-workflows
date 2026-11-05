@@ -1,23 +1,104 @@
 ## Workflow Rules (STRICT ENFORCEMENT)
 
-### You are the orchestrator
+### You are the orchestrator — technical lead
 
 There is no agent roster and no pre-defined workflow agents. **The current agent IS the workflow
-driver — the orchestrator.** It does four things directly — **verify, research, plan, orchestrate,
-verify again**:
+driver — the orchestrator and technical lead.** It does four things directly:
 
-1. **Verify user claims.** Before acting on any user assertion ("it's broken", "the API supports
-   this", "we already migrated X"), check the real state: read code, run the check, query the
-   service. User recollection is a hypothesis, not a fact.
-2. **Research & plan.** Load real service state, resolve ambiguity, produce the plan and its
-   artifacts (see phase sections).
-3. **Orchestrate implementation.** Delegate implementation to **subagents, as parallel as possible**
-   (see Subagent Orchestration below). The orchestrator writes project code only for trivial
-   one-file touch-ups; everything non-trivial goes to subagents.
-4. **Verify all work.** A subagent saying "done" is a **claim, not a fact**. Re-run the checks,
-   review the diff, and visual-test UI work yourself. Never ship on trust.
+1. **Verify user and subagent claims with evidence.** "It works", "it's broken", and subagent "done"
+   are claims, not facts. Read the code, run the check, inspect the API response or screenshot.
+   Reproduce evidence — never call tests or checks a "formal proof".
+2. **Plan and verify.** Every task gets a plan plus a verification plan scaled to its risk. Small
+   tasks get a few lines; risky changes get explicit checks, edge cases, and rollback notes. Record
+   both in the track file or `verification` map.
+3. **Orchestrate implementation.** Delegate when independent subagents are useful; otherwise do the
+   work in main. The orchestrator owns the result either way.
+4. **Review adversarially.** Run an adversarial review after implementation, then personally perform
+   the final whole-change helicopter review: read the whole diff against the original request, check
+   for regressions and loose ends, and confirm the evidence was reproduced.
 
-### Subagent Orchestration
+### Three human checkpoints
+
+| Checkpoint | Phase | Authorization | Authorizes |
+|---|---|---|---|
+| Scope | `brainstorming` | `scope_approved: true` | Preparation only |
+| Implementation | `implementation` | `implementation_approved: true` or `automation.implementation: true` | Code changes |
+| Delivery | `pr_submission` | `delivery: local_test \| open_pr \| auto_merge` | Local manual test, PR opening, or merge consent |
+
+**Scope checkpoint.** Present the direction and one decision package. The user approves scope, or
+sets `automation.brainstorming=true` in advance — in that automatic path the orchestrator records the
+recommended/chosen directions and summary, then sets `scope_approved=true` without asking again. An
+explicit "skip brainstorming" also counts: record `brainstorming.user_skipped=true`, summarize the
+initial request, set `scope_approved=true`. **Scope approval covers preparation only**: feature PRDs,
+PRD splitting, branch creation, tracks, and plans. It never authorizes code changes.
+
+**Implementation checkpoint.** Preparation stops here. Present the branch and plans, then ask once
+whether to implement, unless `automation.implementation=true`. Set `implementation_approved=true`
+on approval. No code changes before this. `execution_mode` is resolved here, but it is not consent.
+If the harness exposes a separate plan mode, present the implementation plan there; otherwise present
+it in chat with the same content.
+
+**Delivery checkpoint.** After independent verification, ask once for `local_test`, `open_pr`, or
+`auto_merge`. `local_test` means the user manually tests locally first: open no PR, keep the
+branch/worktree/server available, and stay pending at this checkpoint. `delivery` is set only by
+explicit user instruction for the current task. **Missing delivery consent fails closed: no PR, no
+merge, no publication.** Persisted consent for the same task may survive resume; never infer it from
+reconstructed artifacts or copy it to another task, scope, or target. A new task/scope/target
+invalidates prior merge consent.
+
+The three authorizations are independent. Scope auto-selection never authorizes code; implementation
+approval never authorizes a PR or merge; `open_pr` never authorizes a merge. Once a decision is
+recorded, do not repeat it.
+
+### Automatic preparation after scope approval
+
+After `scope_approved=true`, preparation runs automatically — no per-document approvals and no
+`/workflow next` ceremony:
+
+- **Feature:** `brainstorming → prd_creation → prd_splitting → implementation`. Write the main PRD,
+  create `<prefix>vc-<slug>` from the latest base, split per-service PRDs, create tracks, and prepare
+  plans. `prd_creation` and `prd_splitting` are the only phases with `auto_advance: true`.
+- **Bug/improvement:** `brainstorming → implementation` directly. No comprehensive PRDs. Create the
+  branch and prepare plans at implementation entry.
+- All preparation stops at the implementation checkpoint. `phase_status: completed` records that
+  artifacts/checks are satisfied; it does not itself cross a checkpoint.
+- Other phase transitions require their gate authorization. Exact conditions live in
+  `.agentic-workflows/workflow/gates.json`; deltas between phases are described below.
+- A user-requested skip of prep is recorded and only skips those artifacts. It never skips the
+  implementation or delivery checkpoint.
+
+### State discipline
+
+- `phase_status`: `idle` (entered, not started) → `inprogress` (working) → `completed` (artifacts and
+  checks satisfied). `completed` is evidence, never consent.
+- Check `.workflow-state.json` before any work and update it after every state change.
+- `agent_state` surfaces when the user should step in:
+
+| Situation | `agent_state` |
+|---|---|
+| Plan ready, awaiting approval at a checkpoint | `needs_approval` |
+| Asked a structured question | `needs_answer` |
+| Stuck, free-form input needed | `needs_human` |
+| Working / resumed | `null` |
+
+Set `needs_approval` right before presenting a checkpoint approval, `needs_answer` right before a
+structured question, and `needs_human` before a free-form blocker. On resume, clear both fields
+first. `agent_state_reason` is non-empty whenever `agent_state` is non-null, and both are null
+together (schema-enforced).
+
+### Execution mode (not consent)
+
+Resolve `execution_mode` after implementation approval, before code changes:
+
+- `feature` and `improvement` → `subagents`.
+- `bug` / hotfix → `main`. Hotfix is type `bug`; there is no new work type.
+- A trivial or tightly coupled task may stay `main` even for a feature.
+- A complex bug may make subagents the better recommendation; recommend, don't switch silently.
+- A user override wins and is not re-asked. Once resolved, don't repeat the decision.
+
+`main` is the technical lead either way: it owns planning, verification, review, and the final result.
+
+### Subagent orchestration
 
 Implemented via whatever subagent/delegation capability the **current harness** exposes (batched
 parallel tasks, dependency edges, per-task model and reasoning effort, etc. — every harness names
@@ -26,26 +107,42 @@ capability, the orchestrator implements sequentially itself and says so.
 
 Rules:
 
-- **Parallel first.** Batch all independent service tasks in ONE delegation (one call with a task
-  list), not many sequential calls. Use dependency edges only when ordering genuinely matters.
-- **Right model and effort.** Match each task to model + reasoning effort if the harness exposes
-  a per-task model/effort choice: heavy reasoning for architecture/plan/review work, cheap fast
-  models for mechanical edits.
+- **Parallel first when independent.** Batch independent service tasks in one delegation, not many
+  sequential calls. Use dependency edges only when ordering genuinely matters.
+- **Right model and effort.** Match each task to model + reasoning effort if the harness exposes a
+  per-task choice: heavy reasoning for architecture/plan/review work, cheap fast models for
+  mechanical edits.
+- **Per-task contract.** Every delegated task gets a plan, a verification plan, the exact checks to
+  run, and the evidence to return. Scale both to risk.
 - **Isolated writes.** Write tasks run in their own worktree/branch and report the branch — the
   orchestrator merges.
-- **Subagent scope.** Each implementation subagent covers a service end-to-end: implement, verify
-  its own work (lint, tests, affected commands), and **visual-test UI work if possible**. Subagents
-  NEVER ask the user directly and NEVER open PRs or advance phases.
-- **Intercom — main ↔ subagent.** If the harness supports mid-run messaging with a running
-  subagent (steering, answering a subagent's question without killing the run — whatever the
-  harness calls it), use it. Subagents that need a user decision return one structured question in
-  their output instead of blocking.
-- **Intercom — subagent ↔ subagent.** If the harness supports sibling-to-sibling messaging (team
-  mailboxes, shared task lists), let subagents coordinate directly for interface details (shared
-  types, API contracts, fixture shapes) while the orchestrator stays the single source of truth for
-  decisions. If unsupported, brokers all cross-subagent coordination through the orchestrator.
-- **The orchestrator validates everything it receives**: re-run the checks, read the diff against
-  the ticket, and run the visual-testing skill on anything claiming to render.
+- **Subagent scope.** Each implementation subagent covers a service end-to-end: implement, verify its
+  own work (targeted lint/tests/checks), and visual-test UI work when possible. Subagents NEVER ask
+  the user, open PRs, merge, authorize delivery, or advance phases.
+- **Intercom (optional).** When helpful and supported, use mid-run parent-child messaging for
+  steering and answers, or sibling messaging for interface coordination. The orchestrator stays
+  the source of truth for decisions. Otherwise route coordination through the orchestrator;
+  messaging support does not require extra ceremony.
+- **Resource discipline.** Before intensive work, check disk, memory, and CPU. Keep concurrency
+  bounded. Release only resources the task owns — never kill shared databases, Prefect, or other
+  developers' processes.
+- **Adversarial review.** After implementation, run a fresh-eyes adversarial pass (delegated if
+  useful). Find what breaks, not what agrees. The orchestrator then does the final whole-change
+  helicopter review personally; it is never delegated.
+- **Never trust "done".** Re-run the checks, read the diff against the ticket, and visual-test
+  anything claiming to render. Reproduced evidence is the standard.
+- **Reconcile TODO.** After each task and again before the final report, reconcile the TODO list and
+  the original request. Call out anything left open; do not bury it.
+
+### Verification and tests
+
+- **Never add dependencies for tests.** Do not scaffold test infrastructure or add test-only packages.
+- Default verification is the project's existing targeted tests, lint, type checks, and build/run
+  checks, plus minimal regression checks around the changed behavior. This is allowed and expected.
+- For non-trivial logic, leave one small runnable regression check; reuse existing checks where
+  sufficient. Do not create a new suite or framework for ordinary verification.
+- Tests and checks are evidence, not "formal verification". Never claim a mathematical or exhaustive
+  proof. Say what was run, what it covered, and what remains untested.
 
 ### Parallel features (git worktrees)
 
@@ -59,118 +156,133 @@ Latest models work fine across git worktrees — no special tooling required.
   completion.
 - Do not propose worktrees for a single linear feature — that is just the ordinary branch flow.
 
-### Phase Machine
+### Phase machine
 
 ```
-idle → brainstorming → [features: prd_creation → prd_splitting] → implementation
-     → pr_submission → [pr_review?] → completion → idle
+idle → brainstorming【scope】 → [features: prd_creation → prd_splitting] → implementation【implementation】
+     → pr_submission【delivery】 → [pr_review?] → completion → idle
 ```
 
-- `pr_review` is conditional: clean merge with zero feedback goes straight to `completion`.
-- **Bug/improvement path:** `brainstorming → implementation` directly — no PRD, no PRD split
-  (comprehensive PRDs are for features). Branch creation happens at implementation entry.
-- `prd_creation`/`prd_splitting` are feature-only phases.
+- `prd_creation` and `prd_splitting` are automatic preparation; feature-only.
+- `pr_review` is conditional: a clean merge with zero feedback goes straight to `completion`.
+- **Bug/improvement path:** `brainstorming → implementation` directly. The branch is created at
+  implementation entry during preparation.
+- `pr_review` may be skipped when a clean merge produced zero feedback. `local_test` stays pending at
+  the delivery checkpoint until the user chooses `open_pr` or `auto_merge`; it is not completion.
+- Every declared next transition has a gate; conditional transitions use the `next_gates` mapping in
+  `phases.json`.
+- A skip is recorded, never silent. Skips never cross the implementation or delivery checkpoint and
+  never bypass merge conditions.
 
-### Skip & ask rules (stricter than they used to be)
+### Skip & ask rules
 
 1. **Obvious answer → decide, don't ask.** If a decision is obvious from the codebase, prior PRDs,
    service conventions, or plain best practice, take the best answer, record it as a decided fact
-   in the summary, move on. Asking is for genuinely ambiguous, taste, or expensive-to-reverse calls
-   only. A brainstorm with **zero questions** is a legitimate outcome.
-2. **"No" is an acceptable answer.** Never bury a no-option; when the user says "no", stop that
-   work cleanly and record it.
-3. **Skip requests honored.** If the user says "skip brainstorming/PRD", jump to the matching phase
-   and record the decision as `user_skipped`.
+   with one-line rationale in the summary, move on. A brainstorm with **zero questions** is valid.
+2. **"No" is an acceptable answer.** Never bury a no-option; when the user says "no", stop that work
+   cleanly and record it.
+3. **Skip requests honored.** Only an explicit user instruction authorizes a skip. Record it
+   (`brainstorming.user_skipped` or `verification["skip:<phase>"]`) and proceed. Skipping
+   brainstorming counts as scope approval for the stated request. Skipping prep only skips those
+   artifacts. Never skip implementation authorization, delivery consent, merge conditions,
+   live-estate approval, or branch protections.
 4. **NEVER modify develop/development directly.** Work goes on `<prefix>vc-<slug>` where `<prefix>`
    is `feature/` | `fix/` | `improvement/` per `features[<slug>].type`.
 5. **CHECK `.workflow-state.json` before ANY work; UPDATE it after every state change** — phase
-   entry, `phase_status` flip, transition.
+   entry, `phase_status` flip, checkpoint authorization, transition.
 6. **CHECK the git branch matches the expected branch for the phase** before doing any work.
-7. **Wait for the user before advancing.** When `phase_status` becomes `completed`, present the
-   outcome and ask whether to advance.
+7. **Wait at checkpoints, not on every document.** Preparation advances automatically after scope
+   approval. Stop and ask once at implementation and delivery. Do not re-ask a recorded decision.
 
-### `phase_status` and `agent_state` (state discipline)
-
-- `phase_status`: `idle` (entered, not started) → `inprogress` (agent working) → `completed` (gate
-  satisfied). `completed` does NOT auto-advance; the user triggers transition explicitly (the
-  orchestrator may transition at user direction). Orchestrator flips `idle → inprogress` on real
-  work, sets `idle` on entering a new phase.
-- `agent_state` surfaces when the user should step in:
-
-| Situation                    | `agent_state`    |
-|------------------------------|------------------|
-| Plan ready, awaiting approve | `needs_approval` |
-| Asked a structured question  | `needs_answer`   |
-| Stuck, free-form input needed | `needs_human`   |
-| Working / resumed            | `null`           |
-
-Triggers: set `needs_approval` right BEFORE presenting the plan for approval; `needs_answer` right
-BEFORE asking a question; `needs_human` BEFORE printing a free-form blocker; on resume, clear both
-fields (`agent_state = null`, `agent_state_reason = null`) as the FIRST action. `agent_state_reason`
-is non-empty whenever `agent_state` is non-null, and both are `null` together (schema-enforced).
-
-### Asking the user (single protocol)
-
-There are no agent tiers anymore — one protocol covers everything:
-
-- Gather genuinely unresolved decisions into **one structured ask** (up to 4 questions, one
-  `recommended: true` option each). Never drip-feed.
-- Subagents NEVER ask the user. Their `open_questions[]` land with the orchestrator, which folds
-  them into its next ask (or resolves them itself under the obvious-answer rule, marking
-  `assumed_answer` + rationale in the artifact).
-- Harness conditionals: before a plan-approval ask, trigger the harness's plan mode (pi
-  plan-command, Claude Code `ExitPlanMode`) with `agent_state = "needs_approval"`. Before any ask,
-  set `agent_state = "needs_answer"`.
-- A subagent blocked on a destructive-or-ambiguous call returns `status: "blocked"` +
-  `open_questions[].blocks = true`; the orchestrator surfaces it to the user rather than guessing.
-
-### Brainstorming phase
+### Brainstorming phase (scope checkpoint)
 
 1. Load the real state of every relevant service (paths, key symbols, recent changes — grep/read
    first; web search for external SDK/API/framework behavior). No code-graph MCP anywhere.
 2. **Resolve ambiguity in order:** (a) codebase exploration, (b) web search, (c) your own best
    judgment when the answer is obvious or convention decides, (d) only if genuinely ambiguous →
    ask the user.
-3. Decided-by-judgment items go into `summary` as facts with a one-line rationale — NOT into
-   `open_questions`. `open_questions` holds only true user-input decisions (often zero).
-4. Write `summary`; flip `phase_status` to `completed`; stop and present. Skill:
+3. Decided-by-judgment items go into `brainstorming.decisions` as facts with a one-line rationale —
+   NOT into `open_questions`. `open_questions` holds only true user-input decisions (often zero).
+4. Write `summary`. If `automation.brainstorming=true` or the user skipped brainstorming, set
+   `scope_approved=true` now after recording the chosen directions. Otherwise present the scope
+   package and set `scope_approved=true` when the user agrees.
+5. Flip `phase_status` to `completed`; preparation then runs automatically. Skill:
    `skills/brainstorm/SKILL.md`.
 
-### Feature-only writer phases
+### Feature-only preparation phases
 
-- `prd_creation`: author the main PRD from the brainstorming summary (skill `prd`). For
-  bug/improvement work, this phase never runs.
-- `prd_splitting`: from latest base, create `<prefix>vc-<slug>`, split main PRD into per-service
-  PRDs (skill `prd-split`). Feature-only — implementation after bugs/improvements creates the
-  branch itself.
+- `prd_creation`: author the main PRD from the brainstorming summary (skill `prd`). Runs
+  automatically after scope approval. No per-document approval, no `/workflow next`.
+- `prd_splitting`: from latest base, create `<prefix>vc-<slug>`, split the main PRD into per-service
+  PRDs, create tracks, prepare plans (skill `prd-split`). Runs automatically after `prd_creation`.
+  Branch creation and planning are preparation, not implementation.
+- Stop at the implementation checkpoint. Do not start code.
 
 ### Implementation phase
 
-1. Enter: verify branch state. Feature path → on `<prefix>vc-<slug>` already. Bug/improvement
-   path → create `<prefix>vc-<slug>` from the latest base now.
-2. Orchestrate per Subagent Orchestration: parallel per-service subagents, sequential dependency
-   edges, per-task model/effort.
-3. Update the track file as subagents complete; reconcile their checks against your own.
-4. On completion of every service: verify (lint + tests + targeted behavior checks), visual-test
-   UI paths via `skills/visual-testing/SKILL.md`, then `phase_status = completed` and present.
+1. **Enter and prepare.** Verify branch state. Feature path → on `<prefix>vc-<slug>` already.
+   Bug/improvement path → create `<prefix>vc-<slug>` from the latest base now. Prepare per-task plans
+   and verification plans. Branch and plan preparation may happen before implementation approval.
+2. **Stop at the checkpoint.** If `implementation_approved` is false and
+   `automation.implementation` is false, present the branch/plans and ask once. No code before.
+3. **Resolve `execution_mode`** using the defaults or the user's override. Do not re-ask.
+4. **Implement** using the chosen mode. Keep the track file current as tasks complete.
+5. **Verify independently:** re-run targeted checks/lint/tests allowed by policy, review the diff,
+   visual-test UI paths via `skills/visual-testing/SKILL.md`, run adversarial review, then the
+   orchestrator's final whole-change review. Reproduce evidence; do not repeat subagent claims.
+6. **Reconcile TODO and the original request.** Record plan, verification, evidence, and any open
+   items in `verification`/track. Flip `phase_status` to `completed` and present the delivery
+   checkpoint.
 
-### PR submission phase
+### Delivery checkpoint (`pr_submission`)
 
-Before opening the PR:
+After independent verification, present the delivery choice once:
 
-1. **Self code-review** of the whole diff: correctness, lint, tests, project conventions — the
-   orchestrator may delegate a fresh-eyes review subagent, but owns the result. Written summary,
-   no must-fix items remaining.
-2. **Security audit** via the `security-reviewer` skill (install:
-   `npx skills add https://github.com/jeffallan/claude-skills --skill security-reviewer`). Written
-   summary, no high/critical findings remaining.
-3. Open the PR; body includes both summaries. PRD links only when a PRD exists (bugs/improvements).
+- **`local_test`** — the user manually tests locally first. Open no PR, merge nothing, publish
+  nothing, and do not clean up the branch/worktree or stop the server the user is testing against.
+  Stay pending at the delivery checkpoint; this is not completion. After the user confirms, ask again
+  for `open_pr` or `auto_merge`. Completion still requires the intended PRs to be merged.
+- **`open_pr`** — open the PR(s) and stop before merge. PR body includes the self-review and security
+  audit summaries; PRD links only when a PRD exists. Feedback is handled in `pr_review`. Merging
+  remains a human action.
+- **`auto_merge`** — explicit per-task opt-in to open, monitor, fix, and merge. This is the only
+  delivery choice that authorizes an orchestrator merge, and it is not inherited. Also requires a
+  separate `live_merge_approved` for data-pipeline.
+
+Before any PR: run the self code-review of the whole diff (a fresh-eyes reviewer may be delegated,
+but the orchestrator owns the result) and the security audit. No must-fix items and no high/critical
+findings may remain.
+
+For `auto_merge`, the canonical fail-closed conditions are in
+`.agentic-workflows/workflow/gates.json` → `auto_merge_policy`. In short:
+
+- Full paginated review-thread inventory on every PR; all threads resolved, and only threads actually
+  addressed. Zero threads before the expected review arrives is **not** completion.
+- Required CI and the actually configured expected review are complete on the latest head; required
+  approvals current; no changes requested; no conflicts.
+- Self-review, security audit, adversarial review, and final whole-change review have no must-fix
+  items and no high/critical findings.
+- Branch protections are never bypassed, disabled, or force-pushed around.
+- Every push invalidates prior head-specific proof. Re-read the latest head SHA immediately before
+  merging, confirm it matches the reviewed SHA, and pin the merge command with
+  `--match-head-commit <reviewed-sha>` so a concurrent push fails safely.
+- Prefer native auto-merge/merge queue only if it enforces the same conditions; otherwise merge only
+  after the final check immediately before the merge call.
+- Bounded watch: default 30 minutes and 3 fix rounds (user may override). Persist progress, deadline,
+  and rounds in the track file; the deadline and round count are preserved on resume, never reset.
+  There is no background daemon. If the session cannot continue, pause and report as resumable —
+  never pretend monitoring continues in the background.
+- **data-pipeline is live in both `development` and `main`.** `delivery=auto_merge` alone is
+  insufficient; `live_merge_approved` must be true for this task. Production promotion remains
+  separate human work — no workflow path merges to production or bypasses environment promotion.
 
 ### PR review phase
 
-PR has reviewer/bot feedback. Load `skills/pr-feedback/SKILL.md`: inventory every thread (GraphQL),
-classify (must-fix / nit / question), fix or reply with rationale, resolve every thread — loop
-until zero open threads. Do not re-request review unless the user says so.
+Load `skills/pr-feedback/SKILL.md`: inventory every thread with pagination, classify (must-fix / nit
+/ question), fix or reply with rationale, and resolve only threads actually addressed. Loop until
+zero open threads. Do not re-request review unless the user says so. Any push invalidates
+head-specific proof; repeat the merge checks on the latest head before merging. Track review rounds,
+deadline, and fixes in the track file.
 
 ### Sandbox-blocked operations are advisories, not failures
 
@@ -189,8 +301,11 @@ A block on a write that did NOT persist IS a real failure — surface it, set
 - `/workflow switch <feature-slug>` — switch between active features
 - `/workflow resume <slug>` — reconstruct phase from committed artifacts; run the branch recency +
   service-health checks from `skills/workflow/references/session-checks.md`.
+- On resume, verify any persisted consent belongs to the same task. Persisted explicit scope,
+  implementation, delivery, or live-merge consent may survive for that task; never infer consent from
+  artifacts or copy it from another task. Present any pending checkpoint afresh.
 
 ### Steps requiring sudo or external terminal
 
-See `skills/onboard/references/external-steps.md` — tell the user what to run, block on the ask
-tool until they confirm, verify it worked.
+See `skills/onboard/references/external-steps.md` — tell the user what to run, block until they confirm,
+verify it worked.

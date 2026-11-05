@@ -502,10 +502,11 @@ Only clone services the user selected. Skip if directory already exists. **Optio
 > Prefect worker polls each estate and `git clone`s the branch **at run time**, so a merge is live
 > the moment it lands. There is no build or release to forget about.
 >
-> **Feature work branches from `development` and PRs into `development`.** Promotion is a **separate
-> PR (`development` → `main`)**, opened deliberately by a human, never as part of a feature. Open the
-> PR and stop either way: never merge it yourself, and never push directly to `development` or
-> `main`.
+> **Feature work branches from `development` and PRs into `development`.** Because that merge is live,
+> it also needs a separate, explicit, task-specific live-estate merge approval; the task's
+> `auto_merge` delivery choice alone is not enough. Without it, open the PR and stop. Promotion is a
+> separate `development` → `main` PR that remains human-only: never open or merge it, and never push
+> directly to either branch.
 
 ## Step 5: Install Dependencies
 
@@ -1551,7 +1552,7 @@ Configure project settings — copy the base template:
 cp .agents/skills/onboard/references/claude-settings.json .claude/settings.json
 ```
 
-> **Auto-mode coverage:** the base template ships with `permissions.allow` covering every command the workflow needs (git, gh, jq, scoped Edit/Write to `docs/` + state files), a `permissions.deny` blocklist for destructive commands, and `autoMode.environment` hints that mark Lark docs as a read-only source. This means the workflow runs hands-off under Claude Code's auto mode (`https://code.claude.com/docs/en/permission-modes#eliminate-prompts-with-auto-mode`) without sandbox prompts breaking sub-agents. Users who want to TIGHTEN beyond the defaults should edit `.claude/settings.json` after install; users who want personal additions should put them in `.claude/settings.local.json` (gitignored).
+> **Auto-mode coverage:** the base template ships with `permissions.allow` covering every non-merge command the workflow needs (git, gh, jq, scoped Edit/Write to `docs/` + state files), a `permissions.deny` blocklist for destructive commands (including raw API merge mutations), and `autoMode` hints that mark Lark docs as a read-only source. A PR merge is deliberately not allow-listed: `gh pr merge` must pass the user confirmation gate, and only after explicit per-task `auto_merge` plus the review/CI/thread conditions — `data-pipeline` additionally needs live-estate approval. Everything else runs hands-off under Claude Code's auto mode (`https://code.claude.com/docs/en/permission-modes#eliminate-prompts-with-auto-mode`) without sandbox prompts breaking sub-agents. Users who want to TIGHTEN beyond the defaults should edit `.claude/settings.json` after install; users who want personal additions should put them in `.claude/settings.local.json` (gitignored).
 
 **Cursor:** If user selected Cursor, ensure the skills symlink exists:
 ```bash

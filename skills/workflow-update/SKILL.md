@@ -33,7 +33,10 @@ Capture the full output. Parse it for:
 - **Failed files:** lines starting with `!`
 - **Whether AGENTS.md was regenerated**
 
-If the script reports "Already up-to-date" and nothing failed, inform the user and stop.
+"Already up-to-date" means only that the distributed files match. It does **not** mean the 4.1
+policy migration has run. Do not stop on that line alone: continue to Step 3 and check the policy
+fields, settings permissions, and symlinks. Report up-to-date only after those checks; matching
+file versions alone never skip the remaining migration or verification.
 
 ### Step 2: Summarize changes
 
@@ -80,26 +83,110 @@ Compare against current `.claude/settings.json`. If there are env vars reference
 3. Ask for confirmation before modifying settings.json
 4. Merge new env vars into the existing `env` object (preserve existing entries)
 
-#### 3b. Workflow state schema migration
+**4.1 merge permission policy.** Auto-merge is allowed by workflow policy only as an explicit,
+per-task delivery choice; it is not a broad merge permission. The new template replaces the broad
+`Bash(gh pr:*)` allow with non-merge `gh pr` subcommands and removes the blanket
+`Bash(gh pr merge:*)` deny, so a merge command still hits the harness's confirmation gate. Never add
+`Bash(gh pr merge:*)` or a bare `Bash(gh pr:*)` to `allow`, and keep the raw-API merge
+mutation denies (`*pulls/*/merge*`, `*enablePullRequestAutoMerge*`, `*mergePullRequest*`).
 
-If `workflow/state-schema.json` was updated:
+Existing workspaces may still carry the old pair (broad allow + blanket deny). That cleanup is
+**not** file replacement and must not be silent:
 
-1. Read the new schema
-2. Read `.workflow-state.json` (if it exists)
-3. Check for new required fields that are missing from existing state
-4. If migration is needed:
-   - Show user what fields are new and their defaults
-   - Ask for confirmation
-   - Add missing fields with sensible defaults (null for nullable, empty object/array for collections)
-5. If no `.workflow-state.json` exists, skip — it will be created correctly when needed
+1. Show the current `permissions.allow` / `permissions.deny` diff against the template.
+2. Ask for approval.
+3. Only on approval, remove the blanket deny and narrow the broad `gh pr` allow in the same edit.
+4. If declined, leave the file untouched and record that `auto_merge` is unavailable — fail closed,
+   never route around the deny.
 
-#### 3c. Symlinks
+The template's `autoMode.allow` also states the gate: `gh pr merge` stays behind the confirmation gate; it proceeds only
+when the task's `auto_merge` was explicitly authorized and every check/review/thread condition
+holds. Data-pipeline merges still need separate live-estate approval, and production promotion
+remains human-only.
 
-If skill paths changed in the manifest:
+#### 3b. Workflow state schema migration (4.1 policy defaults)
 
-1. Check the skills symlinks exist (`.claude/skills`, `.cursor/skills`, `.opencode/skills` → `.agents/skills`)
-2. If any are missing or point to wrong targets, fix them
-3. Report what was fixed
+`workflow/state-schema.json` gains optional delivery/consent fields. **Absent is safe**: the
+workflow treats every missing field as its conservative default. Do not rewrite state on
+update-check or on session start; migration is one coordinated, idempotent step after the user sees
+the diff.
+
+| Field | Absent default | Never infer it from |
+|---|---|---|
+| `scope_approved` | `false` | prior phase progress or a finished summary |
+| `automation.brainstorming` | `false` | scope approval or implementation approval |
+| `automation.implementation` | `false` | `scope_approved`, a branch, or a prior run |
+| `execution_mode` | `null` | work type, team shape, or previous delegation |
+| `implementation_approved` | `false` | `phase_status: completed`, a branch, or an open PR |
+| `delivery` | `null` | an open/merged PR, local checks, or a previous task |
+| `live_merge_approved` | `false` | `delivery: auto_merge` or `data-pipeline` being selected |
+
+`automation` is an object with `brainstorming` and `implementation` booleans and no other keys.
+`execution_mode` is `main`, `subagents`, or `null` (resolve the default at implementation entry;
+it is not consent). `delivery` is `local_test`, `open_pr`, `auto_merge`, or `null`; only an explicit
+user instruction sets it, per task. Preserve the existing `verification` string map and every other
+field unchanged.
+
+Procedure:
+
+1. Read the new schema; if it has no 4.1 policy fields, skip this step.
+2. Read `.workflow-state.json`; if it does not exist, skip — it will be created correctly later.
+3. For each feature entry, check which policy fields are missing. If none are missing, the state is
+   migrated; report that and continue with the remaining checks.
+4. Show the exact fields and defaults to add, and ask once for confirmation. A single diff for the
+   whole file — no per-feature or per-document approvals.
+5. On approval, write atomically and add only the missing fields, preserving every existing value
+   (including `verification` entries). If `automation` exists but one of its booleans is missing,
+   fill only the missing boolean; never reset an existing value. Do not add a migration marker: the
+   schema uses `additionalProperties: false`, and field presence is the idempotence check.
+6. Never derive a `true` value from old state. An old feature may have a completed phase, a branch,
+   or an open/merged PR and still gets `scope_approved: false`, `implementation_approved: false`,
+   `automation` false, `execution_mode: null`, `delivery: null`, `live_merge_approved: false`.
+7. If the user declines, leave the state untouched. Absent fields keep the conservative defaults, so
+   nothing becomes authorized by migrating late.
+
+**Version equality is not migration.** A workspace already at 4.1 with old state still needs this
+check; `Already up-to-date` from Step 1 must not be used as proof that the policy fields exist.
+
+#### 3c. Symlinks — skills yes, old agents no
+
+Skills are real and still symlinked. Old agent-roster symlinks are not. Validate both directions,
+and only for tools the user actually installed.
+
+```bash
+# Skills: must be a symlink that resolves to this workspace's .agents/skills.
+for link in .claude/skills .cursor/skills .opencode/skills; do
+  [ -e "$link" ] || [ -L "$link" ] || continue
+  if [ -L "$link" ] && [ -e "$link" ] && \
+     [ "$(cd "$link" && pwd -P)" = "$(cd .agents/skills && pwd -P)" ]; then
+    echo "✓ $link -> $(readlink "$link")"
+  else
+    echo "✗ $link is not a valid skills symlink -> $(readlink "$link" 2>/dev/null || echo missing)"
+  fi
+done
+```
+
+Old agent symlinks (`.claude/agents`, `.cursor/agents`, `.opencode/agents`, `.amp/agents`) must not
+be restored. A workflow-owned symlink into `.agentic-workflows/agents/` is legacy and can be removed;
+a real directory, or a symlink to a user-owned agents directory, is **not** evidence of the old
+roster and must be left alone.
+
+```bash
+for link in .claude/agents .cursor/agents .opencode/agents .amp/agents; do
+  if [ -L "$link" ]; then
+    target=$(readlink "$link")
+    case "$target" in
+      *agentic-workflows/agents*) rm "$link"; echo "removed legacy $link -> $target" ;;
+      *) echo "kept unrelated symlink $link -> $target" ;;
+    esac
+  elif [ -d "$link" ]; then
+    echo "kept real directory $link (user-owned agents)"
+  fi
+done
+```
+
+If a skills symlink is missing or points elsewhere, fix it only for the tools the user selected;
+otherwise report it.
 
 #### 3e. Legacy installs without a snapshot (one-time)
 
@@ -108,17 +195,20 @@ Workspaces that last updated from a pre-4.0.0 install have no `manifest.json` sn
 update lands (local `.version` or `.agentic-workflows/.version` < 4.0.0, or old roster files still
 present):
 
-1. **Agent files + symlinks.** If `.agentic-workflows/agents/<tool>/` contains frndos-` files or
-   exists at all, delete that directory tree. Then remove the `agents` symlinks it fed
-   (`.claude/agents`, `.cursor/agents`, `.opencode/agents`, `.amp/agents`) if they are symlinks.
-   Keep the `skills` symlinks — those are still real.
+1. **Agent files + symlinks.** Delete `.agentic-workflows/agents/` only when it is the old
+   workflow-owned roster (it contains `frndos-` files, or was created by the old installer). Then
+   remove an `agents` symlink only when its target points into `.agentic-workflows/agents/`; a real
+   directory or a symlink to a user-owned agents directory is not legacy and must be kept. Keep the
+   `skills` symlinks — those are still real. The exact validation is in 3c.
 2. **Removed skills.** Delete `.agents/skills/jj-workflow/` and
    `.agents/skills/workflow/references/agent-teams.md` if present.
 3. **`.claude/settings.json`** (show the diff to the user, confirm first): remove the
    `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` env entry (Team Session mode is gone), and drop these
    permission entries: `mcp__lark__*`, `mcp__claude_ai_Lark__*`, `mcp__code-review-graph__*`,
    `Bash(jj workspace:*)`, `Bash(jj git init:*)`, `Bash(jj log:*)`, `Bash(jj status:*)`. Lark is
-   read-only via the Lark CLI now; code-reviews no longer use the MCP.
+   read-only via the Lark CLI now; code-reviews no longer use the MCP. Do **not** remove an existing
+   `Bash(gh pr merge:*)` deny here — that is the 4.1 merge-policy cleanup in 3a and needs its own
+   explicit approval.
 4. **`.workflow-state.json`** (preserve everything else): delete `workspaces` and
    `workspace_meta` at the top level; delete `agent_teams` inside any feature entry. Leave
    `branch` values alone — the new gates accept the legacy `<worker>/vc-` branch form.
@@ -145,19 +235,42 @@ After applying all changes:
    ```bash
    bash .agentic-workflows/scripts/generate-agents.sh
    ```
-2. **Verify symlinks:**
+2. **Verify symlinks:** skills links must resolve to `.agents/skills`; old agent links must not be
+   workflow symlinks. Do not treat a missing `.claude/agents` as a failure.
    ```bash
-   [ -L .claude/agents ] && echo "✓ .claude/agents" || echo "✗ .claude/agents missing"
-   [ -L .claude/skills ] && echo "✓ .claude/skills" || echo "✗ .claude/skills missing"
+   for link in .claude/skills .cursor/skills .opencode/skills; do
+     [ -e "$link" ] || [ -L "$link" ] || continue
+     if [ -L "$link" ] && [ -e "$link" ] && \
+        [ "$(cd "$link" && pwd -P)" = "$(cd .agents/skills && pwd -P)" ]; then
+       echo "✓ $link -> $(readlink "$link")"
+     else
+       echo "✗ $link invalid"
+     fi
+   done
+   for link in .claude/agents .cursor/agents .opencode/agents .amp/agents; do
+     if [ -L "$link" ]; then
+       case "$(readlink "$link")" in
+         *agentic-workflows/agents*) echo "✗ legacy agent symlink $link" ;;
+         *) echo "✓ unrelated symlink kept: $link" ;;
+       esac
+     fi
+   done
    [ -f .claude/settings.json ] && echo "✓ .claude/settings.json" || echo "✗ .claude/settings.json missing"
    [ -f AGENTS.md ] && echo "✓ AGENTS.md" || echo "✗ AGENTS.md missing"
-   [ -f CLAUDE.md ] || [ -L CLAUDE.md ] && echo "✓ CLAUDE.md" || echo "✗ CLAUDE.md missing"
+   { [ -f CLAUDE.md ] || [ -L CLAUDE.md ]; } && echo "✓ CLAUDE.md" || echo "✗ CLAUDE.md missing"
    ```
-3. **Check version:**
+3. **Check merge permission policy:** no broad merge allow and no accidental legacy deny:
+   ```bash
+   jq -r '.permissions.allow[]?' .claude/settings.json | grep -E '^Bash\(gh pr(:| merge)' \
+     && echo "✗ merge is broad-allowed" || echo "✓ merge is not broad-allowed"
+   jq -r '.permissions.deny[]?' .claude/settings.json | grep -F 'Bash(gh pr merge:*)' \
+     && echo "⚠ legacy blanket deny still present — 4.1 cleanup needs approval" || true
+   ```
+4. **Check version:**
    ```bash
    cat .agentic-workflows/.version
    ```
-4. **Report:**
+5. **Report:**
    ```
    Update complete! v2.0.38 → v2.0.39
 
@@ -187,8 +300,13 @@ Dry-run — check for updates without applying them.
 Verify the current installation is healthy.
 
 **Steps:**
-1. Check all symlinks are correct
-2. Check `.claude/settings.json` has required env vars
+1. Check skills symlinks resolve to `.agents/skills`, and old agent symlinks are absent or user-owned
+   (not workflow-owned). A missing `.claude/agents` is correct, not a failure.
+2. Check `.claude/settings.json` has required env vars and the merge policy: no broad
+   `Bash(gh pr:*)`/`Bash(gh pr merge:*)` allow; a legacy blanket deny is reported as pending 4.1
+   cleanup, never removed silently.
 3. Check AGENTS.md matches what generate-agents.sh would produce
 4. Check `.agentic-workflows/.version` matches manifest version
-5. Report any issues found
+5. Check the 4.1 policy fields: if absent, report **migration pending (safe defaults apply)** and
+   point at `/workflow-update`; do not treat absence as an authorization or as a hard failure.
+6. Report any issues found

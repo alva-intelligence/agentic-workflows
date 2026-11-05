@@ -35,7 +35,15 @@ _Recorded by the orchestrator via the `security-reviewer` skill during `pr_submi
 
 ### Testing / Verification
 
-{{TESTING_NOTES}}  <!-- Manual verification steps. Only include automated test notes if the user explicitly asked for tests (see testing-policy.md). -->
+{{TESTING_NOTES}}  <!-- Exact checks, observed results, manual steps, and unverified behavior. -->
+
+### Delivery
+
+- **Delivery choice:** {{DELIVERY}}  <!-- local_test | open_pr | auto_merge | null; explicit for this task; same-task resume may reuse recorded consent, never other-task/global consent -->
+- **Authorization:** {{DELIVERY_AUTHORIZATION}}  <!-- who/when; scope or implementation approval is not merge consent -->
+- **Live-estate merge approval:** {{LIVE_MERGE_APPROVAL}}  <!-- data-pipeline only; auto_merge alone is insufficient; production promotion stays human-only -->
+- **Review watch:** {{REVIEW_WATCH}}  <!-- started/deadline, fix rounds used/max, latest head SHA, status -->
+- **Merge evidence on latest head:** {{MERGE_EVIDENCE}}  <!-- required CI, configured expected review, paginated thread inventory; mechanics: skills/pr-feedback -->
 
 ### Checklist
 
@@ -44,6 +52,9 @@ _Recorded by the orchestrator via the `security-reviewer` skill during `pr_submi
 - [ ] Track file updated with session log
 - [ ] Self-review passed with no must-fix items remaining
 - [ ] Security audit passed with no high/critical findings remaining
+- [ ] Delivery choice explicitly authorized for this task (same-task consent may survive resume; no other-task/global consent)
+- [ ] If `auto_merge`: latest-head merge evidence recorded; every paginated thread addressed; branch protections not bypassed
+- [ ] If `data-pipeline` touched: separate task-specific live-estate approval recorded; production promotion left to a human
 - [ ] Manual verification steps pass
-- [ ] Automated tests pass (only applicable when the user explicitly requested tests — otherwise mark N/A)
+- [ ] Relevant automated checks pass; verification evidence and any untested behavior recorded
 - [ ] No `.env` or secrets committed

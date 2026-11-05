@@ -1,12 +1,123 @@
 {
   "phase_status_rule": {
-    "description": "Every gate carries an implicit phase_status condition: features[active_feature].phase_status === 'completed'. Phases enter as 'inprogress', flip to 'completed' once their gate's other conditions pass, but the workflow does NOT auto-transition. The user (or the orchestrator at explicit user direction) must trigger advancement explicitly. The condition is repeated in every gate's `conditions` array under type `phase_status_completed` for clarity."
+    "description": "Every gate carries an implicit phase_status condition: features[active_feature].phase_status === 'completed'. A phase enters as 'idle', flips to 'inprogress' when work starts, and becomes 'completed' once the gate's artifact/check conditions are satisfied. 'completed' is evidence only: it does not authorize crossing a human checkpoint, opening a PR, merging, or bypassing any condition. Phases marked auto_advance=true in phases.json advance automatically once completed and their authorizing checkpoint is satisfied; all others wait for explicit gate authorization. The phase_status_completed condition is repeated in every gate's conditions array for clarity."
+  },
+  "checkpoint_rules": {
+    "scope": {
+      "phase": "brainstorming",
+      "authorization_field": "scope_approved",
+      "satisfied_when": "features[active_feature].scope_approved === true",
+      "set_by": [
+        "Explicit user agreement on the scope/direction.",
+        "automation.brainstorming === true: the orchestrator records the recommended/chosen directions (decisions and summary) and then sets scope_approved = true without asking again.",
+        "An explicit user request to skip brainstorming: record brainstorming.user_skipped = true, write the summary from the initial request, and set scope_approved = true."
+      ],
+      "authorizes": "Preparation only for features (prd_creation, prd_splitting, branch creation, track/plan preparation) and branch/plan preparation for bugs/improvements. It never authorizes code changes, PR creation, delivery, merges, live-estate merges, or production promotion.",
+      "stops_at": "implementation checkpoint"
+    },
+    "implementation": {
+      "phase": "implementation",
+      "authorization_field": "implementation_approved",
+      "satisfied_when": "features[active_feature].implementation_approved === true OR features[active_feature].automation.implementation === true",
+      "set_by": "Explicit user approval at the implementation checkpoint, or automation.implementation=true.",
+      "authorizes": "Code changes and implementation work only. Never PR creation, delivery, merging, live-estate merges, or production promotion.",
+      "note": "Reaching the implementation phase with prepared branch/plans is not approval. Scope approval never implies implementation approval."
+    },
+    "delivery": {
+      "phase": "pr_submission",
+      "authorization_field": "delivery",
+      "satisfied_when": "features[active_feature].delivery is 'local_test', 'open_pr', or 'auto_merge', set by explicit user instruction for this feature/task",
+      "options": {
+        "local_test": "User manually tests locally first. Open no PR, merge nothing, and make no live-estate change. Keep the branch/worktree/server available and remain pending at the delivery checkpoint; there is no automatic completion. Only after the user confirms and chooses open_pr or auto_merge does delivery proceed.",
+        "open_pr": "Open the PR(s) and stop. Address feedback only on a separate explicit user request; then use pr_review. Merging remains a human action.",
+        "auto_merge": "Explicit per-task opt-in to open, monitor, fix, and merge under the fail-closed auto_merge_policy. A separate live_merge_approved is still required for data-pipeline."
+      },
+      "fail_closed": "delivery null (or absent) means no PR may be opened, no merge may happen, and nothing may be published. Verified explicit persisted consent for the same task may survive resume; never infer it from reconstructed artifacts or copy it from another task. A new task, scope, or target invalidates prior merge consent.",
+      "live_estate": "data-pipeline development and main are both live Prefect estates. delivery=auto_merge alone is insufficient: live_merge_approved must be true for this task. Production promotion remains separate human work and is never performed by this workflow."
+    }
+  },
+  "execution_mode_defaults": {
+    "state_field": "execution_mode",
+    "values": ["main", "subagents", null],
+    "defaults": {
+      "feature": "subagents",
+      "improvement": "subagents",
+      "bug": "main",
+      "hotfix": "main"
+    },
+    "overrides": {
+      "trivial_or_tightly_coupled": "main",
+      "complex_bug": "recommend subagents; do not switch silently",
+      "user": "explicit user override wins and is not re-asked"
+    },
+    "consent": "execution_mode is not a consent flag. Resolve it after implementation approval and before code changes. Hotfix work uses type 'bug'; no new work type is introduced."
+  },
+  "auto_merge_policy": {
+    "consent": "delivery === 'auto_merge', explicitly chosen for this feature/task. open_pr, local_test, and null never authorize a merge.",
+    "required_conditions": [
+      {
+        "type": "full_thread_inventory",
+        "description": "Paginate every PR's review threads to the end (GraphQL first/after until hasNextPage=false). Account for every thread; resolve only threads actually addressed. Zero threads before the configured expected review arrives is not completion."
+      },
+      {
+        "type": "required_checks",
+        "description": "All required CI checks pass on the latest head SHA."
+      },
+      {
+        "type": "expected_review",
+        "description": "The actually configured expected review (required reviewers, CODEOWNERS, review decision) is complete on the latest head SHA. Required approvals are current; no changes requested; no unresolved threads."
+      },
+      {
+        "type": "verification_clean",
+        "description": "Self-review, security audit, adversarial review, and the orchestrator's final whole-change review show no must-fix items and no high/critical findings."
+      },
+      {
+        "type": "mergeable_protected",
+        "description": "No merge conflicts. Branch protections are satisfied and never bypassed or disabled."
+      },
+      {
+        "type": "head_sha_recheck",
+        "description": "Every push invalidates all prior head-specific proof. Immediately before merging, re-read the latest head SHA and confirm it equals the SHA covered by checks, reviews, and verification. Pin the merge call with gh pr merge --match-head-commit <reviewed-sha>; a concurrent push must fail safely."
+      },
+      {
+        "type": "live_estate_extra_consent",
+        "description": "For data-pipeline, live_merge_approved === true for this task in addition to delivery === 'auto_merge'. Both development and main are live estates."
+      }
+    ],
+    "native_auto_merge": "Use a native auto-merge/merge queue only if it enforces every condition above. Otherwise merge only after a final explicit check immediately before the merge call.",
+    "watch_budget": {
+      "default_minutes": 30,
+      "default_fix_rounds": 3,
+      "override": "The user may override either limit for the task.",
+      "persist": "Record progress, deadline, and fix rounds in the track file. Deadline and round count are preserved on resume, never reset. There is no background daemon; if the session cannot continue, pause the watch as resumable.",
+      "on_timeout": "Pause, report the current head and open items, and resume only in a later session. Never claim background monitoring or completion."
+    },
+    "production": "Production promotion is separate human work. No workflow path merges to production or bypasses environment promotion."
+  },
+  "skip_semantics": {
+    "explicit_user_only": "Only an explicit user instruction authorizes a skip. Record it; never invent one.",
+    "recording": "Record the skip in state/track: brainstorming.user_skipped for brainstorming, or verification['skip:<phase>'] = 'user_skipped: <reason>' for another phase. Set phase_status=completed with the skip note; never claim the skipped artifact exists or that a check passed.",
+    "brainstorming": "A user request to skip brainstorming counts as scope approval for the stated request: set brainstorming.user_skipped=true, write the summary from the initial request, and set scope_approved=true. It does not approve implementation or delivery.",
+    "prep_phases": "A user request to skip feature PRD creation/splitting skips only those artifacts and proceeds to the implementation checkpoint. Scope approval still authorizes only preparation. Bugs/improvements skip these phases by type, not as user skips.",
+    "conditional_transitions": "Resolve one matching next transition per next_strategy key. A skipped conditional branch (e.g. pr_review on a clean merge) is not a failure.",
+    "artifact_override": "A recorded explicit user skip satisfies only that skipped phase's artifact conditions for gate evaluation (file exists, required sections, service PRDs). It never satisfies checkpoint authorization, delivery consent, merge conditions, verification evidence, or branch protections.",
+    "never_skippable": [
+      "implementation authorization before code changes",
+      "delivery consent",
+      "task plan and verification evidence",
+      "auto-merge conditions",
+      "live-estate merge approval",
+      "branch protections and required review",
+      "production promotion"
+    ],
+    "human_checkpoints": "A skip never crosses a human checkpoint. Automation flags pre-authorize scope/implementation; they are not skips. Delivery is always an explicit choice.",
+    "no_fake_completion": "Skipping an artifact does not create evidence. Never mark a check passed that did not run."
   },
   "gates": {
     "idle_to_brainstorming": {
       "from": "idle",
       "to": "brainstorming",
-      "description": "User has filed a new feature/bug/improvement request. Orchestra captures the intent and starts brainstorming.",
+      "description": "User has filed a new feature/bug/improvement request. Orchestra captures the intent and starts the scope checkpoint.",
       "conditions": [
         {
           "type": "user_intent_recorded",
@@ -23,11 +134,23 @@
     "brainstorming_to_prd_creation": {
       "from": "brainstorming",
       "to": "prd_creation",
-      "description": "Feature path only: all asked questions answered, summary written, user has signed off on direction. Zero-question brainstorms pass trivially.",
+      "checkpoint": "scope",
+      "auto_after_scope": true,
+      "description": "Feature path only. Once scope_approved is true the preparation phases run automatically: no per-document approval and no /workflow next. Zero-question brainstorms and automation.brainstorming both satisfy the same conditions.",
       "conditions": [
         {
+          "type": "type_check",
+          "description": "Feature path uses PRD phases.",
+          "check": "features[active_feature].type === 'feature'"
+        },
+        {
+          "type": "scope_approved",
+          "description": "Scope checkpoint satisfied. Authorizes preparation only.",
+          "check": "features[active_feature].scope_approved === true"
+        },
+        {
           "type": "questions_answered",
-          "description": "Every question that was actually asked has an `answer` field set. Obvious-answer decisions are recorded as decisions, not as questions.",
+          "description": "Every question actually asked has an answer. Obvious-answer decisions are recorded as decisions, not questions.",
           "check": "All entries in features[active_feature].brainstorming.questions[*] have answer !== null"
         },
         {
@@ -37,7 +160,6 @@
         },
         {
           "type": "phase_status_completed",
-          "description": "Phase marked completed after summary + user sign-off.",
           "check": "features[active_feature].phase_status === 'completed'"
         }
       ]
@@ -45,8 +167,9 @@
     "brainstorming_to_implementation": {
       "from": "brainstorming",
       "to": "implementation",
+      "checkpoint": "scope",
       "strategy": "bug_or_improvement",
-      "description": "Bug/improvement path only: skips prd_creation and prd_splitting — comprehensive PRDs are for features. Summary written; the branch is created at implementation entry.",
+      "description": "Bug/improvement path only: skips prd_creation and prd_splitting. Entering implementation reaches the checkpoint; branch creation and plan preparation happen there. No code changes before implementation approval.",
       "conditions": [
         {
           "type": "type_check",
@@ -54,8 +177,13 @@
           "check": "features[active_feature].type in ['bug', 'improvement']"
         },
         {
+          "type": "scope_approved",
+          "description": "Scope checkpoint satisfied. Authorizes branch/plan preparation only, never code changes.",
+          "check": "features[active_feature].scope_approved === true"
+        },
+        {
           "type": "summary_present",
-          "description": "Brainstorming summary captures direction and feeds implementation (and the eventual PR body context).",
+          "description": "Brainstorming summary (or initial-request summary when skipped) captures direction.",
           "check": "features[active_feature].brainstorming.summary is a non-empty string"
         },
         {
@@ -67,8 +195,13 @@
     "prd_creation_to_prd_splitting": {
       "from": "prd_creation",
       "to": "prd_splitting",
-      "description": "Main PRD exists with required frontmatter and sections. Phase advances directly to PRD splitting (which now also handles branch creation).",
+      "auto_after_scope": true,
+      "description": "Automatic feature preparation after scope approval. No per-document approval and no /workflow next. Main PRD must exist with required frontmatter and sections; this transition never authorizes code.",
       "conditions": [
+        {
+          "type": "scope_approved",
+          "check": "features[active_feature].scope_approved === true"
+        },
         {
           "type": "file_exists",
           "description": "PRD file must exist.",
@@ -93,16 +226,21 @@
     "prd_splitting_to_implementation": {
       "from": "prd_splitting",
       "to": "implementation",
-      "description": "Feature branch created from base AND main PRD split into per-service PRDs.",
+      "auto_after_scope": true,
+      "description": "Automatic feature preparation complete: feature branch created from base AND main PRD split into per-service PRDs/tracks. Entering implementation reaches the implementation checkpoint; remaining plan preparation may finish there. No code before implementation approval.",
       "conditions": [
         {
+          "type": "scope_approved",
+          "check": "features[active_feature].scope_approved === true"
+        },
+        {
           "type": "git_branch",
-          "description": "Agent has: (1) checked out base (develop for api/web/desktop, development for ai-service/data-service/data-pipeline), (2) pulled latest, (3) created <prefix>vc-<slug> from base where <prefix> is feature/ | fix/ | improvement/ per features[active_feature].type, (4) is currently on the feature branch.",
+          "description": "Agent is on the feature branch created from the latest base: <prefix>vc-<slug>, where <prefix> is feature/ | fix/ | improvement/ per type.",
           "check": "Current branch matches (feature|fix|improvement)/vc-<slug> (legacy form (feature|fix|improvement)/<worker>/vc-<slug> from pre-4.0 features is also accepted) AND equals features[active_feature].branch"
         },
         {
           "type": "file_exists",
-          "description": "Service PRDs must exist for each touched service.",
+          "description": "Service PRDs/tracks exist for each touched service.",
           "check": "features[active_feature].service_prds has entries for all services listed in main PRD frontmatter"
         },
         {
@@ -114,12 +252,22 @@
     "implementation_to_pr_submission": {
       "from": "implementation",
       "to": "pr_submission",
-      "description": "The single implementation path: orchestrator-verified parallel subagents then the PR pipeline.",
+      "description": "Implementation authorized, complete, and independently verified. Advances to the delivery checkpoint. Entering pr_submission is not delivery consent and authorizes no PR.",
       "conditions": [
         {
+          "type": "implementation_authorized",
+          "description": "Code work was authorized before it started.",
+          "check": "features[active_feature].implementation_approved === true OR features[active_feature].automation.implementation === true"
+        },
+        {
+          "type": "plan_and_verification_recorded",
+          "description": "Per-task plan and verification plan/evidence are recorded (verification map or track). Scaled to risk; no requirement to add tests or dependencies.",
+          "check": "features[active_feature].verification documents a plan and verification plan/evidence for the implementation round, or track entries record them"
+        },
+        {
           "type": "track_progress",
-          "description": "Track file must show progress.",
-          "check": "At least one task checked off in each service's track file"
+          "description": "All scoped implementation and acceptance work must be complete.",
+          "check": "Every scoped task and acceptance criterion in each service track is complete or explicitly deferred by the user; no unresolved must-fix remains. One checked task is not completion."
         },
         {
           "type": "git_branch",
@@ -128,8 +276,13 @@
         },
         {
           "type": "work_verified",
-          "description": "Orchestrator verification recorded (re-run checks, diff review, visual testing for UI work) — subagent 'done' claims are not accepted on trust.",
-          "check": "features[active_feature].verification is set for the current implementation round"
+          "description": "Orchestrator verification recorded with reproduced evidence: re-run targeted checks/lint/tests, diff review, visual testing for UI, adversarial review, and final whole-change review. Subagent 'done' claims are not accepted on trust; tests are evidence, never 'formal proof'.",
+          "check": "features[active_feature].verification is set for the current implementation round and records no must-fix or high/critical findings"
+        },
+        {
+          "type": "todo_reconciled",
+          "description": "TODO reconciles every task and the original request before the delivery checkpoint.",
+          "check": "Track/verification records that all tasks and the original request were reconciled, with open items called out explicitly"
         },
         {
           "type": "phase_status_completed",
@@ -141,8 +294,13 @@
       "from": "pr_submission",
       "to": "pr_review",
       "strategy": "has_feedback",
-      "description": "PR is open and has reviewer or bot feedback (comments, change requests, or failing automated checks). Self code-review and security audit must have already passed during pr_submission.",
+      "description": "PR is open and has reviewer or bot feedback. delivery must authorize PR opening (open_pr or auto_merge); self code-review and security audit must have already passed.",
       "conditions": [
+        {
+          "type": "delivery_allows_pr",
+          "description": "delivery is open_pr or auto_merge. local_test has not opened a PR yet and stays pending; null fails closed.",
+          "check": "features[active_feature].delivery in ['open_pr', 'auto_merge']"
+        },
         {
           "type": "self_review_passed",
           "description": "The orchestrator's self code-review must be recorded as passed in the PR body.",
@@ -159,9 +317,13 @@
           "check": "features[active_feature].pr_urls has at least one entry and `gh pr view` succeeds for each"
         },
         {
+          "type": "feedback_action_authorized",
+          "check": "delivery === 'auto_merge' OR a separate explicit request to address this task\u0027s feedback is recorded in the track. open_pr alone authorizes opening and stopping, not fixes."
+        },
+        {
           "type": "has_feedback",
           "description": "PR has at least one open review thread, change request, or failing check.",
-          "check": "`gh pr view --json reviewDecision,comments,reviews` shows reviewDecision === 'CHANGES_REQUESTED' OR any unresolved review thread OR any open review comment"
+          "check": "For every PR, fully paginate GraphQL reviewThreads and REST comments/reviews, inspect effective reviewDecision, and read gh pr checks/statusCheckRollup on the current head. There is an unresolved thread, an outstanding finding/change request, or a failing required check."
         },
         {
           "type": "phase_status_completed",
@@ -173,8 +335,12 @@
       "from": "pr_submission",
       "to": "completion",
       "strategy": "merged_clean",
-      "description": "PR merged with zero reviewer or bot feedback. Bypasses pr_review.",
+      "description": "PR merged with no outstanding reviewer or bot feedback. Bypasses pr_review. delivery must authorize PR opening; if the orchestrator merged, delivery=auto_merge and auto_merge_policy must have passed.",
       "conditions": [
+        {
+          "type": "delivery_allows_pr",
+          "check": "features[active_feature].delivery in ['open_pr', 'auto_merge']"
+        },
         {
           "type": "self_review_passed",
           "check": "PR body contains a self-review section with no must-fix items"
@@ -190,8 +356,13 @@
         },
         {
           "type": "no_feedback",
-          "description": "PR has zero review comments and zero change requests across its lifetime.",
-          "check": "`gh pr view --json comments,reviews` shows no comments and no reviews with state CHANGES_REQUESTED or COMMENTED"
+          "description": "No outstanding feedback remains; historical addressed comments do not block completion.",
+          "check": "For every PR, fully paginate GraphQL reviewThreads and REST comments/reviews: all threads resolved and addressed, no outstanding finding or effective change request. Historical comments with recorded resolution are not open feedback."
+        },
+        {
+          "type": "merge_authorized",
+          "description": "If the orchestrator merged, delivery=auto_merge and every auto_merge_policy condition passed on the latest head. If a human merged, record the human merge; never claim auto-merge proof and never bypass protections.",
+          "check": "Human merge recorded, OR (delivery === 'auto_merge' AND auto_merge_policy fully satisfied AND latest head SHA rechecked immediately before merge)"
         },
         {
           "type": "phase_status_completed",
@@ -202,17 +373,26 @@
     "pr_review_to_completion": {
       "from": "pr_review",
       "to": "completion",
-      "description": "All review threads resolved and PR merged.",
+      "description": "All pages of review threads resolved and PR merged. If the orchestrator merged, auto_merge_policy must have passed; a human merge is recorded as such.",
       "conditions": [
         {
+          "type": "delivery_allows_pr",
+          "check": "features[active_feature].delivery in ['open_pr', 'auto_merge']"
+        },
+        {
           "type": "threads_resolved",
-          "description": "Every review thread has resolution.",
-          "check": "`gh api repos/{owner}/{repo}/pulls/{n}/reviews` shows zero unresolved threads"
+          "description": "Full paginated review-thread inventory is accounted for; every thread is resolved and only addressed threads were resolved.",
+          "check": "`gh api graphql` reviewThreads pagination reaches hasNextPage=false and every node has isResolved === true"
         },
         {
           "type": "pr_merged",
           "description": "All PRs must be merged.",
           "check": "`gh pr view --json state` returns 'MERGED' for all entries in pr_urls"
+        },
+        {
+          "type": "merge_authorized",
+          "description": "If the orchestrator merged, delivery=auto_merge and every auto_merge_policy condition passed on the latest head. If a human merged, record the human merge; never claim auto-merge proof and never bypass protections.",
+          "check": "Human merge recorded, OR (delivery === 'auto_merge' AND auto_merge_policy fully satisfied AND latest head SHA rechecked immediately before merge)"
         },
         {
           "type": "phase_status_completed",

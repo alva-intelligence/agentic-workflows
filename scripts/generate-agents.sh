@@ -67,10 +67,10 @@ info "Fragments: $FRAGMENTS_DIR"
 
 # ── Read version ─────────────────────────────────────────────────────────────
 VERSION="unknown"
-if [[ -f "$CACHE_DIR/.version" ]]; then
-  VERSION=$(cat "$CACHE_DIR/.version" | tr -d '[:space:]')
-elif [[ -f "$CACHE_DIR/VERSION" ]]; then
+if [[ -f "$CACHE_DIR/VERSION" ]]; then
   VERSION=$(cat "$CACHE_DIR/VERSION" | tr -d '[:space:]')
+elif [[ -f "$CACHE_DIR/.version" ]]; then
+  VERSION=$(cat "$CACHE_DIR/.version" | tr -d '[:space:]')
 elif [[ -f "$WORKSPACE_ROOT/VERSION" ]]; then
   VERSION=$(cat "$WORKSPACE_ROOT/VERSION" | tr -d '[:space:]')
 fi

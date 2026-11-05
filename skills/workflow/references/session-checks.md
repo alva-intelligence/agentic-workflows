@@ -19,7 +19,7 @@ After pulling the current branch, check whether each service repo that has a **f
    cd -
    ```
 3. If `behind > 0`, the feature branch is missing commits from the base branch. **Do NOT auto-merge or auto-rebase** — this can produce conflicts that require manual resolution.
-4. **Use your ask tool** (Claude Code: `AskUserQuestion`; Cursor: ask tool; OpenCode: question tool; Amp: ask as plain text and wait) to surface the situation:
+4. **Use the current harness's structured ask capability** (or plain text and wait if unavailable) to surface the situation:
 
    > "The `<service>` feature branch is **N commits behind `<base-branch>`**. Stale branches often cause conflicts at PR time. Would you like me to:
    > - Merge `<base-branch>` into the feature branch now (default)

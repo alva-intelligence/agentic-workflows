@@ -18,34 +18,36 @@ Display this welcome message:
 Welcome to frndOS Agentic Workflows!
 
 frndOS is a multi-service platform built by Alva Intelligence. This system sets up
-your development workspace and guides you through a structured feature development
-workflow — from brainstorming to implementation, PR submission, and review handling.
+your development workspace and guides you through a three-checkpoint workflow —
+scope, implementation, and delivery — with automatic preparation between the
+scope and implementation checkpoints.
 
 What gets installed:
-  - An orchestrator-model instruction set: the running agent drives all phases.
-    No agent roster — implementation is delegated to parallel subagents
-    (right model + reasoning effort per task; inter-harness intercom when supported)
-  - 9 skills (/onboard, /workflow, /workflow-update, /brainstorm, /prd, /prd-split,
-    /pr-feedback, /visual-testing, /setup-workspace)
-  - A phase workflow state machine with gate enforcement (with `phase_status` per
-    phase — `idle` / `inprogress` / `completed`, no auto-advance; bugs/improvements
-    skip the PRD phases and go straight to implementation)
-  - browser-use visual testing — the agent verifies UI work itself, headless-first
+  - An orchestrator-model instruction set: the running agent is the technical lead.
+    Implementation is delegated to independent subagents when useful, with the
+    right model and reasoning effort per task and optional parent-child or
+    sibling messaging where the environment supports it.
+  - 9 skills (/onboard, /workflow, /workflow-update, /brainstorm, /prd,
+    /prd-split, /pr-feedback, /visual-testing, /setup-workspace)
+  - A three-checkpoint workflow state machine: scope → automatic preparation →
+    implementation → delivery. Bugs and improvements skip comprehensive PRDs.
+  - Visual testing of UI work — the agent reproduces rendering claims itself.
   - Auto-updating instruction system (stays in sync with team changes)
   - Templates for PRDs, service PRDs, track files, and PRs
 
-Supported tools: Claude Code, Cursor, OpenCode, Amp (and any tool supporting SKILL.md)
+Supported: any agent environment that loads SKILL.md skills and can delegate work.
+Capability differences (delegation, messaging, model selection) degrade gracefully.
 ```
 
 ### Step 2: Ask for confirmation
 
-Use your **ask tool** (Claude Code: `AskUserQuestion`, Cursor: ask tool, OpenCode: question tool; Amp has no dedicated ask tool — ask as plain text and wait):
+Use your environment's question capability if it has one; otherwise ask in plain text and wait:
 
 > "Would you like to set up frndOS and start the agentic workflow?"
 > - Yes, set it up
 > - No, not now
 
-**Do NOT proceed without explicit confirmation.** The ask tool blocks until the user responds.
+**Do NOT proceed without explicit confirmation.** If your environment has a blocking ask capability, use it so the run pauses for the answer.
 
 ### Step 3: If yes — run the bootstrap (DO NOT CLONE)
 
@@ -62,8 +64,8 @@ This downloads skills, fragments, templates, and workflow configs into `.agentic
 
 1. Read the generated `AGENTS.md` file in the workspace root
 2. Follow the **Session Start Protocol** — it detects this is a fresh workspace
-3. Use your **ask tool** to ask: "Would you like to start onboarding now?"
-4. If yes: Read `.agents/skills/onboard/SKILL.md` and execute the onboarding directly in this session
+3. Ask: "Would you like to start onboarding now?"
+4. If yes: read `.agents/skills/onboard/SKILL.md` and execute onboarding directly in this session
 5. Onboarding walks through: GitHub access, service selection, cloning, dependencies, .env files, database, editor config, and MCP setup
 
 ### Flow summary
@@ -86,107 +88,192 @@ This repo is the single source of truth for frndOS AI agent instructions. It is 
 
 ### See it work
 
-A complete feature lifecycle — from idea to merged PRs. The agent orchestrates; subagents do the work; the orchestrator verifies everything.
+A complete feature lifecycle — from idea to merged PRs. The agent leads; independent subagents execute when useful; the lead verifies everything and stops at three human checkpoints.
 
 ```
 You:    /workflow start brand-health-dashboard
-Agent:  [asks for type (feature) and initial request]
-        Feature "brand-health-dashboard" started. Phase: brainstorming.
-        [(orchestrator) loads service snapshots from the code itself; resolves
-         ambiguity from evidence; decides the obvious answers itself and records
-         them as decisions; asks you only what genuinely needs you — zero
+Agent:  [captures type (feature) and request, enters scope]
+        [loads real service state, decides what evidence can decide, asks only
+         what genuinely needs you, records decisions with rationale]
+        Scope checkpoint: direction + summary + decisions.
+        Approve this scope? [yes]
+        → scope_approved (authorizes preparation only, never code)
 
-         questions is a normal outcome]
-        Brainstorming complete. → phase_status: completed.
+Agent:  [automatic preparation — no per-document approval, no /workflow next]
+        main PRD → feature branch created locally → service PRDs → track files
+        with per-task plans and verification plans. The branch is not pushed yet:
+        push waits for delivery (open_pr / auto_merge) or an explicit push request.
+        Implementation checkpoint: one package with scope summary, branch,
+        services, tracks, plans, risks, and resolved execution mode
+        (feature/improvement default: independent subagents).
+        Approve implementation? [yes]
+        → implementation_approved (authorizes code changes)
 
-You:    /workflow next
-Agent:  → Phase: prd_creation.
-        [drafts PRD using brainstorming summary + your context, includes a
-         Brainstorming Outcome section]
-        PRD created. → phase_status: completed.
+Agent:  [implements; delegates independent work; lead re-runs checks, reviews
+         diffs, visual-tests UI, runs adversarial review, personally reviews
+         the whole change, reconciles TODO against the original request]
+        Delivery checkpoint: local_test, open_pr, or auto_merge? [open_pr]
 
-You:    /workflow next
-Agent:  → Phase: prd_splitting.
-        [creates feature/vc-brand-health-dashboard branch from develop]
-        [splits main PRD into api + web service PRDs, generates track files]
-        Service PRDs created. → phase_status: completed.
-
-You:    /workflow next
-Agent:  → Phase: implementation.
-        [dispatches ONE parallel subagent batch: api task + web task, with
-         dependency edges; each subagent uses the right model/effort for its
-         work and self-verifies (lint, tests) + visual-tests its own UI]
-        [steers via intercom when a subagent needs course-correction mid-run]
-        [subagents report done — claims, not facts]
-        [re-verifies: re-runs checks, reviews diffs, visual-tests the UI paths
-         itself via browser-use]
-        Implementation verified. → Phase: pr_submission.
-
-Agent:  [self code-review on the whole diff — can delegate a fresh-eyes
-         reviewer subagent, still owns the result]
-        [runs the security-reviewer skill audit]
-        [opens PR with both summaries appended to the body]
+Agent:  [self-review + security audit, opens PR, stops before merge]
         API PR: github.com/.../pull/201
         Web PR: github.com/.../pull/88
 
 You:    API reviewer requested changes on the pagination endpoint.
-Agent:  → Phase: pr_review.
-        [loads the pr-feedback skill: reads threads + bot findings, classifies
-         must-fix / nit / question, applies fixes, pushes, replies on each
-         thread, marks resolved via GraphQL]
-        Threads resolved. → phase_status: completed.
+        Please address them.
+Agent:  [records the separate feedback request, then loads the pr-feedback skill:
+         paginates every thread, classifies must-fix / nit / question, fixes
+         what is valid, replies, resolves only addressed threads]
+        Threads resolved.
 
-You:    /workflow next
-Agent:  → Phase: completion.
-        [updates track file, marks feature complete]
+You:    I merged both PRs.
+Agent:  [verifies both PRs actually report MERGED, records the human merge]
+        → completion → idle.
 
-Note: if the PR had merged with zero feedback, the workflow would have
-advanced from pr_submission directly to completion (skipping pr_review).
+Note: auto_merge is a separate per-task opt-in. The agent opens, monitors,
+fixes, and merges only under the full fail-closed conditions below, within a
+bounded watch (default 30 minutes / 3 fix rounds). It rechecks the latest head
+SHA immediately before merging and pins the merge with
+--match-head-commit <reviewed-sha>. data-pipeline needs a separate live-estate
+approval; production promotion stays separate human work.
 
-Bug or improvement? /workflow start same steps, type = fix/improvement →
-brainstorming (light) → implementation directly — no PRD phases. The branch
-is created at implementation entry.
+Bug or improvement? type = bug/improvement/hotfix → scope checkpoint →
+implementation checkpoint directly — no PRD phases. The branch and task plans
+are created on implementation entry. Hotfix work is stored as type bug; there
+is no separate hotfix type.
 ```
-
-You described a dashboard. The agent wrote the PRD, ran parallel implementation
-subagents, verified their work itself, handled code review, and shipped merged
-PRs. You steered; the orchestrator did the rest — and didn't trust its
-subagents' claims without re-checking.
 
 ### Workflow State Machine
 
-Phases with gate enforcement. `pr_review` is conditional (skipped on a clean merge). Features path through the PRD phases; bugs/improvements skip them and go straight to implementation. Every phase carries a `phase_status` (`idle` / `inprogress` / `completed`); `completed` does NOT auto-advance.
+Three human checkpoints. Everything between scope and implementation is automatic preparation; everything after delivery is execution plus verification. `pr_review` is conditional (skipped on a clean merge).
 
 ```
-idle → brainstorming → [features: prd_creation → prd_splitting] →
-  implementation → pr_submission → [pr_review?] → completion → idle
+idle → brainstorming [SCOPE] → [features: prd_creation → prd_splitting] →
+  implementation [IMPLEMENTATION] → pr_submission [DELIVERY] →
+  [pr_review?] → completion → idle
+
+features:         brainstorming → prd_creation → prd_splitting → implementation
+                  (prd_creation/prd_splitting advance automatically after scope)
+bug/improvement:  brainstorming → implementation
+                  (branch + plans prepared at implementation entry)
 ```
+
+- `phase_status` (`idle` / `inprogress` / `completed`) records phase work only. `completed` does NOT authorize crossing any checkpoint, opening a PR, merging, or skipping a gate.
+- No implementation → completion shortcut. `implementation` only advances to `pr_submission`; completion is reachable only through the delivery checkpoint (and `pr_review` when there is feedback).
+- `local_test` keeps the delivery checkpoint pending. The feature does not complete until the user finishes manual testing and then chooses `open_pr` or `auto_merge`.
 
 ![Workflow State Machine](./docs/workflow-state-machine.svg)
 
-### Orchestrator Model
+### Three human checkpoints
 
-There is no agent roster and no pre-defined workflow agents. **The running agent
-is the orchestrator**: it verifies user claims, researches, plans, delegates
-implementation, and verifies everything it receives.
+Only three moments need a person. Every other step is automatic preparation or verified execution.
 
-- **Delegation, parallel-first.** Implementation tasks are batched in one
-  parallel subagent delegation, via whatever subagent/delegation capability the
-  current harness exposes — every harness names this differently. Dependency
-  edges only when ordering matters.
-- **Right model and effort per task.** Heavy reasoning for planning/review,
-  cheap fast models for mechanical edits — where the harness allows it.
-- **Intercom.** If the harness supports mid-run messaging with running
-  subagents (steering, answering subagent questions, team mailboxes — the
-  mechanism differs per harness), the orchestrator steers drifting work and
-  answers subagent questions without killing runs — and lets siblings
-  coordinate interface details directly when sibling-to-sibling messaging
-  exists. Otherwise all coordination routes through the orchestrator.
-- **Subagent scope.** Each implementation subagent covers a service end-to-end:
-  implement, verify its own work, visual-test its UI. Subagents never ask the
-  user and never open PRs or advance phases.
-- **Never trust claims.** Subagent "done" is a claim. Re-run checks, review
-  diffs, visual-test via browser-use yourself.
+| Checkpoint | Where | Authority | What it authorizes |
+|---|---|---|---|
+| **Scope** | end of `brainstorming` | `scope_approved: true` | Preparation only: PRDs, branch, tracks, plans. Never code changes. |
+| **Implementation** | between preparation and the first code change | `implementation_approved: true` or `automation.implementation: true` | Writing, changing, or deleting project code. |
+| **Delivery** | after independent verification, at `pr_submission` | `delivery: "local_test" \| "open_pr" \| "auto_merge"`; `live_merge_approved: true` separately for a live estate | What happens to the verified work. |
+
+**Independent authority.** Scope approval, implementation auto-start, and merge consent are separate:
+
+- `scope_approved` never authorizes code changes.
+- Reaching `implementation` with a prepared branch and plans is not implementation approval.
+- `delivery: "auto_merge"` never authorizes a live-estate merge.
+- Missing authorization fails closed: no PR, no merge, no publication.
+- Branch creation is local. A push waits for `delivery: open_pr` / `auto_merge`, or a separate explicit user instruction to push; scope and implementation approval alone never authorize a push.
+- Do not re-ask a checkpoint the user already approved or preauthorized. Record it once and continue.
+
+**Opt-in automation.** Automation is per-feature, user-granted, and conservative:
+
+| Flag | Default | Effect |
+|---|---|---|
+| `automation.brainstorming` | `false` | The agent may record recommended/chosen directions and set `scope_approved` without a second ask. Destructive, taste-based, or expensive-to-reverse decisions still stop for the user. |
+| `automation.implementation` | `false` | Implementation entry is preauthorized after preparation, with no second ask. Independent of scope approval. |
+
+`automation` has no delivery or merge powers. It never opens a PR, merges, changes a live estate, or promotes to production. Do not invent other flags; record any other standing permission in the track and the relevant `verification` entry.
+
+**Execution defaults.** `execution_mode` is resolved before implementation starts and is not a consent flag:
+
+| Work | Default |
+|---|---|
+| `feature` | independent subagents |
+| `improvement` | independent subagents |
+| `bug` (including hotfix) | main agent |
+| trivial or tightly coupled task | main agent, any type, with rationale recorded |
+| complex bug | may recommend subagents; never switch silently |
+| user override | wins, recorded, not asked again |
+
+### State contract and migration
+
+The checkpoint fields are optional per-feature state. Every default is safe when the field is absent:
+
+```json
+{
+  "scope_approved": false,
+  "automation": { "brainstorming": false, "implementation": false },
+  "execution_mode": null,
+  "implementation_approved": false,
+  "delivery": null,
+  "live_merge_approved": false
+}
+```
+
+| Field | Values | Default | Set by |
+|---|---|---|---|
+| `scope_approved` | boolean | `false` | Scope checkpoint (explicit agreement, recorded skip, or `automation.brainstorming`) |
+| `automation.brainstorming` | boolean | `false` | Explicit user instruction |
+| `automation.implementation` | boolean | `false` | Explicit user instruction |
+| `execution_mode` | `"main"` \| `"subagents"` \| `null` | `null` | Resolved before implementation; user override wins |
+| `implementation_approved` | boolean | `false` | Implementation checkpoint or `automation.implementation` |
+| `delivery` | `"local_test"` \| `"open_pr"` \| `"auto_merge"` \| `null` | `null` | Explicit user instruction only, per feature/task |
+| `live_merge_approved` | boolean | `false` | Separate explicit user approval for this task |
+
+A user-requested brainstorming skip counts as **scope approval only**. It never authorizes implementation, delivery, or a push.
+
+**Migration rules**
+
+- Existing `.workflow-state.json` files without these fields remain valid. Read an absent field as its safe default; do not rewrite state just to add fields.
+- A feature copied from an older workspace has no recorded checkpoint authority. Re-confirm the pending checkpoint before crossing it.
+- A feature reconstructed from branch/PRD/track/PR artifacts never inherits scope, implementation, delivery, or live-merge consent. Reset the checkpoint fields to their safe defaults and re-confirm.
+- Verified, explicitly persisted consent for the **same task** may survive resume. Never infer consent from artifacts, copy it from another task, carry it across a new scope/target, or treat a global default as consent.
+- `phase_status: "completed"` is evidence that the phase's artifacts/checks are satisfied. It does not cross a checkpoint, and preparation phases do not need `/workflow next`.
+
+### Delivery and auto-merge
+
+Delivery is chosen once at the checkpoint, after independent verification. `delivery: null` fails closed: no PR, no merge, no live publication.
+
+| Delivery | Result |
+|---|---|
+| `local_test` | The user manually tests the verified work locally first. No PR is opened, the branch/worktree/server stays available, and `pr_submission` stays pending. The feature never completes from a local test: after the user reports the result, they choose `open_pr` or `auto_merge` (or test again). |
+| `open_pr` | Self-review and security audit, then open the PR(s) and stop before any merge. Address feedback only on a separate explicit request; merging is a human action. |
+| `auto_merge` | Explicit per-task consent to open, monitor, fix, and merge under the full auto-merge gate below. |
+
+**Auto-merge gate** — every condition must hold on the current head:
+
+1. **Authority.** `delivery` is explicitly `auto_merge` for this task; `implementation_approved` is true; `live_merge_approved` is true for a live estate. Missing any authorization means no merge.
+2. **Full feedback inventory.** Paginate every review-thread page and every PR-level comment/review. Every thread is resolved; resolve only threads actually addressed. Historical addressed comments do not count as open feedback. Zero threads before the configured expected review arrives is not completion.
+3. **Required checks and review on the latest head.** All required CI checks pass on the latest commit. The review the repository actually requires (required approvals, CODEOWNERS, bot review) has completed on that same head.
+4. **Approvals current.** No changes requested, required approvals present for the latest head, no merge conflicts, and every branch protection satisfied.
+5. **Proof package clean.** Self-review, security audit, adversarial review, and the final whole-change review are recorded with no must-fix items and no high/critical findings.
+6. **Head-specific proof.** Every push invalidates prior head-specific proof. Re-read the latest head SHA and re-run the merge-critical checks immediately before merging; record the SHA and pin the merge command with `--match-head-commit <reviewed-sha>`.
+7. **No bypass.** Never bypass branch protections, admin-merge, force-push a shared branch, or disable/skip a required check.
+8. **Native mechanisms.** Prefer a native auto-merge or merge queue only when it enforces these same conditions. Otherwise wait for checks and merge normally.
+
+**Bounded watch.** Default 30 minutes and 3 fix rounds, unless the user overrides one. Progress, deadline, rounds, and last checked head SHA live in the track; a timeout or session end pauses the watch as resumable. There is no background daemon; never claim background monitoring or completion.
+
+**Live estates.** `data-pipeline` is live even on `development` — a merge is running work. `delivery: "auto_merge"` alone is insufficient: require a separate explicit approval for that task and record `live_merge_approved: true`. Production promotion remains separate human work; no workflow path performs or bypasses it.
+
+### Technical lead contract
+
+The running agent is the technical lead. It owns planning, verification, and the final verdict. Subagents execute delegated units; their "done" is a claim, not a fact.
+
+- **Plan + verification plan for every task, scaled to risk.** Before implementation, each task gets a short plan (approach, touched areas, dependencies, risks) and a verification plan (expected evidence, exact checks, risk level).
+- **Evidence, not claims.** Re-run checks, read the diff against the task, and reproduce behavior yourself. Record commands and observed results. Never describe checks or tests as "formal verification" or "formal proof".
+- **Independent subagents when useful.** Delegate independent work in one batch, use dependency edges only when ordering matters, and steer through optional parent-child or sibling messaging when the environment supports it. Otherwise coordinate through the lead.
+- **Adversarial review and final whole-change review.** Use an independent reviewer (a fresh subagent or a separate pass) to attack the change, then personally review the whole diff end to end before delivery.
+- **Resources.** Before intensive work (browser automation, builds, migrations, data jobs), check disk, memory, and CPU headroom. Bound concurrency. Release only resources the task owns (processes, ports, tabs, temp files); never kill shared infrastructure.
+- **TODO reconciliation.** Update the task checklist after each completed task. Before the final report, reconcile the checklist and the original request: every requested item accounted for, nothing extra silently added.
+
+**Verification policy.** No dependency is added for testing, and no new test infrastructure is scaffolded by default. Existing targeted tests, lint, type checks, build checks, and manual reproduction are the default evidence. For non-trivial logic, leave one small runnable regression check; reuse an existing check where sufficient. A trivial one-line change needs none. New suites, frameworks, or test dependencies are not part of default verification. Never run an entire suite when a targeted check answers the question.
 
 ![Agent Architecture](./docs/agent-architecture.svg)
 
@@ -221,28 +308,28 @@ Then generates all configuration files — fragments, skills, schemas, templates
 
 ### Skills
 
-Skills are slash commands you invoke directly. They're the entry points for each workflow action. **Note:** Amp has no slash commands — it auto-loads skills based on their `description` frontmatter when you express the intent in natural language (e.g., "start a new feature called user-profiles" loads the workflow skill).
+Skills are slash commands you invoke directly. They're the entry points for each workflow action. Some environments auto-load a skill based on its `description` when you express the intent in natural language instead of typing the slash command.
 
 | Skill | What it does |
 |-------|-------------|
 | `/onboard` | Full workspace setup — GitHub access, service cloning, dependencies, .env files, database, editor config, MCP servers. Optional services (data-pipeline, desktop) included or skipped here. Run once after bootstrap. |
-| `/workflow start <slug>` | Start a new feature, bug, or improvement run. Creates workflow state and enters the phase machine. |
-| `/workflow status` | Show current feature phase, phase_status, branch, PRDs, PRs — everything at a glance. |
-| `/workflow next` | Advance to the next phase (checks gate conditions first). Bugs/improvements jump from brainstorming straight to implementation. |
-| `/workflow switch <slug>` | Context-switch between active features. Each keeps its own phase. |
-| `/workflow resume <slug>` | Pick up someone else's feature. Reconstructs phase from committed artifacts. |
+| `/workflow start <slug>` | Start a feature, bug, or improvement run. Creates workflow state and enters the scope checkpoint. |
+| `/workflow status` | Show current phase, phase_status, checkpoints, branch, PRDs, tracks, PRs, and review watch. |
+| `/workflow next` | Optional explicit, gate-checked transition. Not required for automatic preparation and cannot substitute for a checkpoint approval. |
+| `/workflow switch <slug>` | Context-switch between active features. Each keeps its own phase and checkpoint state. |
+| `/workflow resume <slug>` | Pick up someone else's feature. Reconstructs artifacts/phase; checkpoint authority is not inherited. |
 | `/workflow list` | List all local features with their phases. |
 | `/workflow list-all` | Discover ALL features across the team — scans branches, worktrees, PRDs, track files. |
 | `/workflow worktrees` | Offer/parallelize work via git worktrees. |
-| `/workflow progress` | Detailed progress: phase timeline, task completion %, session logs. |
+| `/workflow progress` | Detailed progress: phase timeline, checkpoint table, task completion, plans/evidence, review watch. |
 | `/workflow-update` | Update agentic-workflows instructions. Runs update script, summarizes changes, applies non-trivial updates (settings, schema migrations). |
 | `/workflow-update check` | Dry-run — check for available updates without applying. |
 | `/workflow-update verify` | Health check — verify symlinks, settings, AGENTS.md, version are correct. |
-| `/brainstorm` | Run the brainstorming phase — resolve ambiguity from evidence, decide the obvious, ask only what needs the user. |
-| `/prd` | Create a formal PRD from the brainstorming summary + your description (feature path only). |
-| `/prd-split` | Create the feature branch + split a main PRD into per-service PRDs (feature path only). |
-| `/pr-feedback` | Address PR review feedback — inventory every thread, classify each finding, fix or reply, then resolve via GraphQL. |
-| `/visual-testing` | browser-use visual validation of UI claims — what to click, what to check, screenshot evidence, strict resource discipline. |
+| `/brainstorm` | Run the scope checkpoint — resolve ambiguity from evidence, decide the obvious, ask only what needs the user. |
+| `/prd` | Automatic preparation: create the main PRD from the approved scope (feature path only). |
+| `/prd-split` | Automatic preparation: create the feature branch locally + split the main PRD into per-service PRDs and tracks (feature path only). |
+| `/pr-feedback` | Address PR review feedback — full paginated thread inventory, classify each finding, fix or reply, resolve only addressed threads. |
+| `/visual-testing` | Visual validation of UI claims — what to click, what to check, screenshot evidence, strict resource discipline. |
 | `/setup-workspace` | Interactive wizard to create a brand new agentic workspace for a different project using this framework as the base. |
 
 ### How auto-update works
@@ -266,27 +353,36 @@ agentic-workflows/
     fragments/            # Markdown fragments assembled into AGENTS.md
                           #   (orchestrator model, session protocol, conventions)
     AGENTS.md.template    # Template with {{FRAGMENT:...}} markers
+  docs/
+    workflow-state-machine.svg  # Three-checkpoint phase machine
+    agent-architecture.svg      # Technical-lead + execution + delivery architecture
+    DECISIONS-LEDGER.md         # Direction-change history and open questions
   scripts/
     update-check.sh       # Downloads updates from this repo
     generate-agents.sh    # Assembles AGENTS.md from fragments
+    check-manifest-coverage.py  # Every distributed file is declared (CI)
+    check-workflow.py     # Workflow metadata + generator version regression (CI)
   skills/
     onboard/              # /onboard — full workspace setup
     workflow/             # /workflow — state machine management
     workflow-update/      # /workflow-update — update + apply non-trivial changes
-    brainstorm/           # /brainstorm — evidence-first ambiguity resolution
-    prd/                  # /prd — PRD creation (feature path)
-    prd-split/            # /prd-split — branch creation + split PRD (feature path)
+    brainstorm/           # /brainstorm — evidence-first scope checkpoint
+    prd/                  # /prd — automatic main PRD preparation
+    prd-split/            # /prd-split — branch + service split preparation
     pr-feedback/          # /pr-feedback — address + resolve PR review threads
-    visual-testing/       # /visual-testing — browser-use visual validation
+    visual-testing/       # /visual-testing — visual validation of UI work
     setup-workspace/      # /setup-workspace — wizard to create new agentic workspaces
   templates/
     prd/                  # PRD document templates
     pr/                   # PR body templates
     tracks/               # Track file templates
   workflow/
-    phases.json           # Phase state machine definitions (with skip paths)
-    gates.json            # Gate conditions per phase transition
-    state-schema.json     # JSON schema for .workflow-state.json
+    phases.json           # Phase state machine definitions (checkpoints + auto paths)
+    gates.json            # Gate conditions, checkpoint rules, delivery policy
+    state-schema.json     # JSON schema for .workflow-state.json (optional consent fields)
+  .github/workflows/
+    check-manifest-coverage.yml  # CI: manifest coverage + workflow metadata
+    update-manifest.yml          # CI: rehash distributed files on main
   manifest.json           # File registry with SHA-256 hashes
   VERSION                 # Semver (patch auto-bumped by CI)
 ```
@@ -301,9 +397,13 @@ agentic-workflows/
 To add a new distributable file, add an entry to `manifest.json` with:
 - File path as key, `sha256: "PLACEHOLDER"`, `install_to` path, and `type`
 
+Repo-internal checks (`scripts/check-workflow.py`, `scripts/check-manifest-coverage.py`) are deliberately excluded from `manifest.json`: they validate this repository's own declarative files in CI and are not part of an onboarded workspace's runtime.
+
 ### Key conventions
 
 - Commit messages with `[skip ci]` or `[manifest]` skip the update Action
 - All distributable files must be registered in `manifest.json`
 - Skills use the universal `.agents/skills/` path (symlinked to `.claude/`, `.cursor/`, `.opencode/`)
 - AGENTS.md (generated from fragments) is the single instruction surface — no per-tool agent files
+- Workflow metadata is declarative JSON; no runtime engine executes it. CI asserts that phases, gates, schema references, checkpoint fields, and the generator version handling agree
+- Checkpoint authority is explicit per feature/task; absent consent fields default safe and never inherit across tasks

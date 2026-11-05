@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 500" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 710" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
   <defs>
     <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="10" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#444"/>
@@ -6,109 +6,122 @@
     <marker id="arrow-purple" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="10" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#9c36b5"/>
     </marker>
-    <marker id="arrow-green" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="10" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#2f9e44"/>
-    </marker>
     <filter id="shadow" x="-4%" y="-4%" width="108%" height="116%">
       <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.08"/>
     </filter>
   </defs>
 
-  <text x="550" y="28" text-anchor="middle" font-size="20" font-weight="700" fill="#1e1e1e">frndOS Orchestrator Architecture</text>
-  <text x="550" y="48" text-anchor="middle" font-size="12" fill="#757575">one orchestrator · parallel subagents · intercom · visual verification</text>
+  <text x="560" y="30" text-anchor="middle" font-size="21" font-weight="700" fill="#1e1e1e">frndOS Technical-Lead Architecture</text>
+  <text x="560" y="51" text-anchor="middle" font-size="12" fill="#757575">three human checkpoints · independent execution · evidence verification · fail-closed delivery</text>
 
-  <!-- Orchestration zone -->
-  <rect x="180" y="60" width="590" height="90" rx="12" fill="#e5dbff" stroke="#9c36b5" stroke-width="1" opacity="0.35"/>
-  <text x="192" y="74" font-size="10" fill="#7048a0" font-weight="600">ORCHESTRATOR (the running agent — no agent files)</text>
+  <!-- Human checkpoints -->
+  <rect x="25" y="68" width="1070" height="76" rx="12" fill="#fff4e6" stroke="#f08c00" stroke-width="1" opacity="0.45"/>
+  <text x="37" y="84" font-size="9" font-weight="600" fill="#946100">HUMAN CHECKPOINTS — THE ONLY REQUIRED STOPS</text>
+  <rect x="40" y="92" width="250" height="44" rx="8" fill="#ffd8a8" stroke="#e8590c" stroke-width="2" filter="url(#shadow)"/>
+  <text x="165" y="110" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e1e1e">1 · SCOPE</text>
+  <text x="165" y="127" text-anchor="middle" font-size="8.5" fill="#555">approve direction · preparation only</text>
+  <line x1="290" y1="112" x2="320" y2="112" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="320" y="92" width="300" height="44" rx="8" fill="#ffd8a8" stroke="#e8590c" stroke-width="2" filter="url(#shadow)"/>
+  <text x="470" y="110" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e1e1e">2 · IMPLEMENTATION</text>
+  <text x="470" y="127" text-anchor="middle" font-size="8.5" fill="#555">approve code work · automation may preauthorize</text>
+  <line x1="620" y1="112" x2="650" y2="112" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="650" y="92" width="320" height="44" rx="8" fill="#ffd8a8" stroke="#e8590c" stroke-width="2" filter="url(#shadow)"/>
+  <text x="810" y="110" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e1e1e">3 · DELIVERY</text>
+  <text x="810" y="127" text-anchor="middle" font-size="8.5" fill="#555">local_test · open_pr · auto_merge (per task)</text>
+  <text x="985" y="107" font-size="8" fill="#e8590c">automation flags</text>
+  <text x="985" y="120" font-size="8" fill="#e8590c">never delivery</text>
 
-  <!-- Developer -->
-  <rect x="25" y="80" width="140" height="44" rx="10" fill="#fff3bf" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
-  <text x="95" y="107" text-anchor="middle" font-size="14" font-weight="600" fill="#1e1e1e">Developer</text>
-  <line x1="165" y1="100" x2="215" y2="100" stroke="#f08c00" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="190" y="93" text-anchor="middle" font-size="10" fill="#946100">command</text>
+  <!-- Developer, technical lead, delivery outcomes -->
+  <rect x="25" y="175" width="150" height="70" rx="10" fill="#fff3bf" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
+  <text x="100" y="200" text-anchor="middle" font-size="14" font-weight="700" fill="#1e1e1e">Developer</text>
+  <text x="100" y="218" text-anchor="middle" font-size="8.5" fill="#946100">three decisions</text>
+  <text x="100" y="232" text-anchor="middle" font-size="8.5" fill="#946100">scope · implementation · delivery</text>
+  <line x1="175" y1="210" x2="205" y2="210" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- Orchestrator -->
-  <rect x="220" y="82" width="530" height="56" rx="10" fill="#d0bfff" stroke="#9c36b5" stroke-width="2" filter="url(#shadow)"/>
-  <text x="485" y="104" text-anchor="middle" font-size="16" font-weight="700" fill="#1e1e1e">Orchestrator</text>
-  <text x="485" y="124" text-anchor="middle" font-size="11" fill="#3b3b3b">verify user claims · research · plan · delegate · verify everything</text>
+  <rect x="205" y="165" width="650" height="130" rx="12" fill="#d0bfff" stroke="#9c36b5" stroke-width="2" filter="url(#shadow)"/>
+  <text x="220" y="187" font-size="15" font-weight="700" fill="#1e1e1e">Technical lead — the running agent</text>
+  <text x="220" y="204" font-size="9.5" fill="#3b3b3b">verify claims · plan · orchestrate · verify everything — no agent roster</text>
+  <text x="220" y="224" font-size="9" fill="#3b3b3b">· Verify claims with reproduced evidence</text>
+  <text x="220" y="240" font-size="9" fill="#3b3b3b">· Plan + verification plan per task (risk-scaled)</text>
+  <text x="220" y="256" font-size="9" fill="#3b3b3b">· Resolve execution_mode once; user override wins</text>
+  <text x="500" y="224" font-size="9" fill="#3b3b3b">· Adversarial review + final whole-change review</text>
+  <text x="500" y="240" font-size="9" fill="#3b3b3b">· Reconcile TODO with the original request</text>
+  <text x="500" y="256" font-size="9" fill="#3b3b3b">· Resource check · bounded concurrency</text>
+  <text x="220" y="276" font-size="8.5" fill="#555">Optional parent-child / sibling intercom where supported; otherwise coordinate through the lead.</text>
 
-  <!-- Lark CLI (read-only) -->
-  <rect x="815" y="68" width="160" height="60" rx="10" fill="#c3fae8" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
-  <text x="895" y="93" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">Lark CLI</text>
-  <text x="895" y="110" text-anchor="middle" font-size="10" fill="#15803d">read pasted links · read-only</text>
-  <line x1="815" y1="98" x2="755" y2="98" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-green)"/>
+  <rect x="880" y="165" width="225" height="130" rx="10" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
+  <text x="892" y="187" font-size="13" font-weight="700" fill="#1e1e1e">Delivery outcomes</text>
+  <text x="892" y="208" font-size="8.2" fill="#555">local_test — manual test first; no PR</text>
+  <text x="892" y="224" font-size="8.2" fill="#555">open_pr — open, stop; fixes on request</text>
+  <text x="892" y="240" font-size="8.2" fill="#555">auto_merge — explicit per-task opt-in</text>
+  <text x="892" y="256" font-size="8.2" fill="#555">live estate — separate live_merge_approved</text>
+  <text x="892" y="272" font-size="8.2" fill="#555">production — separate human work</text>
+  <line x1="855" y1="210" x2="880" y2="210" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- Delegation arrows -->
-  <line x1="290" y1="138" x2="130" y2="195" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="350" y1="138" x2="345" y2="195" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="420" y1="138" x2="560" y2="195" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="500" y1="138" x2="775" y2="195" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
-  <line x1="560" y1="138" x2="990" y2="195" stroke="#9c36b5" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <!-- Execution layer -->
+  <rect x="25" y="320" width="1070" height="145" rx="12" fill="#d3f9d8" stroke="#2f9e44" stroke-width="1" opacity="0.35"/>
+  <text x="37" y="336" font-size="9" font-weight="600" fill="#15803d">EXECUTION — resolved mode, not consent; user override wins</text>
+  <line x1="530" y1="295" x2="530" y2="320" stroke="#9c36b5" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#arrow-purple)"/>
+  <text x="540" y="311" font-size="8.5" fill="#7048a0">resolve mode once</text>
 
-  <!-- Sub-Agent zone -->
-  <rect x="15" y="165" width="1075" height="110" rx="12" fill="#d3f9d8" stroke="#2f9e44" stroke-width="1" opacity="0.3"/>
-  <text x="27" y="178" font-size="10" fill="#15803d" font-weight="600">SUBAGENT LAYER (spawned per batch — batched in ONE call, dependency edges only when needed)</text>
+  <rect x="40" y="352" width="310" height="95" rx="10" fill="#e9ecef" stroke="#868e96" stroke-width="2" filter="url(#shadow)"/>
+  <text x="52" y="372" font-size="13" font-weight="700" fill="#1e1e1e">main agent</text>
+  <text x="52" y="390" font-size="8.5" fill="#555">default: bug / hotfix · trivial or coupled</text>
+  <text x="52" y="408" font-size="8.5" fill="#555">Lead implements under the same plan +</text>
+  <text x="52" y="422" font-size="8.5" fill="#555">verification plan. No delegation needed.</text>
 
-  <rect x="22" y="192" width="150" height="40" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
-  <text x="97" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">subagent: api</text>
-  <text x="97" y="244" text-anchor="middle" font-size="9" fill="#757575">implement + verify</text>
+  <rect x="365" y="352" width="718" height="95" rx="10" fill="#d3f9d8" stroke="#2f9e44" stroke-width="1" opacity="0.55"/>
+  <text x="377" y="370" font-size="9" font-weight="600" fill="#15803d">subagents — default: feature / improvement · complex bug may recommend</text>
+  <rect x="377" y="380" width="165" height="55" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="1.5"/>
+  <text x="459" y="400" text-anchor="middle" font-size="10.5" font-weight="600" fill="#1e1e1e">service task</text>
+  <text x="459" y="418" text-anchor="middle" font-size="8.5" fill="#555">implement → verify → evidence</text>
+  <rect x="552" y="380" width="165" height="55" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="1.5"/>
+  <text x="634" y="400" text-anchor="middle" font-size="10.5" font-weight="600" fill="#1e1e1e">service task</text>
+  <text x="634" y="418" text-anchor="middle" font-size="8.5" fill="#555">plan + verification plan</text>
+  <rect x="727" y="380" width="165" height="55" rx="8" fill="#b2f2bb" stroke="#2f9e44" stroke-width="1.5"/>
+  <text x="809" y="400" text-anchor="middle" font-size="10.5" font-weight="600" fill="#1e1e1e">independent reviewer</text>
+  <text x="809" y="418" text-anchor="middle" font-size="8.5" fill="#555">adversarial attack</text>
+  <rect x="902" y="380" width="165" height="55" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="1.5"/>
+  <text x="984" y="400" text-anchor="middle" font-size="10.5" font-weight="600" fill="#1e1e1e">research task</text>
+  <text x="984" y="418" text-anchor="middle" font-size="8.5" fill="#555">external SDK / API facts</text>
+  <line x1="350" y1="400" x2="365" y2="400" stroke="#9c36b5" stroke-width="1.4" stroke-dasharray="5 3" marker-start="url(#arrow-purple)" marker-end="url(#arrow-purple)"/>
+  <text x="731" y="459" text-anchor="middle" font-size="8.5" fill="#15803d">optional parent ↔ child and sibling ↔ sibling intercom; otherwise through the lead</text>
 
-  <rect x="185" y="192" width="150" height="40" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
-  <text x="260" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">subagent: web</text>
-  <text x="260" y="244" text-anchor="middle" font-size="9" fill="#757575">implement + self-test UI</text>
+  <!-- Verification chain -->
+  <text x="37" y="488" font-size="10" font-weight="600" fill="#1e1e1e">VERIFICATION BEFORE DELIVERY — reproduced evidence, not claims</text>
+  <rect x="30" y="500" width="195" height="58" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="127" y="520" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">Reproduce evidence</text>
+  <text x="127" y="536" text-anchor="middle" font-size="8.5" fill="#555">re-run checks · read diff</text>
+  <text x="127" y="549" text-anchor="middle" font-size="8.5" fill="#555">observed results</text>
+  <line x1="225" y1="529" x2="240" y2="529" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="240" y="500" width="195" height="58" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="337" y="520" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">Adversarial review</text>
+  <text x="337" y="536" text-anchor="middle" font-size="8.5" fill="#555">independent reviewer</text>
+  <text x="337" y="549" text-anchor="middle" font-size="8.5" fill="#555">attack the change</text>
+  <line x1="435" y1="529" x2="450" y2="529" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="450" y="500" width="195" height="58" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="547" y="520" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">Final whole-change review</text>
+  <text x="547" y="536" text-anchor="middle" font-size="8.5" fill="#555">lead reviews the diff</text>
+  <text x="547" y="549" text-anchor="middle" font-size="8.5" fill="#555">personally</text>
+  <line x1="645" y1="529" x2="660" y2="529" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="660" y="500" width="195" height="58" rx="8" fill="#a5d8ff" stroke="#1971c2" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="757" y="520" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">TODO reconciliation</text>
+  <text x="757" y="536" text-anchor="middle" font-size="8.5" fill="#555">tasks + original request</text>
+  <text x="757" y="549" text-anchor="middle" font-size="8.5" fill="#555">open items explicit</text>
+  <line x1="855" y1="529" x2="870" y2="529" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="870" y="500" width="195" height="58" rx="8" fill="#ffd8a8" stroke="#e8590c" stroke-width="2.5" filter="url(#shadow)"/>
+  <text x="967" y="520" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">Delivery checkpoint</text>
+  <text x="967" y="536" text-anchor="middle" font-size="8.5" fill="#555">fail-closed consent</text>
+  <text x="967" y="549" text-anchor="middle" font-size="8.5" fill="#555">head-specific + pinned SHA</text>
 
-  <rect x="348" y="192" width="150" height="40" rx="8" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
-  <text x="423" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">subagent: data-service</text>
-  <text x="423" y="244" text-anchor="middle" font-size="9" fill="#757575">implement + verify</text>
+  <!-- Auto-merge strip -->
+  <rect x="30" y="572" width="1060" height="62" rx="10" fill="#fff3bf" stroke="#f08c00" stroke-width="1" opacity="0.55"/>
+  <text x="42" y="588" font-size="10" font-weight="600" fill="#946100">AUTO-MERGE GATE — delivery=auto_merge, explicit per task</text>
+  <text x="42" y="603" font-size="8.5" fill="#555">Full paginated thread inventory, all resolved · required CI + actual configured review on latest head · approvals current, no changes requested/conflicts</text>
+  <text x="42" y="618" font-size="8.5" fill="#555">No must-fix or high/critical findings · head SHA rechecked and merge pinned with --match-head-commit · protections never bypassed · bounded 30 min / 3 rounds, resumable</text>
 
-  <rect x="511" y="192" width="150" height="40" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="2" filter="url(#shadow)"/>
-  <text x="586" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">subagent: reviewer</text>
-  <text x="586" y="244" text-anchor="middle" font-size="9" fill="#757575">fresh-eyes diff review</text>
-
-  <rect x="674" y="192" width="150" height="40" rx="8" fill="#99e9f2" stroke="#0c8599" stroke-width="2" filter="url(#shadow)"/>
-  <text x="749" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">subagent: research</text>
-  <text x="749" y="244" text-anchor="middle" font-size="9" fill="#757575">external SDK/API facts</text>
-
-  <rect x="837" y="192" width="150" height="40" rx="8" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
-  <text x="912" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">right model + effort</text>
-  <text x="912" y="244" text-anchor="middle" font-size="9" fill="#757575">per task, if harness allows</text>
-
-  <text x="1063" y="216" font-size="10" fill="#15803d">⇄ intercom:</text>
-  <text x="1063" y="230" font-size="9" fill="#15803d">steer / answer</text>
-  <text x="1063" y="242" font-size="9" fill="#15803d">+ sibling links</text>
-
-  <!-- Skills zone -->
-  <rect x="15" y="295" width="1075" height="68" rx="12" fill="#dbe4ff" stroke="#1971c2" stroke-width="1" opacity="0.3"/>
-  <text x="27" y="308" font-size="10" fill="#2563eb" font-weight="600">SKILLS LAYER (9 skills)</text>
-
-  <rect x="22" y="318" width="90" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="67" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/onboard</text>
-  <rect x="120" y="318" width="90" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="165" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/workflow</text>
-  <rect x="218" y="318" width="65" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="250" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/prd</text>
-  <rect x="291" y="318" width="90" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="336" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/prd-split</text>
-  <rect x="389" y="318" width="95" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="436" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/brainstorm</text>
-  <rect x="492" y="318" width="105" height="28" rx="6" fill="#c3fae8" stroke="#2f9e44" stroke-width="1"/>
-  <text x="544" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">/visual-testing</text>
-  <rect x="605" y="318" width="130" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="670" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/setup-workspace</text>
-  <rect x="743" y="318" width="130" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="808" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/workflow-update</text>
-  <rect x="881" y="318" width="115" height="28" rx="6" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="938" y="337" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">/pr-feedback</text>
-
-  <!-- Tools zone -->
-  <rect x="15" y="382" width="1075" height="52" rx="12" fill="#fff3bf" stroke="#f08c00" stroke-width="1" opacity="0.3"/>
-  <text x="27" y="395" font-size="10" fill="#946100" font-weight="600">SUPPORTED TOOLS</text>
-  <rect x="25" y="405" width="110" height="22" rx="5" fill="#fff3bf" stroke="#f08c00" stroke-width="1"/>
-  <text x="80" y="420" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">Claude Code</text>
-  <rect x="145" y="405" width="80" height="22" rx="5" fill="#fff3bf" stroke="#f08c00" stroke-width="1"/>
-  <text x="185" y="420" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">Cursor</text>
-  <rect x="235" y="405" width="90" height="22" rx="5" fill="#fff3bf" stroke="#f08c00" stroke-width="1"/>
-  <text x="280" y="420" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">OpenCode</text>
-  <rect x="335" y="405" width="55" height="22" rx="5" fill="#fff3bf" stroke="#f08c00" stroke-width="1"/>
-  <text x="362" y="420" text-anchor="middle" font-size="11" font-weight="600" fill="#1e1e1e">Amp</text>
+  <!-- Declarative layer -->
+  <rect x="30" y="650" width="1060" height="48" rx="10" fill="#e9ecef" stroke="#868e96" stroke-width="1"/>
+  <text x="42" y="666" font-size="9" font-weight="600" fill="#1e1e1e">DECLARATIVE LAYER — JSON describes, nothing executes it</text>
+  <text x="42" y="684" font-size="8.5" fill="#555">phases.json · gates.json · state-schema.json · skills and templates — CI asserts agreement; no runtime engine</text>
 </svg>
