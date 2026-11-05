@@ -23,6 +23,15 @@ This document covers the {{SERVICE_NAME}} implementation for the {{FEATURE_TITLE
 ### Depended By
 - {{DEPENDENT}}
 
+## Plan
+
+_Approach before implementation. Each task also carries a plan and verification plan in the track._
+
+- **Approach:** {{APPROACH}}
+- **Files/areas touched:** {{TOUCHED_AREAS}}
+- **Risks:** {{RISKS}}
+- **Open technical decisions:** {{TECHNICAL_DECISIONS}}
+
 ## Implementation Tasks
 
 - [ ] **TASK-1:** {{TASK_DESCRIPTION}}
@@ -52,15 +61,31 @@ This document covers the {{SERVICE_NAME}} implementation for the {{FEATURE_TITLE
 
 {{SCHEMA_CHANGES}}
 
-## Testing
+### Rollback / Recovery
 
-> **Note:** Tests are opt-in per the Testing Policy (`.agentic-workflows/fragments/testing-policy.md`). Leave Unit/Integration Tests blank unless the user has explicitly asked for tests. Manual Verification is always useful — fill it in regardless.
+{{ROLLBACK}}
 
-### Unit Tests
-- {{TEST}}  <!-- Only populate if the user explicitly asked for tests -->
+## Verification
 
-### Integration Tests
-- {{TEST}}  <!-- Only populate if the user explicitly asked for tests -->
+_Existing targeted tests, lint, type checks, and manual checks are the default evidence. Do not add
+new test dependencies, files, or suites unless the user explicitly asked for tests in this task.
+Never describe this section as formal verification._
 
-### Manual Verification
-- {{STEP}}
+- **Risk level:** low / medium / high
+- **Existing checks to run:** {{CHECKS}}
+- **Minimal regression check:** {{REGRESSION}}
+- **Manual verification:** {{MANUAL_STEPS}}
+- **Expected evidence:** {{EVIDENCE}}
+
+## Delivery
+
+_Delivery mode is authorized per task in workflow state and the track. This section records
+constraints only._
+
+- **Live estate:** {{LIVE_ESTATE}} (yes for `data-pipeline`)
+- **Delivery constraints:** {{DELIVERY_CONSTRAINTS}}
+- **Manual local test steps (if `local_test`):** {{LOCAL_TEST_STEPS}}
+
+## Open Questions
+
+- [ ] Q-1: {{QUESTION}}
