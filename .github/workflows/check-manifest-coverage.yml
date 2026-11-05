@@ -1,17 +1,17 @@
-name: Manifest coverage
+name: Repo consistency checks
 
-# A file under a distributed directory that is missing from manifest.json is
-# invisible to every onboarded workspace, and update-manifest.yml cannot catch
-# it: that workflow iterates `jq -r '.files | keys[]'`, so it rehashes files
-# already declared and has no way to discover a new one. See
-# scripts/check-manifest-coverage.py for the incident this closes.
+# Two declarations are easy to break silently: a file under a distributed
+# directory that is missing from manifest.json (invisible to every onboarded
+# workspace), and workflow/*.json drifting out of agreement (nothing executes
+# that metadata, so nothing notices). update-manifest.yml only rehashes files
+# already declared, so it cannot catch the first. See the checks for detail.
 on:
   pull_request:
   push:
     branches: [main]
 
 jobs:
-  check-manifest-coverage:
+  consistency:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,3 +24,6 @@ jobs:
 
       - name: Every distributed file is declared in the manifest
         run: python3 scripts/check-manifest-coverage.py
+
+      - name: Workflow metadata and generator version are consistent
+        run: python3 scripts/check-workflow.py

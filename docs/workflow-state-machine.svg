@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 390" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 640" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
   <defs>
     <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="10" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#444"/>
@@ -17,78 +17,109 @@
     </filter>
   </defs>
 
-  <text x="500" y="28" text-anchor="middle" font-size="20" font-weight="700" fill="#1e1e1e">frndOS Workflow State Machine</text>
-  <text x="500" y="48" text-anchor="middle" font-size="12" fill="#757575">orchestrator-driven · gate enforcement · feature vs bug/improvement paths</text>
+  <text x="560" y="30" text-anchor="middle" font-size="21" font-weight="700" fill="#1e1e1e">frndOS Three-Checkpoint Workflow</text>
+  <text x="560" y="51" text-anchor="middle" font-size="12" fill="#757575">scope → automatic preparation → implementation → delivery · phase_status never crosses a checkpoint</text>
 
-  <!-- Row 1 (left to right) -->
-  <rect x="10" y="72" width="90" height="44" rx="10" fill="#e9ecef" stroke="#868e96" stroke-width="2" filter="url(#shadow)"/>
-  <text x="55" y="99" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">Idle</text>
-  <line x1="100" y1="94" x2="120" y2="94" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <!-- Automatic preparation panel -->
+  <rect x="320" y="96" width="390" height="104" rx="12" fill="#d3f9d8" stroke="#2f9e44" stroke-width="1" opacity="0.35"/>
+  <text x="522" y="110" text-anchor="middle" font-size="9" font-weight="600" fill="#15803d">AUTOMATIC PREPARATION AFTER SCOPE APPROVAL</text>
 
-  <rect x="125" y="72" width="160" height="44" rx="10" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
-  <text x="205" y="99" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">1. Brainstorming</text>
-  <text x="205" y="130" text-anchor="middle" font-size="10" fill="#757575">evidence-first · zero asks OK</text>
-  <line x1="285" y1="94" x2="305" y2="94" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <!-- Row 1: Idle → Brainstorming → PRD Creation → PRD Splitting → Implementation -->
+  <rect x="20" y="120" width="80" height="56" rx="10" fill="#e9ecef" stroke="#868e96" stroke-width="2" filter="url(#shadow)"/>
+  <text x="60" y="152" text-anchor="middle" font-size="14" font-weight="600" fill="#1e1e1e">Idle</text>
 
-  <rect x="310" y="72" width="150" height="44" rx="10" fill="#a5d8ff" stroke="#1971c2" stroke-width="2" filter="url(#shadow)"/>
-  <text x="385" y="99" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">2. PRD Creation</text>
-  <text x="385" y="130" text-anchor="middle" font-size="10" fill="#757575">features only</text>
-  <line x1="460" y1="94" x2="480" y2="94" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="130" y="120" width="180" height="56" rx="10" fill="#a5d8ff" stroke="#e8590c" stroke-width="3" filter="url(#shadow)"/>
+  <text x="220" y="140" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">1 · Brainstorming</text>
+  <text x="220" y="157" text-anchor="middle" font-size="9" font-weight="700" fill="#e8590c">SCOPE CHECKPOINT</text>
+  <text x="220" y="170" text-anchor="middle" font-size="8.5" fill="#555">direction · decisions · summary</text>
 
-  <rect x="485" y="72" width="150" height="44" rx="10" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
-  <text x="560" y="99" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">3. PRD Splitting</text>
-  <text x="560" y="130" text-anchor="middle" font-size="10" fill="#757575">features only · branch made</text>
-  <line x1="635" y1="94" x2="655" y2="94" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="350" y="120" width="150" height="56" rx="10" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
+  <text x="425" y="140" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1e1e1e">2 · PRD Creation</text>
+  <text x="425" y="157" text-anchor="middle" font-size="9" fill="#555">features only · preparation</text>
+  <text x="425" y="170" text-anchor="middle" font-size="8.5" fill="#777">no per-document approval</text>
 
-  <rect x="660" y="72" width="180" height="44" rx="10" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
-  <text x="750" y="99" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">4. Implementation</text>
-  <text x="750" y="130" text-anchor="middle" font-size="10" fill="#757575">parallel subagents (+branch for bugs)</text>
+  <rect x="540" y="120" width="150" height="56" rx="10" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" filter="url(#shadow)"/>
+  <text x="615" y="140" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1e1e1e">3 · PRD Splitting</text>
+  <text x="615" y="157" text-anchor="middle" font-size="9" fill="#555">branch + service PRDs</text>
+  <text x="615" y="170" text-anchor="middle" font-size="8.5" fill="#777">tracks · plans · verification plans</text>
 
-  <!-- Implementation -> PR Submission -->
-  <line x1="820" y1="116" x2="820" y2="195" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="730" y="120" width="180" height="56" rx="10" fill="#b2f2bb" stroke="#e8590c" stroke-width="3" filter="url(#shadow)"/>
+  <text x="820" y="140" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">4 · Implementation</text>
+  <text x="820" y="157" text-anchor="middle" font-size="9" font-weight="700" fill="#e8590c">IMPLEMENTATION CHECKPOINT</text>
+  <text x="820" y="170" text-anchor="middle" font-size="8.5" fill="#555">code work · independent verification</text>
 
-  <!-- Bug/improvement shortcut (dashed green: brainstorming -> implementation) -->
-  <path d="M 170 116 L 170 150 Q 170 160 180 160 L 648 160 Q 658 160 658 170 L 658 195" fill="none" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-green)"/>
-  <text x="415" y="154" text-anchor="middle" font-size="10" fill="#2f9e44" font-style="italic">bug / improvement — no PRD phases</text>
+  <!-- Row 1 edges -->
+  <line x1="100" y1="148" x2="130" y2="148" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="310" y1="148" x2="350" y2="148" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="500" y1="148" x2="540" y2="148" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="690" y1="148" x2="730" y2="148" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- Row 2 (right to left) -->
-  <rect x="660" y="200" width="180" height="44" rx="10" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
-  <text x="750" y="227" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">5. PR Submission</text>
-  <text x="750" y="258" text-anchor="middle" font-size="10" fill="#757575">self review + security audit first</text>
-  <line x1="660" y1="222" x2="640" y2="222" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <!-- Implementation → Delivery -->
+  <line x1="820" y1="176" x2="820" y2="320" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="832" y="238" font-size="9" fill="#555">after independent</text>
+  <text x="832" y="251" font-size="9" fill="#555">evidence + review</text>
 
-  <rect x="475" y="200" width="165" height="44" rx="10" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
-  <text x="557" y="227" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">6. PR Review</text>
-  <text x="557" y="258" text-anchor="middle" font-size="10" fill="#757575">pr-feedback skill</text>
-  <line x1="475" y1="222" x2="455" y2="222" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <!-- Bug / improvement: brainstorming → implementation, never PR submission -->
+  <path d="M 220 176 L 220 230 Q 220 240 230 240 L 745 240 Q 755 240 755 230 L 755 176" fill="none" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-green)"/>
+  <text x="470" y="232" text-anchor="middle" font-size="9" fill="#2f9e44" font-style="italic">bug / improvement → implementation only · no PRD phases</text>
 
-  <rect x="285" y="200" width="165" height="44" rx="10" fill="#ffc9c9" stroke="#e03131" stroke-width="2" filter="url(#shadow)"/>
-  <text x="367" y="227" text-anchor="middle" font-size="12" font-weight="600" fill="#1e1e1e">7. Completion</text>
-  <text x="367" y="258" text-anchor="middle" font-size="10" fill="#757575">track file · cleanup</text>
+  <!-- Row 2: PR Submission → PR Review → Completion -->
+  <rect x="730" y="320" width="180" height="56" rx="10" fill="#ffd8a8" stroke="#e8590c" stroke-width="3" filter="url(#shadow)"/>
+  <text x="820" y="340" text-anchor="middle" font-size="13" font-weight="600" fill="#1e1e1e">5 · PR Submission</text>
+  <text x="820" y="357" text-anchor="middle" font-size="9" font-weight="700" fill="#e8590c">DELIVERY CHECKPOINT</text>
+  <text x="820" y="370" text-anchor="middle" font-size="8.5" fill="#555">local_test · open_pr · auto_merge</text>
 
-  <!-- Skip PR review (dashed orange: pr_submission -> completion) -->
-  <path d="M 780 244 L 780 285 Q 780 295 770 295 L 420 295 Q 410 295 410 285 L 410 246" fill="none" stroke="#f08c00" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-orange)"/>
-  <text x="595" y="290" text-anchor="middle" font-size="10" fill="#f08c00" font-style="italic">skip PR review</text>
+  <rect x="540" y="320" width="150" height="56" rx="10" fill="#ffd8a8" stroke="#f08c00" stroke-width="2" filter="url(#shadow)"/>
+  <text x="615" y="340" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1e1e1e">6 · PR Review</text>
+  <text x="615" y="357" text-anchor="middle" font-size="9" fill="#555">conditional · feedback only</text>
+  <text x="615" y="370" text-anchor="middle" font-size="8.5" fill="#777">paginated thread inventory</text>
 
-  <!-- Back to idle -->
-  <path d="M 285 222 L 70 222 Q 55 222 55 207 L 55 118" fill="none" stroke="#999" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-gray)"/>
-  <text x="170" y="240" text-anchor="middle" font-size="10" fill="#999" font-style="italic">back to Idle</text>
+  <rect x="350" y="320" width="150" height="56" rx="10" fill="#ffc9c9" stroke="#e03131" stroke-width="2" filter="url(#shadow)"/>
+  <text x="425" y="340" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1e1e1e">7 · Completion</text>
+  <text x="425" y="357" text-anchor="middle" font-size="9" fill="#555">merged · cleanup</text>
+  <text x="425" y="370" text-anchor="middle" font-size="8.5" fill="#777">production remains separate</text>
+
+  <line x1="730" y1="348" x2="690" y2="348" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="710" y="340" text-anchor="middle" font-size="8.5" fill="#555">feedback</text>
+  <line x1="540" y1="348" x2="500" y2="348" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="520" y="340" text-anchor="middle" font-size="8.5" fill="#555">resolved</text>
+
+  <!-- Clean merge skips PR review -->
+  <path d="M 820 376 L 820 430 Q 820 440 810 440 L 435 440 Q 425 440 425 430 L 425 376" fill="none" stroke="#f08c00" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-orange)"/>
+  <text x="630" y="432" text-anchor="middle" font-size="9" fill="#f08c00" font-style="italic">merged clean · no feedback (conditional)</text>
+
+  <!-- Completion back to Idle -->
+  <path d="M 350 376 L 350 490 Q 350 500 340 500 L 70 500 Q 60 500 60 490 L 60 176" fill="none" stroke="#999" stroke-width="1.5" stroke-dasharray="6 3" marker-end="url(#arrow-gray)"/>
+  <text x="200" y="492" text-anchor="middle" font-size="9" fill="#999" font-style="italic">back to Idle</text>
+
+  <!-- local_test keeps PR submission pending -->
+  <path d="M 910 340 C 950 320 980 330 980 348 C 980 366 950 376 910 366" fill="none" stroke="#e8590c" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrow-orange)"/>
+  <text x="988" y="330" font-size="8.5" fill="#e8590c" font-weight="600">local_test</text>
+  <text x="988" y="343" font-size="8.5" fill="#e8590c">test locally first</text>
+  <text x="988" y="356" font-size="8.5" fill="#e8590c">no PR · stays pending</text>
 
   <!-- Legend -->
-  <text x="30" y="332" font-size="12" font-weight="600" fill="#1e1e1e">Phase groups</text>
-  <rect x="30" y="344" width="12" height="12" rx="2" fill="#e9ecef" stroke="#868e96" stroke-width="1"/>
-  <text x="48" y="355" font-size="11" fill="#757575">Backlog</text>
-  <rect x="105" y="344" width="12" height="12" rx="2" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
-  <text x="123" y="355" font-size="11" fill="#757575">Plan</text>
-  <rect x="165" y="344" width="12" height="12" rx="2" fill="#b2f2bb" stroke="#2f9e44" stroke-width="1"/>
-  <text x="183" y="355" font-size="11" fill="#757575">Build</text>
-  <rect x="225" y="344" width="12" height="12" rx="2" fill="#ffd8a8" stroke="#f08c00" stroke-width="1"/>
-  <text x="243" y="355" font-size="11" fill="#757575">Review</text>
-  <rect x="295" y="344" width="12" height="12" rx="2" fill="#ffc9c9" stroke="#e03131" stroke-width="1"/>
-  <text x="313" y="355" font-size="11" fill="#757575">Done</text>
+  <text x="30" y="540" font-size="11" font-weight="600" fill="#1e1e1e">Legend</text>
+  <rect x="30" y="550" width="12" height="12" rx="2" fill="#e9ecef" stroke="#868e96" stroke-width="1"/>
+  <text x="48" y="560" font-size="9.5" fill="#555">Backlog</text>
+  <rect x="112" y="550" width="12" height="12" rx="2" fill="#a5d8ff" stroke="#1971c2" stroke-width="1"/>
+  <text x="130" y="560" font-size="9.5" fill="#555">Plan</text>
+  <rect x="174" y="550" width="12" height="12" rx="2" fill="#b2f2bb" stroke="#2f9e44" stroke-width="1"/>
+  <text x="192" y="560" font-size="9.5" fill="#555">Build / preparation</text>
+  <rect x="300" y="550" width="12" height="12" rx="2" fill="#ffd8a8" stroke="#f08c00" stroke-width="1"/>
+  <text x="318" y="560" font-size="9.5" fill="#555">Delivery / review</text>
+  <rect x="424" y="550" width="12" height="12" rx="2" fill="#ffc9c9" stroke="#e03131" stroke-width="1"/>
+  <text x="442" y="560" font-size="9.5" fill="#555">Done</text>
+  <rect x="498" y="550" width="12" height="12" rx="2" fill="#a5d8ff" stroke="#e8590c" stroke-width="3"/>
+  <text x="516" y="560" font-size="9.5" fill="#555">Human checkpoint (thick orange border)</text>
 
-  <line x1="390" y1="350" x2="440" y2="350" stroke="#f08c00" stroke-width="1.5" stroke-dasharray="6 3"/>
-  <text x="446" y="355" font-size="11" fill="#f08c00">skip PR review (submission → completion)</text>
-  <line x1="700" y1="350" x2="750" y2="350" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3"/>
-  <text x="756" y="355" font-size="11" fill="#2f9e44">bug / improvement (brainstorm → impl)</text>
+  <line x1="30" y1="582" x2="70" y2="582" stroke="#2f9e44" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <text x="78" y="586" font-size="9.5" fill="#2f9e44">automatic preparation</text>
+  <line x1="235" y1="582" x2="275" y2="582" stroke="#f08c00" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <text x="283" y="586" font-size="9.5" fill="#f08c00">conditional / clean merge</text>
+  <line x1="470" y1="582" x2="510" y2="582" stroke="#999" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <text x="518" y="586" font-size="9.5" fill="#999">return to Idle</text>
+
+  <text x="30" y="610" font-size="9.5" fill="#444">Three human checkpoints: scope · implementation · delivery. phase_status is evidence only and never crosses one. No implementation → completion shortcut.</text>
+  <text x="30" y="627" font-size="9" fill="#666">Delivery: local_test stays pending · open_pr opens then stops (feedback fixes need a separate request) · auto_merge is explicit per task + bounded watch, pinned head SHA; data-pipeline needs separate live_merge_approved.</text>
 </svg>
