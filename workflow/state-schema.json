@@ -60,9 +60,53 @@
           "format": "date-time"
         },
         "type": {
-          "description": "Kind of work being done. Captured from the user's intake message.",
+          "description": "Kind of work being done. Captured from the user's intake message. Hotfix work uses type 'bug'; there is no separate hotfix type.",
           "type": "string",
           "enum": ["feature", "bug", "improvement"]
+        },
+        "scope_approved": {
+          "description": "True only after the scope checkpoint is satisfied: explicit user agreement on direction, an explicit 'skip brainstorming' instruction (recorded as brainstorming.user_skipped), or automation.brainstorming=true after the orchestrator records the recommended/chosen directions. Authorizes preparation only for features (PRD creation, PRD splitting, branch creation, track/plan preparation) and branch/plan preparation for bugs/improvements. It never authorizes code changes, PR creation, merging, live-estate merges, or production promotion. Absent means false.",
+          "type": "boolean",
+          "default": false
+        },
+        "automation": {
+          "description": "Optional pre-authorizations for checkpoints. brainstorming=true lets the orchestrator choose recommended directions and set scope_approved after recording them; implementation=true allows implementation work to start without a separate implementation ask. Neither flag authorizes delivery, PR creation, merging, or live-estate changes. Absent means both false.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "brainstorming": {
+              "description": "Pre-authorize the scope checkpoint. The orchestrator must still record the recommended/chosen directions and summary before setting scope_approved=true. Default false.",
+              "type": "boolean",
+              "default": false
+            },
+            "implementation": {
+              "description": "Pre-authorize implementation start. Scope approval alone never implies this. Default false.",
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "execution_mode": {
+          "description": "How implementation is executed. Resolved before implementation starts; it is not a consent flag. Defaults: feature/improvement -> subagents; bug/hotfix -> main. A trivial or tightly coupled task may stay main; a complex bug may recommend subagents. User override wins and is not re-asked. null means resolve the default at implementation start.",
+          "type": ["string", "null"],
+          "enum": ["main", "subagents", null],
+          "default": null
+        },
+        "implementation_approved": {
+          "description": "True only with explicit user approval at the implementation checkpoint, or when automation.implementation=true. Required before any code change. Reaching the implementation phase with prepared branch/plans is not approval. Absent means false.",
+          "type": "boolean",
+          "default": false
+        },
+        "delivery": {
+          "description": "Delivery choice recorded only by explicit user instruction for this feature/task. local_test = user manually tests locally first: no PR is opened, the branch/worktree/server stays available, and the workflow remains pending at the delivery checkpoint until the user chooses open_pr or auto_merge. open_pr = open PR(s) and stop before any merge. auto_merge = explicit per-task consent to open, monitor, fix, and merge under the fail-closed conditions in workflow/gates.json. null fails closed: no PR may be opened, no merge, no live publication. Completion requires the intended PRs to be merged. Verified explicit persisted consent for the same task may survive resume; never infer consent from reconstructed artifacts, copy it from another task, or carry it across a new scope/target. A new task, scope, or target invalidates prior merge consent.",
+          "type": ["string", "null"],
+          "enum": ["local_test", "open_pr", "auto_merge", null],
+          "default": null
+        },
+        "live_merge_approved": {
+          "description": "Separate explicit task-level approval to merge into a live estate. data-pipeline development and main are both live estates. Required in addition to delivery=auto_merge for data-pipeline. Never implied by delivery, automation, or scope approval. Verified persisted approval survives resume for the same task; a new task/scope/target invalidates it. Production promotion remains a separate human action. Absent means false.",
+          "type": "boolean",
+          "default": false
         },
         "initial_request": {
           "description": "Raw text of the user's intake request for this feature/bug/improvement. Feeds the brainstorming phase.",
@@ -110,7 +154,7 @@
           "type": ["string", "null"]
         },
         "verification": {
-          "description": "Record of the orchestrator's verification for the latest implementation round — what was re-run (lint/tests), diff review notes, visual-testing summary. Subagent 'done' claims are never accepted on trust.",
+          "description": "String map recording the orchestrator's plan, verification plan, and evidence for the latest implementation round. Suggested keys: plan, verification_plan, evidence, commands, self_review_head_sha, security_head_sha, adversarial_review, final_review, todo_reconciliation, review_inventory. Subagent 'done' claims are never accepted on trust; record reproduced evidence, never a 'formal proof' claim.",
           "type": ["object", "null"],
           "additionalProperties": { "type": "string" }
         },
